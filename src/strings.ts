@@ -15,6 +15,7 @@ export const strings = {
   newLesson: '新しいレッスン',
   topicPrompt: '何を学びたい？（トピックを入力）',
   nextChunk: '次へ',
+  tidy: '⤢ 整列 / Tidy',
   replay: 'リプレイ',
   replayExit: '終了',
   replayPlay: '再生',

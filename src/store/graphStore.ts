@@ -8,6 +8,7 @@ import {
   answerPosition,
   branchDepth,
   branchPosition,
+  computeLayout,
   spinePosition,
   whySiblingCount,
 } from '../layout/layout';
@@ -37,6 +38,7 @@ type GraphActions = {
   finishStreaming: () => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   setNodeSize: (nodeId: string, size: { width: number; height: number }) => void;
+  tidyLayout: () => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
   recompute: () => void;
@@ -268,6 +270,17 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       const node = get().nodes[nodeId];
       if (!node) return;
       putNode({ ...node, size });
+    },
+
+    tidyLayout() {
+      const { nodes, edges } = get();
+      const positions = computeLayout(nodes, edges);
+      for (const [id, position] of Object.entries(positions)) {
+        const node = nodes[id];
+        if (node && (node.position.x !== position.x || node.position.y !== position.y)) {
+          putNode({ ...node, position });
+        }
+      }
     },
 
     setPlaygroundParams(nodeId, params) {

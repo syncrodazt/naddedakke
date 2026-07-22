@@ -38,6 +38,12 @@ export function Toolbar() {
     panToNode(chunkId);
   }
 
+  function handleTidy() {
+    useGraphStore.getState().tidyLayout();
+    // Let the position updates flush to React Flow before fitting.
+    window.setTimeout(() => void fitView({ duration: 500 }), 60);
+  }
+
   async function refreshSessions() {
     setSessions(await db.sessions.orderBy('createdAt').toArray());
   }
@@ -112,6 +118,11 @@ export function Toolbar() {
           disabled={streaming}
         >
           {strings.nextChunk} →
+        </button>
+      )}
+      {session?.mode === 'learn' && (
+        <button type="button" className={styles.button} onClick={handleTidy}>
+          {strings.tidy}
         </button>
       )}
       <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
