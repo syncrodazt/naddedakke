@@ -7,7 +7,10 @@
 
 export type ChatPayload = { system: string; user: string };
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+// Rolling alias — always points at the current flash model, so the app keeps
+// working when Google retires a specific version (gemini-2.5-flash already
+// rejects new users with a 404).
+export const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest';
 
 export function isChatPayload(v: unknown): v is ChatPayload {
   return (
