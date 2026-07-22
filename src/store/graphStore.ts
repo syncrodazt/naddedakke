@@ -21,6 +21,7 @@ type GraphState = {
   streamingNodeId: string | null; // answer node currently receiving a stream
   pendingQuestionId: string | null; // question node showing its compose box
   computeIssues: Record<string, string>; // gyakusan: nodeId → cycle/eval issue
+  lessonComplete: boolean; // learn mode: model signaled the lesson is finished
 };
 
 type GraphActions = {
@@ -30,6 +31,9 @@ type GraphActions = {
   addWhyBranch: (parentId: string, sel: SelectionRange) => string;
   submitQuestion: (questionId: string, questionText: string) => string;
   appendToNode: (nodeId: string, delta: string) => void;
+  setNodeMd: (nodeId: string, md: string) => void;
+  setStreamingNode: (nodeId: string | null) => void;
+  setLessonComplete: (complete: boolean) => void;
   finishStreaming: () => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
@@ -80,6 +84,7 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
     streamingNodeId: null,
     pendingQuestionId: null,
     computeIssues: {},
+    lessonComplete: false,
 
     async createSession(title) {
       const session: Session = {
@@ -89,7 +94,14 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
         createdAt: Date.now(),
         seqCounter: 0,
       };
-      set({ session, nodes: {}, edges: {}, streamingNodeId: null, pendingQuestionId: null });
+      set({
+        session,
+        nodes: {},
+        edges: {},
+        streamingNodeId: null,
+        pendingQuestionId: null,
+        lessonComplete: false,
+      });
       markDirty({ session: true });
       await flushNow();
       return session.id;
@@ -109,6 +121,7 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
         streamingNodeId: null,
         pendingQuestionId: null,
         computeIssues: {},
+        lessonComplete: false,
       });
       runRecompute();
       return true;
@@ -225,6 +238,20 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       putNode({ ...node, content: { ...node.content, md: node.content.md + delta } });
     },
 
+    setNodeMd(nodeId, md) {
+      const node = get().nodes[nodeId];
+      if (!node) return;
+      putNode({ ...node, content: { ...node.content, md } });
+    },
+
+    setStreamingNode(nodeId) {
+      set({ streamingNodeId: nodeId });
+    },
+
+    setLessonComplete(complete) {
+      set({ lessonComplete: complete });
+    },
+
     finishStreaming() {
       set({ streamingNodeId: null });
     },
@@ -264,6 +291,7 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
         streamingNodeId: null,
         pendingQuestionId: null,
         computeIssues: {},
+        lessonComplete: false,
       });
       runRecompute();
       markDirty({

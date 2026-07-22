@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
-import { CompoundCurve, compoundCurveDefaults } from './CompoundCurve';
+import { CompoundCurve } from './CompoundCurve';
+import { compoundCurveDefaults } from './compound';
 
 export type PlaygroundComponentProps = {
   params: Record<string, number>;

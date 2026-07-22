@@ -1,5 +1,5 @@
-import { SliderCanvas, type DrawFn, type SliderSpec } from './SliderCanvas';
-import { compoundAt, simpleAt, verdict } from './compound';
+import { SliderCanvas, type DrawFn } from './SliderCanvas';
+import { compoundAt, compoundCurveSliders, simpleAt, verdict } from './compound';
 import type { PlaygroundComponentProps } from './registry';
 
 // Palette constants (canvas can't resolve CSS custom properties).
@@ -9,13 +9,6 @@ const MUTED = '#5B6B7B';
 const GRID = '#D5DDE4';
 const ALIAS = '#0B8F8C'; // compound — the real, observed curve
 const BRANCH = '#C2185B'; // simple — the intuition that goes wrong
-
-export const compoundCurveSliders: SliderSpec[] = [
-  { key: 'rate', label: '年利', min: 1, max: 15, step: 0.5, unit: '%' },
-  { key: 'years', label: '期間', min: 5, max: 50, step: 1, unit: '年' },
-];
-
-export const compoundCurveDefaults = { rate: 6, years: 30 };
 
 const PAD = { left: 34, right: 10, top: 10, bottom: 20 };
 

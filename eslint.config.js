@@ -19,4 +19,10 @@ export default tseslint.config(
       globals: globals.browser,
     },
   },
+  {
+    files: ['server/**/*.ts', 'api/**/*.ts', 'vite.config.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 );

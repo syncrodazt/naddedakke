@@ -1,7 +1,15 @@
-// Pure math for the compound-interest playground — kept separate so it's
-// trivially unit-testable without a canvas.
+// Pure math and config for the compound-interest playground — kept separate
+// from the component so it's unit-testable and fast-refresh stays happy.
+import type { SliderSpec } from './SliderCanvas';
 
 export type CompoundParams = { rate: number; years: number };
+
+export const compoundCurveSliders: SliderSpec[] = [
+  { key: 'rate', label: '年利', min: 1, max: 15, step: 0.5, unit: '%' },
+  { key: 'years', label: '期間', min: 5, max: 50, step: 1, unit: '年' },
+];
+
+export const compoundCurveDefaults = { rate: 6, years: 30 };
 
 export function compoundAt(rate: number, t: number): number {
   return Math.pow(1 + rate / 100, t);

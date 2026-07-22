@@ -1,4 +1,5 @@
-import type { AnswerRequest, TeachService } from './types';
+import type { AnswerRequest, LessonChunkRequest, TeachService } from './types';
+import { LESSON_DONE_MARKER } from './types';
 
 const CANNED: { keywords: string[]; md: string }[] = [
   {
@@ -50,6 +51,8 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const MOCK_LESSON_CHUNKS = 3;
+
 /** Canned answers streamed in small tokens so the UI exercises real streaming. */
 export class MockClaudeService implements TeachService {
   async *streamAnswer(req: AnswerRequest): AsyncGenerator<string> {
@@ -58,6 +61,21 @@ export class MockClaudeService implements TeachService {
     for (const token of tokens) {
       if (req.signal?.aborted) return;
       await delay(30 + Math.random() * 30);
+      yield token;
+    }
+  }
+
+  async *streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {
+    const n = req.chunkIndex + 1;
+    let md =
+      `## ${req.topic} — その${n}\n\n` +
+      `これはモックのレッスンチャンク${n}です。本物のレッスンは ` +
+      `\`.env.local\` に \`GEMINI_API_KEY\` を設定すると生成されます。`;
+    if (n >= MOCK_LESSON_CHUNKS) md += `\n${LESSON_DONE_MARKER}`;
+    const tokens = md.match(/\S+\s*/g) ?? [md];
+    for (const token of tokens) {
+      if (req.signal?.aborted) return;
+      await delay(20 + Math.random() * 20);
       yield token;
     }
   }

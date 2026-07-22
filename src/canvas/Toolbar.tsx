@@ -5,16 +5,34 @@ import { useGraphStore } from '../store/graphStore';
 import { useReplayStore } from '../replay/replayStore';
 import { exportSession, validateImport } from '../db/exportImport';
 import { fireFixture } from '../gyakusan/fireFixture';
+import { nextLessonChunk, startLesson } from '../services/lesson';
+import { useCameraNav } from './useCameraNav';
 import { db } from '../db/db';
 import { strings } from '../strings';
 import styles from './Toolbar.module.css';
 
 export function Toolbar() {
   const session = useGraphStore((s) => s.session);
+  const streaming = useGraphStore((s) => s.streamingNodeId !== null);
+  const lessonComplete = useGraphStore((s) => s.lessonComplete);
   const startReplay = useReplayStore((s) => s.start);
   const fileInput = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const { fitView } = useReactFlow();
+  const { panToNode } = useCameraNav();
+
+  async function handleNewLesson() {
+    const topic = window.prompt(strings.topicPrompt)?.trim();
+    if (!topic) return;
+    const chunkId = await startLesson(topic);
+    await refreshSessions();
+    panToNode(chunkId);
+  }
+
+  async function handleNextChunk() {
+    const chunkId = await nextLessonChunk();
+    panToNode(chunkId);
+  }
 
   async function refreshSessions() {
     setSessions(await db.sessions.orderBy('createdAt').toArray());
@@ -79,6 +97,19 @@ export function Toolbar() {
           </option>
         ))}
       </select>
+      <button type="button" className={styles.button} onClick={() => void handleNewLesson()}>
+        ＋ {strings.newLesson}
+      </button>
+      {session?.mode === 'learn' && !lessonComplete && (
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => void handleNextChunk()}
+          disabled={streaming}
+        >
+          {strings.nextChunk} →
+        </button>
+      )}
       <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
         ▶ {strings.replay}
       </button>

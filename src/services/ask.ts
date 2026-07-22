@@ -1,5 +1,6 @@
 import { useGraphStore } from '../store/graphStore';
-import { teachService } from './claude';
+import { mockService, teachService } from './claude';
+import { withFallback } from './stream';
 
 /** The ancestor chain (root chunk → … → parent), NOT the whole graph. */
 export function ancestorChainMd(nodeId: string): string {
@@ -35,13 +36,16 @@ export async function askQuestion(questionId: string, questionText: string): Pro
   const contextMd = parent ? ancestorChainMd(parent.id) : '';
 
   const answerId = store.submitQuestion(questionId, questionText);
+  const req = {
+    sessionId: session.id,
+    question: questionText,
+    quotedText,
+    contextMd,
+  };
   try {
-    const stream = teachService.streamAnswer({
-      sessionId: session.id,
-      question: questionText,
-      quotedText,
-      contextMd,
-    });
+    const stream = withFallback(teachService.streamAnswer(req), () =>
+      mockService.streamAnswer(req),
+    );
     for await (const delta of stream) {
       useGraphStore.getState().appendToNode(answerId, delta);
     }
