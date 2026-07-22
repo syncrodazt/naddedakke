@@ -8,6 +8,10 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
+  /* Reserve three lines so re-wrapping while scrubbing sliders never
+     changes the node's height (the whole card would jitter otherwise). */
+  min-height: calc(3 * 1.55em);
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
   background: color-mix(in srgb, var(--guard) 14%, transparent);
   border-left: 3px solid var(--guard);
