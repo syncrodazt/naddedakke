@@ -37,10 +37,15 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
     [node, panToNode],
   );
 
+  const addIdea = useCallback(() => {
+    panToNode(useGraphStore.getState().addIdeaBranch(node.id));
+  }, [node.id, panToNode]);
+
   function submit() {
     const question = text.trim();
     if (question === '') return;
-    void askQuestion(node.id, question, intent);
+    // 'idea' is a free-form question → answered with the explain prompt.
+    void askQuestion(node.id, question, intent === 'respond' ? 'respond' : 'why');
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -54,9 +59,16 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
     <NodeShell
       nodeId={node.id}
       seq={node.seq}
-      label={intent === 'respond' ? strings.yourAnswerLabel : strings.questionLabel}
+      label={
+        intent === 'respond'
+          ? strings.yourAnswerLabel
+          : intent === 'idea'
+            ? strings.ideaLabel
+            : strings.questionLabel
+      }
       accent="branch"
       showUnderstood
+      onAddIdea={addIdea}
       headerExtra={
         <button type="button" className={`${styles.back} nodrag`} onClick={backToSource}>
           {strings.backToSource}
@@ -76,7 +88,13 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
             value={text}
             autoFocus
             rows={2}
-            placeholder={intent === 'respond' ? strings.answerPlaceholder : strings.askPlaceholder}
+            placeholder={
+              intent === 'respond'
+                ? strings.answerPlaceholder
+                : intent === 'idea'
+                  ? strings.ideaPlaceholder
+                  : strings.askPlaceholder
+            }
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
             onFocus={(e) => e.target.select()}

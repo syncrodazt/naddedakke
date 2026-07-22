@@ -50,12 +50,17 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
     panToNode(questionId);
   }, [check, node.id, panToNode]);
 
+  const addIdea = useCallback(() => {
+    panToNode(useGraphStore.getState().addIdeaBranch(node.id));
+  }, [node.id, panToNode]);
+
   return (
     <NodeShell
       nodeId={node.id}
       seq={node.seq}
       label={streaming ? strings.thinking : strings.chunkLabel}
       showUnderstood
+      onAddIdea={addIdea}
     >
       <MarkdownContent
         nodeId={node.id}

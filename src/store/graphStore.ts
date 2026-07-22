@@ -29,7 +29,12 @@ type GraphActions = {
   createSession: (title: string) => Promise<string>;
   loadSession: (id: string) => Promise<boolean>;
   addChunk: (md: string) => string;
-  addWhyBranch: (parentId: string, sel: SelectionRange, intent?: 'why' | 'respond') => string;
+  addWhyBranch: (
+    parentId: string,
+    sel: SelectionRange,
+    intent?: 'why' | 'respond' | 'idea',
+  ) => string;
+  addIdeaBranch: (parentId: string) => string;
   submitQuestion: (questionId: string, questionText: string) => string;
   appendToNode: (nodeId: string, delta: string) => void;
   setNodeMd: (nodeId: string, md: string) => void;
@@ -201,6 +206,13 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       });
       set({ pendingQuestionId: questionId });
       return questionId;
+    },
+
+    // A free-form "new idea" branch off a whole node — a question node with no
+    // text highlight (a zero-width anchor keeps the branch⇄parent link without
+    // underlining the entire note).
+    addIdeaBranch(parentId) {
+      return get().addWhyBranch(parentId, { start: 0, end: 0, text: '' }, 'idea');
     },
 
     submitQuestion(questionId, questionText) {

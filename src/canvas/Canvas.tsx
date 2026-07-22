@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, type MouseEvent } from 'react';
 import {
   ReactFlow,
   Background,
@@ -15,6 +15,8 @@ import { useGraphStore } from '../store/graphStore';
 import { useTextSelection, type ActiveSelection } from './useTextSelection';
 import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
+import { NodeContextMenu, type MenuState } from './NodeContextMenu';
+import { nextLessonChunk } from '../services/lesson';
 
 type CanvasProps = {
   nodes: Node[];
@@ -27,6 +29,23 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   const setNodePosition = useGraphStore((s) => s.setNodePosition);
   const [selection, clearSelection] = useTextSelection();
   const { panToNode } = useCameraNav();
+  const [menu, setMenu] = useState<MenuState | null>(null);
+
+  const onNodeContextMenu = useCallback((e: MouseEvent, node: Node) => {
+    e.preventDefault();
+    setMenu({ x: e.clientX, y: e.clientY, nodeId: node.id });
+  }, []);
+
+  const onNewIdea = useCallback(
+    (nodeId: string) => {
+      panToNode(useGraphStore.getState().addIdeaBranch(nodeId));
+    },
+    [panToNode],
+  );
+
+  const onNextChunk = useCallback(() => {
+    void nextLessonChunk().then((chunkId) => panToNode(chunkId));
+  }, [panToNode]);
 
   // The store is the single source of truth: only position changes (drags) are
   // applied back; structural changes always originate from store actions.
@@ -58,6 +77,7 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodeContextMenu={readOnly ? undefined : onNodeContextMenu}
         nodesDraggable={!readOnly}
         fitView
         minZoom={0.1}
@@ -68,6 +88,14 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
         <Controls />
       </ReactFlow>
       {selection && !readOnly && <WhyButton selection={selection} onAct={onAct} />}
+      {menu && !readOnly && (
+        <NodeContextMenu
+          menu={menu}
+          onClose={() => setMenu(null)}
+          onNewIdea={onNewIdea}
+          onNextChunk={onNextChunk}
+        />
+      )}
     </>
   );
 }

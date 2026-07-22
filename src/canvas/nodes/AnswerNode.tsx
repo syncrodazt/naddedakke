@@ -29,6 +29,10 @@ export function AnswerNode({ data }: NodeProps<RFlowNode>) {
     [node, panToNode],
   );
 
+  const addIdea = useCallback(() => {
+    panToNode(useGraphStore.getState().addIdeaBranch(node.id));
+  }, [node.id, panToNode]);
+
   return (
     <NodeShell
       nodeId={node.id}
@@ -36,6 +40,7 @@ export function AnswerNode({ data }: NodeProps<RFlowNode>) {
       label={streaming ? strings.thinking : strings.answerLabel}
       accent="alias"
       showUnderstood
+      onAddIdea={addIdea}
     >
       <MarkdownContent
         nodeId={node.id}

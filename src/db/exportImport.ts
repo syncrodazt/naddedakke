@@ -87,7 +87,9 @@ function validateNode(v: unknown, sessionId: string): RNode {
     node.size = { width: s.width, height: s.height };
   }
   if (v.branchIntent !== undefined) {
-    if (v.branchIntent !== 'why' && v.branchIntent !== 'respond') fail(`node ${id} branchIntent`);
+    if (v.branchIntent !== 'why' && v.branchIntent !== 'respond' && v.branchIntent !== 'idea') {
+      fail(`node ${id} branchIntent`);
+    }
     node.branchIntent = v.branchIntent;
   }
   if (v.understood !== undefined) {

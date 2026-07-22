@@ -1,0 +1,28 @@
+.menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgb(18 32 46 / 0.22);
+}
+
+.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--bg);
+}
