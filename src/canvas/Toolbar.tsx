@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { useGraphStore } from '../store/graphStore';
+import { useReplayStore } from '../replay/replayStore';
 import { exportSession, validateImport } from '../db/exportImport';
 import { db } from '../db/db';
 import { strings } from '../strings';
@@ -7,6 +8,7 @@ import styles from './Toolbar.module.css';
 
 export function Toolbar() {
   const session = useGraphStore((s) => s.session);
+  const startReplay = useReplayStore((s) => s.start);
   const fileInput = useRef<HTMLInputElement>(null);
 
   function handleExport() {
@@ -36,6 +38,9 @@ export function Toolbar() {
   return (
     <div className={styles.toolbar}>
       <span className={styles.title}>{session ? session.title : strings.appTitle}</span>
+      <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
+        ▶ {strings.replay}
+      </button>
       <button type="button" className={styles.button} onClick={handleExport} disabled={!session}>
         {strings.exportSession}
       </button>

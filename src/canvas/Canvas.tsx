@@ -19,9 +19,11 @@ import { WhyButton } from './WhyButton';
 type CanvasProps = {
   nodes: Node[];
   edges: Edge[];
+  /** Replay mode: no dragging, no new branches. */
+  readOnly?: boolean;
 };
 
-export function Canvas({ nodes, edges }: CanvasProps) {
+export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   const setNodePosition = useGraphStore((s) => s.setNodePosition);
   const [selection, clearSelection] = useTextSelection();
   const { panToNode } = useCameraNav();
@@ -56,6 +58,7 @@ export function Canvas({ nodes, edges }: CanvasProps) {
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        nodesDraggable={!readOnly}
         fitView
         minZoom={0.1}
         proOptions={{ hideAttribution: false }}
@@ -64,7 +67,7 @@ export function Canvas({ nodes, edges }: CanvasProps) {
         <MiniMap pannable zoomable nodeColor="var(--grid)" maskColor="rgb(18 32 46 / 0.08)" />
         <Controls />
       </ReactFlow>
-      {selection && <WhyButton selection={selection} onAsk={onAsk} />}
+      {selection && !readOnly && <WhyButton selection={selection} onAsk={onAsk} />}
     </>
   );
 }

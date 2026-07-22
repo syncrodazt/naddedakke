@@ -44,6 +44,22 @@ body {
   background: var(--bg);
 }
 
+/* Nodes fade in as they mount — most visible during replay reveal.
+   Opacity only: React Flow positions nodes with an inline transform,
+   which a transform animation would override mid-flight. */
+.react-flow__node {
+  animation: node-in 0.35s ease;
+}
+
+@keyframes node-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .react-flow__minimap {
   border: 1px solid var(--grid);
   border-radius: 8px;

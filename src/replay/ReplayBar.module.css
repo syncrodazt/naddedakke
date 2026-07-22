@@ -1,0 +1,80 @@
+.bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 420px;
+  padding: 8px 14px;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgb(18 32 46 / 0.14);
+}
+
+.play {
+  font: inherit;
+  font-size: 15px;
+  width: 34px;
+  height: 34px;
+  color: #fff;
+  background: var(--ink);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.scrubber {
+  flex: 1;
+  accent-color: var(--branch);
+}
+
+.counter {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.speeds {
+  display: flex;
+  gap: 2px;
+}
+
+.speed,
+.speedActive {
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--grid);
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.speedActive {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.exit {
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.exit:hover {
+  color: var(--branch);
+  border-color: var(--branch);
+}
