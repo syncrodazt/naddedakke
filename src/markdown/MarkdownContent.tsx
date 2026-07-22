@@ -18,6 +18,7 @@ type MarkdownContentProps = {
   nodeId: string;
   md: string;
   highlights?: Highlight[];
+  resolvedHighlightIds?: string[]; // highlights whose question is understood → teal
   onHighlightClick?: (highlightId: string) => void;
 };
 
@@ -25,15 +26,19 @@ export const MarkdownContent = memo(function MarkdownContent({
   nodeId,
   md,
   highlights,
+  resolvedHighlightIds,
   onHighlightClick,
 }: MarkdownContentProps) {
+  const resolvedKey = (resolvedHighlightIds ?? []).join(',');
   const rehypePlugins = useMemo(
     () => [
       () => rehypeSourceOffsets(md),
-      () => rehypeHighlightMarks(highlights ?? []),
+      () => rehypeHighlightMarks(highlights ?? [], new Set(resolvedHighlightIds ?? [])),
       rehypeKatex,
     ],
-    [md, highlights],
+    // resolvedKey is a stable string form of resolvedHighlightIds for memoization.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [md, highlights, resolvedKey],
   );
 
   function handleClick(e: MouseEvent<HTMLDivElement>) {

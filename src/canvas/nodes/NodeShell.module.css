@@ -74,6 +74,31 @@
   font-variant-numeric: tabular-nums;
 }
 
+.understood {
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 999px;
+  padding: 1px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.understood[data-on] {
+  color: #fff;
+  background: var(--alias);
+  border-color: var(--alias);
+}
+
+/* Understood nodes get a calm teal frame + a subtle wash. */
+.card[data-understood] {
+  border-color: var(--alias);
+  box-shadow: 0 0 0 1px var(--alias) inset;
+}
+
 .resizeHandle {
   width: 8px;
   height: 8px;

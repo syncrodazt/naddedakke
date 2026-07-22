@@ -7,7 +7,10 @@ import type { Highlight } from '../model/types';
 // at the overlap boundaries and the overlapping piece is wrapped in
 // <mark data-highlight-id>. The markdown source itself is never mutated —
 // that would shift every stored offset.
-export function rehypeHighlightMarks(highlights: Highlight[]) {
+export function rehypeHighlightMarks(
+  highlights: Highlight[],
+  resolvedIds: Set<string> = new Set(),
+) {
   return (tree: Root) => {
     if (highlights.length === 0) return;
     visit(tree, 'element', (el: Element) => {
@@ -40,7 +43,10 @@ export function rehypeHighlightMarks(highlights: Highlight[]) {
         children.push({
           type: 'element',
           tagName: 'mark',
-          properties: { dataHighlightId: cut.id },
+          properties: {
+            dataHighlightId: cut.id,
+            className: resolvedIds.has(cut.id) ? ['resolved'] : undefined,
+          },
           children: [{ type: 'text', value: text.slice(start - segStart, cut.end - segStart) }],
         });
         cursor = cut.end;

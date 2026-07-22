@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import type { RFlowNode } from '../../store/selectors';
 import { strings } from '../../strings';
@@ -10,7 +10,16 @@ import { NodeShell } from './NodeShell';
 export function AnswerNode({ data }: NodeProps<RFlowNode>) {
   const { node } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
+  const nodes = useGraphStore((s) => s.nodes);
   const { panToNode } = useCameraNav();
+
+  const resolvedIds = useMemo(
+    () =>
+      node.content.highlights
+        .filter((h) => h.childNodeId && nodes[h.childNodeId]?.understood)
+        .map((h) => h.id),
+    [node.content.highlights, nodes],
+  );
 
   const onHighlightClick = useCallback(
     (highlightId: string) => {
@@ -26,11 +35,13 @@ export function AnswerNode({ data }: NodeProps<RFlowNode>) {
       seq={node.seq}
       label={streaming ? strings.thinking : strings.answerLabel}
       accent="alias"
+      showUnderstood
     >
       <MarkdownContent
         nodeId={node.id}
         md={node.content.md}
         highlights={node.content.highlights}
+        resolvedHighlightIds={resolvedIds}
         onHighlightClick={onHighlightClick}
       />
     </NodeShell>

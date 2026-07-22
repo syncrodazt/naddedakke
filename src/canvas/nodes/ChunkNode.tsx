@@ -12,7 +12,18 @@ import styles from './ChunkNode.module.css';
 export function ChunkNode({ data }: NodeProps<RFlowNode>) {
   const { node } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
+  const nodes = useGraphStore((s) => s.nodes);
   const { panToNode } = useCameraNav();
+
+  // Highlights whose spawned question has been marked understood — render teal
+  // (confusion resolved) instead of pink.
+  const resolvedIds = useMemo(
+    () =>
+      node.content.highlights
+        .filter((h) => h.childNodeId && nodes[h.childNodeId]?.understood)
+        .map((h) => h.id),
+    [node.content.highlights, nodes],
+  );
 
   // The Socratic comprehension-check ("> ❓ …") at the end of the chunk.
   const check = useMemo(() => findCheckRange(node.content.md), [node.content.md]);
@@ -44,11 +55,13 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
       nodeId={node.id}
       seq={node.seq}
       label={streaming ? strings.thinking : strings.chunkLabel}
+      showUnderstood
     >
       <MarkdownContent
         nodeId={node.id}
         md={node.content.md}
         highlights={node.content.highlights}
+        resolvedHighlightIds={resolvedIds}
         onHighlightClick={onHighlightClick}
       />
       {check && !streaming && !answered && (

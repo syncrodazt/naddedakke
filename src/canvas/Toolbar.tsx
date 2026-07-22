@@ -17,6 +17,7 @@ export function Toolbar() {
   const streaming = useGraphStore((s) => s.streamingNodeId !== null);
   const lessonComplete = useGraphStore((s) => s.lessonComplete);
   const startReplay = useReplayStore((s) => s.start);
+  const nodes = useGraphStore((s) => s.nodes);
   const models = useModelStore((s) => s.available);
   const selectedModel = useModelStore((s) => s.selected);
   const setModel = useModelStore((s) => s.setSelected);
@@ -43,6 +44,12 @@ export function Toolbar() {
     // Let the position updates flush to React Flow before fitting.
     window.setTimeout(() => void fitView({ duration: 500 }), 60);
   }
+
+  // Learn-mode understanding progress: understood nodes / total content nodes.
+  const learnNodes = Object.values(nodes).filter(
+    (n) => n.kind === 'chunk' || n.kind === 'question' || n.kind === 'answer',
+  );
+  const understoodCount = learnNodes.filter((n) => n.understood).length;
 
   async function refreshSessions() {
     setSessions(await db.sessions.orderBy('createdAt').toArray());
@@ -124,6 +131,11 @@ export function Toolbar() {
         <button type="button" className={styles.button} onClick={handleTidy}>
           {strings.tidy}
         </button>
+      )}
+      {session?.mode === 'learn' && learnNodes.length > 0 && (
+        <span className={styles.progress} title={strings.understoodTitle}>
+          ✓ {strings.understoodProgress} {understoodCount}/{learnNodes.length}
+        </span>
       )}
       <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
         ▶ {strings.replay}

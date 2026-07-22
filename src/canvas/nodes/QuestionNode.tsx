@@ -56,6 +56,7 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
       seq={node.seq}
       label={intent === 'respond' ? strings.yourAnswerLabel : strings.questionLabel}
       accent="branch"
+      showUnderstood
       headerExtra={
         <button type="button" className={`${styles.back} nodrag`} onClick={backToSource}>
           {strings.backToSource}

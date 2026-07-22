@@ -73,6 +73,23 @@ describe('rehypeHighlightMarks', () => {
     expect(fullText(tree)).toBe(md);
   });
 
+  it('adds the resolved class only to resolved highlight marks', () => {
+    const md = 'one two three';
+    const processor = unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkRehype)
+      .use(() => rehypeSourceOffsets(md))
+      .use(() => rehypeHighlightMarks([hl('h1', 0, 3, 'one'), hl('h2', 8, 13, 'three')], new Set(['h2'])));
+    const tree = processor.runSync(processor.parse(md)) as Root;
+    const classes: Record<string, unknown> = {};
+    visit(tree, 'element', (el: Element) => {
+      if (el.tagName === 'mark') classes[String(el.properties.dataHighlightId)] = el.properties.className;
+    });
+    expect(classes.h2).toEqual(['resolved']);
+    expect(classes.h1).toBeUndefined();
+  });
+
   it('ignores highlights outside the rendered text', () => {
     const md = 'short';
     const tree = renderTree(md, [hl('h1', 100, 120, 'nope')]);

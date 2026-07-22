@@ -38,6 +38,7 @@ type GraphActions = {
   finishStreaming: () => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   setNodeSize: (nodeId: string, size: { width: number; height: number }) => void;
+  toggleUnderstood: (nodeId: string) => void;
   tidyLayout: () => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
@@ -270,6 +271,12 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       const node = get().nodes[nodeId];
       if (!node) return;
       putNode({ ...node, size });
+    },
+
+    toggleUnderstood(nodeId) {
+      const node = get().nodes[nodeId];
+      if (!node) return;
+      putNode({ ...node, understood: !node.understood });
     },
 
     tidyLayout() {

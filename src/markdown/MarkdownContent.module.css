@@ -36,6 +36,15 @@
   background: color-mix(in srgb, var(--branch) 12%, transparent);
 }
 
+/* Resolved: the question spawned from this highlight is understood. */
+.markdown mark[data-highlight-id].resolved {
+  border-bottom-color: var(--alias);
+}
+
+.markdown mark[data-highlight-id].resolved:hover {
+  background: color-mix(in srgb, var(--alias) 12%, transparent);
+}
+
 @keyframes hl-flash {
   0%,
   100% {

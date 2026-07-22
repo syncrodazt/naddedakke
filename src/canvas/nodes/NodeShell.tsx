@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import { useGraphStore } from '../../store/graphStore';
+import { strings } from '../../strings';
 import styles from './NodeShell.module.css';
 
 type NodeShellProps = {
@@ -10,14 +11,28 @@ type NodeShellProps = {
   accent?: 'branch' | 'alias' | 'guard';
   children: ReactNode;
   headerExtra?: ReactNode;
+  // Learn-mode nodes (chunk/question/answer) get a "分かった / Got it" toggle
+  // that marks the node understood, closing the confusion→resolution loop.
+  showUnderstood?: boolean;
 };
 
 // Shared card chrome. The header is the drag handle; the body carries `nodrag`
 // so selecting text inside a node never drags it. NodeResizer lets the user
 // resize; the committed size persists through the store.
-export function NodeShell({ nodeId, seq, label, accent, children, headerExtra }: NodeShellProps) {
+export function NodeShell({
+  nodeId,
+  seq,
+  label,
+  accent,
+  children,
+  headerExtra,
+  showUnderstood,
+}: NodeShellProps) {
+  const understood = useGraphStore((s) => s.nodes[nodeId]?.understood ?? false);
+  const toggleUnderstood = useGraphStore((s) => s.toggleUnderstood);
+
   return (
-    <div className={styles.card} data-accent={accent}>
+    <div className={styles.card} data-accent={accent} data-understood={understood || undefined}>
       <NodeResizer
         minWidth={240}
         minHeight={120}
@@ -35,6 +50,18 @@ export function NodeShell({ nodeId, seq, label, accent, children, headerExtra }:
         </span>
         <span className={styles.label}>{label}</span>
         {headerExtra}
+        {showUnderstood && (
+          <button
+            type="button"
+            className={`${styles.understood} nodrag`}
+            data-on={understood || undefined}
+            title={strings.understoodTitle}
+            onClick={() => toggleUnderstood(nodeId)}
+          >
+            {understood ? '✓ ' : ''}
+            {strings.gotIt}
+          </button>
+        )}
       </div>
       <div className={`${styles.body} nodrag nowheel`}>{children}</div>
       <Handle type="source" position={Position.Right} className={styles.handle} />

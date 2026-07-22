@@ -90,6 +90,10 @@ function validateNode(v: unknown, sessionId: string): RNode {
     if (v.branchIntent !== 'why' && v.branchIntent !== 'respond') fail(`node ${id} branchIntent`);
     node.branchIntent = v.branchIntent;
   }
+  if (v.understood !== undefined) {
+    if (typeof v.understood !== 'boolean') fail(`node ${id} understood`);
+    node.understood = v.understood;
+  }
   if (v.formula !== undefined) {
     if (typeof v.formula !== 'string') fail(`node ${id} formula`);
     node.formula = v.formula;
