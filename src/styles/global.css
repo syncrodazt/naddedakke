@@ -78,3 +78,7 @@ body {
 .react-flow__edge.edge-reply .react-flow__edge-path {
   stroke: var(--branch);
 }
+
+.react-flow__edge.edge-depends .react-flow__edge-path {
+  stroke: var(--alias);
+}

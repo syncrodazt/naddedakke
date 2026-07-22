@@ -32,6 +32,8 @@ export type RNode = {
   unit?: string;
   // playground only: registered component key + serializable params
   playground?: PlaygroundRef;
+  // variable only: slider/number-input config
+  varInput?: { min: number; max: number; step: number };
 };
 
 export type PlaygroundRef = {

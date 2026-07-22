@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Highlight, REdge, RNode, Session, SessionExport } from '../model/types';
 import { newId } from '../model/ids';
+import { recomputeGraph } from '../gyakusan/engine';
 import { db } from '../db/db';
 import { flushNow, initPersistence, markDirty } from '../db/persistence';
 import {
@@ -19,6 +20,7 @@ type GraphState = {
   edges: Record<string, REdge>;
   streamingNodeId: string | null; // answer node currently receiving a stream
   pendingQuestionId: string | null; // question node showing its compose box
+  computeIssues: Record<string, string>; // gyakusan: nodeId → cycle/eval issue
 };
 
 type GraphActions = {
@@ -31,6 +33,8 @@ type GraphActions = {
   finishStreaming: () => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
+  setVariableValue: (nodeId: string, value: number) => void;
+  recompute: () => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
 };
@@ -57,12 +61,25 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
     markDirty({ edgeIds: [edge.id] });
   }
 
+  function runRecompute(): void {
+    const { nodes, edges } = get();
+    const { values, issues } = recomputeGraph(nodes, edges);
+    for (const [id, value] of Object.entries(values)) {
+      const node = nodes[id];
+      if (node?.formula !== undefined && node.value !== value) {
+        putNode({ ...node, value });
+      }
+    }
+    set({ computeIssues: issues });
+  }
+
   return {
     session: null,
     nodes: {},
     edges: {},
     streamingNodeId: null,
     pendingQuestionId: null,
+    computeIssues: {},
 
     async createSession(title) {
       const session: Session = {
@@ -91,7 +108,9 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
         edges: Object.fromEntries(edges.map((e) => [e.id, e])),
         streamingNodeId: null,
         pendingQuestionId: null,
+        computeIssues: {},
       });
+      runRecompute();
       return true;
     },
 
@@ -222,6 +241,17 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       putNode({ ...node, playground: { ...node.playground, params } });
     },
 
+    setVariableValue(nodeId, value) {
+      const node = get().nodes[nodeId];
+      if (!node || node.kind !== 'variable') return;
+      putNode({ ...node, value });
+      runRecompute();
+    },
+
+    recompute() {
+      runRecompute();
+    },
+
     setPendingQuestion(questionId) {
       set({ pendingQuestionId: questionId });
     },
@@ -233,7 +263,9 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
         edges: Object.fromEntries(payload.edges.map((e) => [e.id, e])),
         streamingNodeId: null,
         pendingQuestionId: null,
+        computeIssues: {},
       });
+      runRecompute();
       markDirty({
         session: true,
         nodeIds: payload.nodes.map((n) => n.id),

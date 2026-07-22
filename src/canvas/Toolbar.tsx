@@ -1,7 +1,10 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useReactFlow } from '@xyflow/react';
+import type { Session } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { useReplayStore } from '../replay/replayStore';
 import { exportSession, validateImport } from '../db/exportImport';
+import { fireFixture } from '../gyakusan/fireFixture';
 import { db } from '../db/db';
 import { strings } from '../strings';
 import styles from './Toolbar.module.css';
@@ -10,6 +13,34 @@ export function Toolbar() {
   const session = useGraphStore((s) => s.session);
   const startReplay = useReplayStore((s) => s.start);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const { fitView } = useReactFlow();
+
+  async function refreshSessions() {
+    setSessions(await db.sessions.orderBy('createdAt').toArray());
+  }
+
+  useEffect(() => {
+    void refreshSessions();
+  }, [session?.id, session?.title]);
+
+  async function switchSession(id: string) {
+    await useGraphStore.getState().loadSession(id);
+    void fitView({ duration: 500 });
+  }
+
+  async function openFireDemo() {
+    const existing = await db.sessions.get(fireFixture.session.id);
+    if (existing) {
+      await useGraphStore.getState().loadSession(existing.id);
+    } else {
+      // applyImport resolves after the Dexie flush, so the list refresh
+      // below is guaranteed to see the new session.
+      await useGraphStore.getState().applyImport(fireFixture);
+      await refreshSessions();
+    }
+    void fitView({ duration: 500 });
+  }
 
   function handleExport() {
     const { session, nodes, edges } = useGraphStore.getState();
@@ -37,9 +68,22 @@ export function Toolbar() {
 
   return (
     <div className={styles.toolbar}>
-      <span className={styles.title}>{session ? session.title : strings.appTitle}</span>
+      <select
+        className={styles.sessionSelect}
+        value={session?.id ?? ''}
+        onChange={(e) => void switchSession(e.target.value)}
+      >
+        {sessions.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.title || s.id}
+          </option>
+        ))}
+      </select>
       <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
         ▶ {strings.replay}
+      </button>
+      <button type="button" className={styles.button} onClick={() => void openFireDemo()}>
+        {strings.fireDemo}
       </button>
       <button type="button" className={styles.button} onClick={handleExport} disabled={!session}>
         {strings.exportSession}

@@ -20,6 +20,18 @@
   margin-right: 4px;
 }
 
+.sessionSelect {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 6px;
+  padding: 3px 6px;
+  max-width: 180px;
+}
+
 .button {
   font: inherit;
   font-size: 12px;

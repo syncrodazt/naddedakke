@@ -91,6 +91,18 @@ function validateNode(v: unknown, sessionId: string): RNode {
     if (typeof v.unit !== 'string') fail(`node ${id} unit`);
     node.unit = v.unit;
   }
+  if (v.varInput !== undefined) {
+    const vi = v.varInput;
+    if (
+      !isRecord(vi) ||
+      typeof vi.min !== 'number' ||
+      typeof vi.max !== 'number' ||
+      typeof vi.step !== 'number'
+    ) {
+      fail(`node ${id} varInput`);
+    }
+    node.varInput = { min: vi.min, max: vi.max, step: vi.step };
+  }
   if (v.playground !== undefined) {
     const pg = v.playground;
     if (!isRecord(pg) || typeof pg.key !== 'string' || !isRecord(pg.params)) {

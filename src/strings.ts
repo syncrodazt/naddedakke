@@ -18,6 +18,12 @@ export const strings = {
   chunkLabel: 'レッスン',
   playgroundLabel: 'プレイグラウンド',
   playgroundMissing: '未登録のプレイグラウンドです',
+  variableLabel: '変数',
+  derivedLabel: '計算',
+  goalLabel: 'ゴール',
+  cycleError: '循環参照',
+  computeError: '計算エラー',
+  fireDemo: 'FIRE逆算デモ',
   questionLabel: '質問',
   answerLabel: '回答',
 } as const;
