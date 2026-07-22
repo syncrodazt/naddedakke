@@ -3,42 +3,51 @@ import { LESSON_DONE_MARKER } from './claude/types';
 
 // Prompt construction is provider-agnostic: every service receives a plain
 // {system, user} pair and maps it onto its own wire format.
+//
+// Language: the tutor mirrors the learner — a Thai topic gets a Thai lesson,
+// an English question gets an English answer, and so on. Section labels in
+// the user prompt are kept in English so they don't bias the detection.
 
 export type ChatPrompt = { system: string; user: string };
 
 const TUTOR_PERSONA =
-  'あなたは第一原理から教える家庭教師です。日本語で、簡潔で正確なMarkdownで答えてください。' +
-  '数式はKaTeX記法（$...$ / $$...$$）を使ってよい。生のHTMLは書かない。';
+  'You are a tutor who teaches from first principles. ' +
+  'Always respond in the same language the learner uses — detect it from their topic or ' +
+  'question (e.g. Thai, English, Japanese) and write the entire response in that language. ' +
+  'Write concise, accurate Markdown. Math may use KaTeX notation ($...$ / $$...$$). ' +
+  'Never write raw HTML.';
 
 export function buildAnswerPrompt(req: AnswerRequest): ChatPrompt {
   return {
     system:
       `${TUTOR_PERSONA}\n` +
-      '生徒がレッスン本文の一部をハイライトして「なんで？」と質問しています。' +
-      'ハイライトされた箇所そのものを、根本の理由から説明してください。' +
-      '長さは150〜250語程度。結論を先に、導出は後に。',
+      'The learner highlighted a passage in the lesson and asked "why?" about it. ' +
+      'Explain the highlighted passage itself from first principles — conclusion first, ' +
+      'derivation after. Keep it around 150-250 words.',
     user:
-      `## これまでの文脈（レッスンの祖先チェーン）\n\n${req.contextMd || '(なし)'}\n\n` +
-      `## ハイライトされた箇所\n\n> ${req.quotedText}\n\n` +
-      `## 質問\n\n${req.question}`,
+      `## Lesson context (ancestor chain)\n\n${req.contextMd || '(none)'}\n\n` +
+      `## Highlighted passage\n\n> ${req.quotedText}\n\n` +
+      `## Question\n\n${req.question}`,
   };
 }
 
 export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
   const previous =
     req.previousChunksMd.length > 0
-      ? req.previousChunksMd.map((md, i) => `### チャンク${i + 1}\n${md}`).join('\n\n')
-      : '(まだない)';
+      ? req.previousChunksMd.map((md, i) => `### Chunk ${i + 1}\n${md}`).join('\n\n')
+      : '(none yet)';
   return {
     system:
       `${TUTOR_PERSONA}\n` +
-      'トピックを約10個の小さなチャンクに分けて、ソクラテス式に一歩ずつ教えます。' +
-      '今回は次の1チャンクだけを書いてください。全部を一度に書いてはいけません。\n' +
-      '形式: 1行目は「## タイトル」、本文は150〜250語のMarkdown。\n' +
-      `これがレッスンの最終チャンクなら、本文の後に改行して「${LESSON_DONE_MARKER}」とだけ書いた行を追加してください。`,
+      'You teach the topic Socratically, split into roughly 10 small chunks. ' +
+      'Write ONLY the next single chunk — never the whole lesson at once.\n' +
+      'Format: the first line is "## <title>", then a 150-250 word Markdown body ' +
+      "(title and body in the learner's language).\n" +
+      `If this is the final chunk of the lesson, add one extra line after the body ` +
+      `containing exactly "${LESSON_DONE_MARKER}".`,
     user:
-      `## トピック\n\n${req.topic}\n\n` +
-      `## これまでのチャンク\n\n${previous}\n\n` +
-      `チャンク${req.chunkIndex + 1}を書いてください。`,
+      `## Topic\n\n${req.topic}\n\n` +
+      `## Chunks so far\n\n${previous}\n\n` +
+      `Write chunk ${req.chunkIndex + 1}.`,
   };
 }

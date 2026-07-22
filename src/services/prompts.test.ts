@@ -13,20 +13,30 @@ describe('prompt builders', () => {
     expect(p.user).toContain('> 指数関数の性質');
     expect(p.user).toContain('why is this the case?');
     expect(p.user).toContain('72の法則');
-    expect(p.system).toContain('なんで？');
+    expect(p.system).toContain('first principles');
   });
 
   it('lesson prompt carries the topic, prior chunks, and the done marker protocol', () => {
     const p = buildLessonChunkPrompt({
       sessionId: 's',
-      topic: 'ベイズの定理',
-      previousChunksMd: ['## その1\n中身1', '## その2\n中身2'],
+      topic: 'ทฤษฎีบทของเบย์',
+      previousChunksMd: ['## Chunk A\nbody A', '## Chunk B\nbody B'],
       chunkIndex: 2,
     });
-    expect(p.user).toContain('ベイズの定理');
-    expect(p.user).toContain('中身2');
-    expect(p.user).toContain('チャンク3');
+    expect(p.user).toContain('ทฤษฎีบทของเบย์');
+    expect(p.user).toContain('body B');
+    expect(p.user).toContain('Write chunk 3');
     expect(p.system).toContain(LESSON_DONE_MARKER);
-    expect(p.system).toContain('1チャンクだけ');
+    expect(p.system).toContain('next single chunk');
+  });
+
+  it('instructs the model to mirror the learner language', () => {
+    const p = buildLessonChunkPrompt({
+      sessionId: 's',
+      topic: 'compound interest',
+      previousChunksMd: [],
+      chunkIndex: 0,
+    });
+    expect(p.system).toContain('same language');
   });
 });
