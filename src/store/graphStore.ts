@@ -30,6 +30,7 @@ type GraphActions = {
   appendToNode: (nodeId: string, delta: string) => void;
   finishStreaming: () => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
+  setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
 };
@@ -213,6 +214,12 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       const node = get().nodes[nodeId];
       if (!node) return;
       putNode({ ...node, position });
+    },
+
+    setPlaygroundParams(nodeId, params) {
+      const node = get().nodes[nodeId];
+      if (!node?.playground) return;
+      putNode({ ...node, playground: { ...node.playground, params } });
     },
 
     setPendingQuestion(questionId) {

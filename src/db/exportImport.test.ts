@@ -64,6 +64,21 @@ describe('JSON export/import round-trip', () => {
     expect(() => validateImport(bad)).toThrow(/offsets/);
   });
 
+  it('round-trips a playground node with key and params', () => {
+    const imported = validateImport(roundTrip(fixture));
+    const pg = imported.nodes.find((n) => n.kind === 'playground')!;
+    expect(pg.playground).toEqual({ key: 'compound-curve', params: { rate: 6, years: 30 } });
+  });
+
+  it('rejects non-numeric playground params', () => {
+    const bad = roundTrip(fixture) as {
+      nodes: { kind: string; playground?: { params: Record<string, unknown> } }[];
+    };
+    const pg = bad.nodes.find((n) => n.kind === 'playground')!;
+    pg.playground!.params.rate = 'six';
+    expect(() => validateImport(bad)).toThrow(/playground/);
+  });
+
   it('rejects non-objects', () => {
     expect(() => validateImport('[]')).toThrow(/invalid/);
     expect(() => validateImport(null)).toThrow(/invalid/);

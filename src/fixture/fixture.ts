@@ -101,22 +101,35 @@ answer1.content.highlights.push({
   childNodeId: question2.id,
 });
 
+// Interactive spine step: touch the curves the lesson described.
+const playground1: RNode = {
+  ...n(
+    'fx-pg-1',
+    'playground',
+    9,
+    spinePosition(4),
+    '## 触ってみよう\n\n年利と期間を動かして、複利と単利の差がどう開くか確かめよう。',
+  ),
+  playground: { key: 'compound-curve', params: { rate: 6, years: 30 } },
+};
+
 const session: Session = {
   id: SESSION_ID,
   title: '複利のきほん',
   mode: 'learn',
   createdAt: 0,
-  seqCounter: 8,
+  seqCounter: 9,
 };
 
 export const fixture: SessionExport = {
   schemaVersion: 1,
   session,
-  nodes: [chunk1, chunk2, chunk3, chunk4, question1, answer1, question2, answer2],
+  nodes: [chunk1, chunk2, chunk3, chunk4, question1, answer1, question2, answer2, playground1],
   edges: [
     e('fx-e-1', 'next', chunk1.id, chunk2.id),
     e('fx-e-2', 'next', chunk2.id, chunk3.id),
     e('fx-e-3', 'next', chunk3.id, chunk4.id),
+    e('fx-e-8', 'next', chunk4.id, playground1.id),
     e('fx-e-4', 'why', chunk2.id, question1.id),
     e('fx-e-5', 'reply', question1.id, answer1.id),
     e('fx-e-6', 'why', answer1.id, question2.id),

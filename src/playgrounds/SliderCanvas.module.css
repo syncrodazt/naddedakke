@@ -1,0 +1,46 @@
+.playground {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verdict {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--guard) 14%, transparent);
+  border-left: 3px solid var(--guard);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.canvas {
+  width: 100%;
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+}
+
+.slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slider input {
+  accent-color: var(--alias);
+}
+
+.sliderLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sliderLabel b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

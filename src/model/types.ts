@@ -30,6 +30,13 @@ export type RNode = {
   formula?: string; // mathjs expr referencing other node ids by name
   value?: number;
   unit?: string;
+  // playground only: registered component key + serializable params
+  playground?: PlaygroundRef;
+};
+
+export type PlaygroundRef = {
+  key: string; // registry key of a first-party React component
+  params: Record<string, number>;
 };
 
 export type Highlight = {

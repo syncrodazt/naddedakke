@@ -4,7 +4,7 @@ import styles from './NodeShell.module.css';
 
 type NodeShellProps = {
   label: string;
-  accent?: 'branch' | 'alias';
+  accent?: 'branch' | 'alias' | 'guard';
   children: ReactNode;
   headerExtra?: ReactNode;
 };

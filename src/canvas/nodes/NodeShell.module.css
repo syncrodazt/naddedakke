@@ -15,6 +15,10 @@
   border-color: var(--alias);
 }
 
+.card[data-accent='guard'] {
+  border-color: var(--guard);
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -36,6 +40,10 @@
 
 .card[data-accent='alias'] .header .label {
   color: var(--alias);
+}
+
+.card[data-accent='guard'] .header .label {
+  color: color-mix(in srgb, var(--guard) 60%, var(--ink));
 }
 
 .body {

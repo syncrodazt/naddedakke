@@ -91,6 +91,16 @@ function validateNode(v: unknown, sessionId: string): RNode {
     if (typeof v.unit !== 'string') fail(`node ${id} unit`);
     node.unit = v.unit;
   }
+  if (v.playground !== undefined) {
+    const pg = v.playground;
+    if (!isRecord(pg) || typeof pg.key !== 'string' || !isRecord(pg.params)) {
+      fail(`node ${id} playground`);
+    }
+    for (const [k, val] of Object.entries(pg.params)) {
+      if (typeof val !== 'number') fail(`node ${id} playground.params.${k}`);
+    }
+    node.playground = { key: pg.key, params: pg.params as Record<string, number> };
+  }
   return node;
 }
 

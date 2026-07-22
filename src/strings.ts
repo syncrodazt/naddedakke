@@ -16,6 +16,8 @@ export const strings = {
   importFailed: 'インポートに失敗しました',
   overwriteConfirm: '同じIDのセッションが既にあります。上書きしますか？',
   chunkLabel: 'レッスン',
+  playgroundLabel: 'プレイグラウンド',
+  playgroundMissing: '未登録のプレイグラウンドです',
   questionLabel: '質問',
   answerLabel: '回答',
 } as const;
