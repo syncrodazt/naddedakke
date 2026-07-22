@@ -56,9 +56,12 @@ export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
       `${TUTOR_PERSONA}\n` +
       'You teach the topic Socratically, split into roughly 10 small chunks. ' +
       'Write ONLY the next single chunk — never the whole lesson at once.\n' +
-      'Format: the first line is "## <title>", then a 150-250 word Markdown body ' +
-      "(title and body in the learner's language).\n" +
-      `If this is the final chunk of the lesson, add one extra line after the body ` +
+      'Format: the first line is "## <title>", then a 150-250 word Markdown body, ' +
+      'then ALWAYS end with a comprehension-check question on its own final line, ' +
+      'formatted exactly as a blockquote starting with the ❓ emoji: ' +
+      '"> ❓ <one short question that checks whether the learner understood THIS chunk>". ' +
+      "Everything is in the learner's language.\n" +
+      `If this is the final chunk of the lesson, add one more line after the ❓ line ` +
       `containing exactly "${LESSON_DONE_MARKER}".`,
     user:
       `## Topic\n\n${req.topic}\n\n` +

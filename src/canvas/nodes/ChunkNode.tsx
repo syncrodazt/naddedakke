@@ -1,16 +1,29 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import type { RFlowNode } from '../../store/selectors';
 import { strings } from '../../strings';
 import { MarkdownContent } from '../../markdown/MarkdownContent';
 import { useGraphStore } from '../../store/graphStore';
+import { findCheckRange } from '../../services/checkQuestion';
 import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
+import styles from './ChunkNode.module.css';
 
 export function ChunkNode({ data }: NodeProps<RFlowNode>) {
   const { node } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
   const { panToNode } = useCameraNav();
+
+  // The Socratic comprehension-check ("> ❓ …") at the end of the chunk.
+  const check = useMemo(() => findCheckRange(node.content.md), [node.content.md]);
+  // Whether the learner has already answered this check (a respond branch that
+  // anchors inside the check range).
+  const answered = useMemo(
+    () =>
+      check !== null &&
+      node.content.highlights.some((h) => h.start >= check.start && h.end <= check.end),
+    [check, node.content.highlights],
+  );
 
   const onHighlightClick = useCallback(
     (highlightId: string) => {
@@ -19,6 +32,12 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
     },
     [node, panToNode],
   );
+
+  const answerCheck = useCallback(() => {
+    if (!check) return;
+    const questionId = useGraphStore.getState().addWhyBranch(node.id, check, 'respond');
+    panToNode(questionId);
+  }, [check, node.id, panToNode]);
 
   return (
     <NodeShell
@@ -32,6 +51,11 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
         highlights={node.content.highlights}
         onHighlightClick={onHighlightClick}
       />
+      {check && !streaming && !answered && (
+        <button type="button" className={`${styles.checkButton} nodrag`} onClick={answerCheck}>
+          {strings.checkUnderstanding}
+        </button>
+      )}
     </NodeShell>
   );
 }

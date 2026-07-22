@@ -3,6 +3,7 @@ export const strings = {
   appTitle: 'なんでだっけ？',
   nande: 'なんで？',
   respond: '答える',
+  checkUnderstanding: '❓ 答えて理解を確認 / Check my understanding',
   defaultQuestion: 'why is this the case?',
   answerPlaceholder: 'あなたの答えを入力… / Type your answer… (Enter で送信)',
   yourAnswerLabel: 'あなたの答え',

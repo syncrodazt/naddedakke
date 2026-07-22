@@ -77,7 +77,8 @@ export class MockClaudeService implements TeachService {
     let md =
       `## ${req.topic} — その${n}\n\n` +
       `これはモックのレッスンチャンク${n}です。本物のレッスンは ` +
-      `\`.env.local\` に \`GEMINI_API_KEY\` を設定すると生成されます。`;
+      `\`.env.local\` に \`GEMINI_API_KEY\` を設定すると生成されます。\n\n` +
+      `> ❓ このチャンク${n}の要点を一言で言うと？`;
     if (n >= MOCK_LESSON_CHUNKS) md += `\n${LESSON_DONE_MARKER}`;
     const tokens = md.match(/\S+\s*/g) ?? [md];
     for (const token of tokens) {
