@@ -36,6 +36,7 @@ export const strings = {
   cycleError: '循環参照',
   computeError: '計算エラー',
   fireDemo: 'FIRE逆算デモ',
+  examples: '📚 例 / Examples',
   questionLabel: '質問',
   answerLabel: '回答',
 } as const;

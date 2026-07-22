@@ -4,7 +4,7 @@ import type { Session } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { useReplayStore } from '../replay/replayStore';
 import { exportSession, validateImport } from '../db/exportImport';
-import { fireFixture } from '../gyakusan/fireFixture';
+import { examples } from '../fixture/examples';
 import { nextLessonChunk, startLesson } from '../services/lesson';
 import { useModelStore } from '../store/modelStore';
 import { useCameraNav } from './useCameraNav';
@@ -64,14 +64,16 @@ export function Toolbar() {
     void fitView({ duration: 500 });
   }
 
-  async function openFireDemo() {
-    const existing = await db.sessions.get(fireFixture.session.id);
+  async function loadExample(exampleId: string) {
+    const example = examples.find((ex) => ex.id === exampleId);
+    if (!example) return;
+    const existing = await db.sessions.get(example.id);
     if (existing) {
       await useGraphStore.getState().loadSession(existing.id);
     } else {
-      // applyImport resolves after the Dexie flush, so the list refresh
-      // below is guaranteed to see the new session.
-      await useGraphStore.getState().applyImport(fireFixture);
+      // applyImport resolves after the Dexie flush, so the refresh below is
+      // guaranteed to see the new session.
+      await useGraphStore.getState().applyImport(example.data);
       await refreshSessions();
     }
     void fitView({ duration: 500 });
@@ -140,9 +142,21 @@ export function Toolbar() {
       <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
         ▶ {strings.replay}
       </button>
-      <button type="button" className={styles.button} onClick={() => void openFireDemo()}>
-        {strings.fireDemo}
-      </button>
+      <select
+        className={styles.button}
+        value=""
+        onChange={(e) => {
+          if (e.target.value) void loadExample(e.target.value);
+          e.target.value = '';
+        }}
+      >
+        <option value="">{strings.examples}</option>
+        {examples.map((ex) => (
+          <option key={ex.id} value={ex.id}>
+            {ex.label}
+          </option>
+        ))}
+      </select>
       <button type="button" className={styles.button} onClick={handleExport} disabled={!session}>
         {strings.exportSession}
       </button>
