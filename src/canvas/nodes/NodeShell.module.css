@@ -1,0 +1,51 @@
+.card {
+  width: 360px;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgb(18 32 46 / 0.06);
+  overflow: hidden;
+}
+
+.card[data-accent='branch'] {
+  border-color: var(--branch);
+}
+
+.card[data-accent='alias'] {
+  border-color: var(--alias);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 55%, var(--card));
+  border-bottom: 1px solid var(--grid);
+  cursor: grab;
+}
+
+.card[data-accent='branch'] .header .label {
+  color: var(--branch);
+}
+
+.card[data-accent='alias'] .header .label {
+  color: var(--alias);
+}
+
+.body {
+  padding: 12px 14px;
+  cursor: auto;
+}
+
+.handle {
+  width: 6px;
+  height: 6px;
+  background: var(--muted);
+  border: none;
+}

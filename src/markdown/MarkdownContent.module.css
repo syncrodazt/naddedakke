@@ -1,0 +1,33 @@
+.markdown {
+  user-select: text;
+  cursor: text;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-size: 1.05em;
+  margin: 0.4em 0;
+}
+
+.markdown blockquote {
+  margin: 0.4em 0;
+  padding: 0.1em 0.8em;
+  border-left: 3px solid var(--branch);
+  color: var(--muted);
+}
+
+.markdown code {
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
