@@ -7,7 +7,11 @@ import { NodeShell } from './NodeShell';
 export function ChunkNode({ data }: NodeProps<RFlowNode>) {
   return (
     <NodeShell label={strings.chunkLabel}>
-      <MarkdownContent md={data.node.content.md} />
+      <MarkdownContent
+        nodeId={data.node.id}
+        md={data.node.content.md}
+        highlights={data.node.content.highlights}
+      />
     </NodeShell>
   );
 }

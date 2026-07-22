@@ -25,6 +25,31 @@
   color: var(--muted);
 }
 
+.markdown mark[data-highlight-id] {
+  background: transparent;
+  color: inherit;
+  border-bottom: 2px solid var(--branch);
+  cursor: pointer;
+}
+
+.markdown mark[data-highlight-id]:hover {
+  background: color-mix(in srgb, var(--branch) 12%, transparent);
+}
+
+@keyframes hl-flash {
+  0%,
+  100% {
+    background: transparent;
+  }
+  50% {
+    background: color-mix(in srgb, var(--branch) 35%, transparent);
+  }
+}
+
+.markdown mark[data-highlight-id].flash {
+  animation: hl-flash 0.7s ease 2;
+}
+
 .markdown code {
   background: var(--bg);
   border-radius: 4px;

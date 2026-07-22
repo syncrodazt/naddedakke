@@ -7,7 +7,11 @@ import { NodeShell } from './NodeShell';
 export function AnswerNode({ data }: NodeProps<RFlowNode>) {
   return (
     <NodeShell label={strings.answerLabel} accent="alias">
-      <MarkdownContent md={data.node.content.md} />
+      <MarkdownContent
+        nodeId={data.node.id}
+        md={data.node.content.md}
+        highlights={data.node.content.highlights}
+      />
     </NodeShell>
   );
 }
