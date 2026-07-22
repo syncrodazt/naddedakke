@@ -12,6 +12,9 @@ import {
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './nodes/nodeTypes';
 import { useGraphStore } from '../store/graphStore';
+import { useTextSelection, type ActiveSelection } from './useTextSelection';
+import { useCameraNav } from './useCameraNav';
+import { WhyButton } from './WhyButton';
 
 type CanvasProps = {
   nodes: Node[];
@@ -20,6 +23,8 @@ type CanvasProps = {
 
 export function Canvas({ nodes, edges }: CanvasProps) {
   const setNodePosition = useGraphStore((s) => s.setNodePosition);
+  const [selection, clearSelection] = useTextSelection();
+  const { panToNode } = useCameraNav();
 
   // The store is the single source of truth: only position changes (drags) are
   // applied back; structural changes always originate from store actions.
@@ -34,19 +39,32 @@ export function Canvas({ nodes, edges }: CanvasProps) {
     [setNodePosition],
   );
 
+  const onAsk = useCallback(
+    (active: ActiveSelection) => {
+      const questionId = useGraphStore.getState().addWhyBranch(active.nodeId, active.sel);
+      window.getSelection()?.removeAllRanges();
+      clearSelection();
+      panToNode(questionId);
+    },
+    [clearSelection, panToNode],
+  );
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      fitView
-      minZoom={0.1}
-      proOptions={{ hideAttribution: false }}
-    >
-      <Background variant={BackgroundVariant.Lines} color="var(--grid)" gap={32} />
-      <MiniMap pannable zoomable nodeColor="var(--grid)" maskColor="rgb(18 32 46 / 0.08)" />
-      <Controls />
-    </ReactFlow>
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        fitView
+        minZoom={0.1}
+        proOptions={{ hideAttribution: false }}
+      >
+        <Background variant={BackgroundVariant.Lines} color="var(--grid)" gap={32} />
+        <MiniMap pannable zoomable nodeColor="var(--grid)" maskColor="rgb(18 32 46 / 0.08)" />
+        <Controls />
+      </ReactFlow>
+      {selection && <WhyButton selection={selection} onAsk={onAsk} />}
+    </>
   );
 }

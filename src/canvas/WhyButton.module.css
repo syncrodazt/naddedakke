@@ -1,0 +1,31 @@
+.why {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 1000;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--branch);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgb(194 24 91 / 0.35);
+  animation: why-pop 0.15s ease-out;
+}
+
+.why:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes why-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

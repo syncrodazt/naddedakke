@@ -1,0 +1,49 @@
+.back {
+  font: inherit;
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.back:hover {
+  color: var(--branch);
+}
+
+.compose {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.input {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  padding: 6px 8px;
+  resize: vertical;
+}
+
+.input:focus {
+  outline: 2px solid color-mix(in srgb, var(--branch) 40%, transparent);
+  border-color: var(--branch);
+}
+
+.send {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--branch);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
