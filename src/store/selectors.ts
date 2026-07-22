@@ -3,6 +3,8 @@ import type { REdge, RNode } from '../model/types';
 
 export type RFlowNode = Node<{ node: RNode }>;
 
+const DEFAULT_NODE_WIDTH = 360;
+
 export function toFlowNode(rnode: RNode): RFlowNode {
   return {
     id: rnode.id,
@@ -10,6 +12,13 @@ export function toFlowNode(rnode: RNode): RFlowNode {
     position: rnode.position,
     data: { node: rnode },
     dragHandle: '.drag-handle',
+    // NodeResizer controls these once the user resizes; default width keeps
+    // the card at its designed size, height stays auto until resized.
+    width: rnode.size?.width ?? DEFAULT_NODE_WIDTH,
+    height: rnode.size?.height,
+    style: rnode.size
+      ? { width: rnode.size.width, height: rnode.size.height }
+      : { width: DEFAULT_NODE_WIDTH },
   };
 }
 

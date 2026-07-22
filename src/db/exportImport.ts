@@ -79,6 +79,17 @@ function validateNode(v: unknown, sessionId: string): RNode {
       highlights: content.highlights.map((h) => validateHighlight(h, `node ${id}`)),
     },
   };
+  if (v.size !== undefined) {
+    const s = v.size;
+    if (!isRecord(s) || typeof s.width !== 'number' || typeof s.height !== 'number') {
+      fail(`node ${id} size`);
+    }
+    node.size = { width: s.width, height: s.height };
+  }
+  if (v.branchIntent !== undefined) {
+    if (v.branchIntent !== 'why' && v.branchIntent !== 'respond') fail(`node ${id} branchIntent`);
+    node.branchIntent = v.branchIntent;
+  }
   if (v.formula !== undefined) {
     if (typeof v.formula !== 'string') fail(`node ${id} formula`);
     node.formula = v.formula;

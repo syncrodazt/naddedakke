@@ -17,7 +17,7 @@ export function DerivedNode({ data }: NodeProps<RFlowNode>) {
   const issue = useGraphStore((s) => s.computeIssues[node.id]);
 
   return (
-    <NodeShell label={strings.derivedLabel} accent="alias">
+    <NodeShell nodeId={node.id} seq={node.seq} label={strings.derivedLabel} accent="alias">
       <MarkdownContent nodeId={node.id} md={node.content.md} highlights={node.content.highlights} />
       {issue !== undefined ? (
         <span className={styles.errorBadge}>

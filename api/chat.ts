@@ -12,15 +12,23 @@ export const config = { runtime: 'edge' };
 // gemini-2.5-flash can 404 for new keys). Override via GEMINI_MODEL.
 const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest';
 
-type ChatPayload = { system: string; user: string };
+type ChatPayload = { system: string; user: string; model?: string };
 
 function isChatPayload(v: unknown): v is ChatPayload {
+  if (typeof v !== 'object' || v === null) return false;
+  const o = v as Record<string, unknown>;
   return (
-    typeof v === 'object' &&
-    v !== null &&
-    typeof (v as Record<string, unknown>).system === 'string' &&
-    typeof (v as Record<string, unknown>).user === 'string'
+    typeof o.system === 'string' &&
+    typeof o.user === 'string' &&
+    (o.model === undefined || typeof o.model === 'string')
   );
+}
+
+// A client-supplied model id goes into the request URL path — allow only the
+// character set real Gemini/Gemma ids use.
+function sanitizeModel(model: string | undefined): string | null {
+  if (typeof model !== 'string') return null;
+  return /^[a-zA-Z0-9.-]{1,64}$/.test(model) ? model : null;
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -42,7 +50,7 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+  const model = sanitizeModel(payload.model) ?? process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;

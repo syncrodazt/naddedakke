@@ -20,7 +20,7 @@ export function PlaygroundNode({ data }: NodeProps<RFlowNode>) {
   const Component = entry?.component;
 
   return (
-    <NodeShell label={strings.playgroundLabel} accent="guard">
+    <NodeShell nodeId={node.id} seq={node.seq} label={strings.playgroundLabel} accent="guard">
       {node.content.md !== '' && (
         <MarkdownContent
           nodeId={node.id}

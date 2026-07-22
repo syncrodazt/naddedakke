@@ -22,6 +22,8 @@ export type RNode = {
   kind: NodeKind;
   seq: number; // global monotonic order — the replay timeline
   position: { x: number; y: number };
+  size?: { width: number; height: number }; // user-resized dimensions (optional)
+  branchIntent?: 'why' | 'respond'; // question nodes: なんで？ vs. the learner's answer
   content: {
     md: string; // markdown body
     highlights: Highlight[];

@@ -1,6 +1,12 @@
 import type { AnswerRequest, LessonChunkRequest, TeachService } from './claude/types';
-import { buildAnswerPrompt, buildLessonChunkPrompt, type ChatPrompt } from './prompts';
+import {
+  buildAnswerPrompt,
+  buildLessonChunkPrompt,
+  buildResponsePrompt,
+  type ChatPrompt,
+} from './prompts';
 import { streamSseText } from './sse';
+import { currentModel } from '../store/modelStore';
 
 // Streams from the /api/chat proxy (Vite middleware in dev, Vercel edge
 // function in production). The Gemini API key never reaches the browser.
@@ -9,7 +15,7 @@ export class GeminiService implements TeachService {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(prompt),
+      body: JSON.stringify({ ...prompt, model: currentModel() }),
       signal,
     });
     if (!res.ok || !res.body) {
@@ -20,7 +26,8 @@ export class GeminiService implements TeachService {
   }
 
   streamAnswer(req: AnswerRequest): AsyncGenerator<string> {
-    return this.streamChat(buildAnswerPrompt(req), req.signal);
+    const prompt = req.intent === 'respond' ? buildResponsePrompt(req) : buildAnswerPrompt(req);
+    return this.streamChat(prompt, req.signal);
   }
 
   streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {

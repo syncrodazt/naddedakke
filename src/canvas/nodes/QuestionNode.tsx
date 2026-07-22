@@ -11,9 +11,12 @@ import styles from './QuestionNode.module.css';
 
 export function QuestionNode({ data }: NodeProps<RFlowNode>) {
   const { node } = data;
+  const intent = node.branchIntent ?? 'why';
   const pending = useGraphStore((s) => s.pendingQuestionId === node.id);
   const { panToNode, panToHighlight } = useCameraNav();
-  const [text, setText] = useState<string>(strings.defaultQuestion);
+  // 'why' pre-fills the default question; 'respond' starts empty for the
+  // learner to write their own answer.
+  const [text, setText] = useState<string>(intent === 'why' ? strings.defaultQuestion : '');
 
   // Back-navigation: the why edge + the parent's highlight are the
   // bidirectional link — no extra state.
@@ -37,7 +40,7 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
   function submit() {
     const question = text.trim();
     if (question === '') return;
-    void askQuestion(node.id, question);
+    void askQuestion(node.id, question, intent);
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -49,7 +52,9 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
 
   return (
     <NodeShell
-      label={strings.questionLabel}
+      nodeId={node.id}
+      seq={node.seq}
+      label={intent === 'respond' ? strings.yourAnswerLabel : strings.questionLabel}
       accent="branch"
       headerExtra={
         <button type="button" className={`${styles.back} nodrag`} onClick={backToSource}>
@@ -70,7 +75,7 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
             value={text}
             autoFocus
             rows={2}
-            placeholder={strings.askPlaceholder}
+            placeholder={intent === 'respond' ? strings.answerPlaceholder : strings.askPlaceholder}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
             onFocus={(e) => e.target.select()}

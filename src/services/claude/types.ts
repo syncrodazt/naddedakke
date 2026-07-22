@@ -1,8 +1,9 @@
 export type AnswerRequest = {
   sessionId: string;
-  question: string; // the user's question text
+  question: string; // the learner's text — a "why?" question, or their own answer
   quotedText: string; // the highlighted anchor text
   contextMd: string; // ancestor chain markdown (root chunk → … → parent)
+  intent?: 'why' | 'respond'; // ask why, or submit an answer for feedback
   signal?: AbortSignal;
 };
 

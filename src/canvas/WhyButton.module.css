@@ -1,22 +1,39 @@
-.why {
+.pill {
   position: fixed;
   transform: translateX(-50%);
   z-index: 1000;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgb(18 32 46 / 0.35);
+  animation: why-pop 0.15s ease-out;
+}
+
+.why,
+.respond {
   font: inherit;
   font-size: 13px;
   font-weight: 700;
   color: #fff;
-  background: var(--branch);
   border: none;
   border-radius: 999px;
-  padding: 6px 16px;
+  padding: 5px 14px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgb(194 24 91 / 0.35);
-  animation: why-pop 0.15s ease-out;
 }
 
-.why:hover {
-  filter: brightness(1.08);
+.why {
+  background: var(--branch);
+}
+
+.respond {
+  background: var(--alias);
+}
+
+.why:hover,
+.respond:hover {
+  filter: brightness(1.12);
 }
 
 @keyframes why-pop {

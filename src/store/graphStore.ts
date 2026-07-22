@@ -28,7 +28,7 @@ type GraphActions = {
   createSession: (title: string) => Promise<string>;
   loadSession: (id: string) => Promise<boolean>;
   addChunk: (md: string) => string;
-  addWhyBranch: (parentId: string, sel: SelectionRange) => string;
+  addWhyBranch: (parentId: string, sel: SelectionRange, intent?: 'why' | 'respond') => string;
   submitQuestion: (questionId: string, questionText: string) => string;
   appendToNode: (nodeId: string, delta: string) => void;
   setNodeMd: (nodeId: string, md: string) => void;
@@ -36,6 +36,7 @@ type GraphActions = {
   setLessonComplete: (complete: boolean) => void;
   finishStreaming: () => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
+  setNodeSize: (nodeId: string, size: { width: number; height: number }) => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
   recompute: () => void;
@@ -155,7 +156,7 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       return node.id;
     },
 
-    addWhyBranch(parentId, sel) {
+    addWhyBranch(parentId, sel, intent = 'why') {
       const { session, nodes, edges } = get();
       if (!session) throw new Error('no active session');
       const parent = nodes[parentId];
@@ -178,6 +179,7 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
         kind: 'question',
         seq: nextSeq(),
         position: branchPosition(parent, depth, siblingIndex),
+        branchIntent: intent,
         content: { md: `> ${sel.text}`, highlights: [] },
       };
 
@@ -260,6 +262,12 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       const node = get().nodes[nodeId];
       if (!node) return;
       putNode({ ...node, position });
+    },
+
+    setNodeSize(nodeId, size) {
+      const node = get().nodes[nodeId];
+      if (!node) return;
+      putNode({ ...node, size });
     },
 
     setPlaygroundParams(nodeId, params) {

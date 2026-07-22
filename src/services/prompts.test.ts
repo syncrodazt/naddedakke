@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnswerPrompt, buildLessonChunkPrompt } from './prompts';
+import { buildAnswerPrompt, buildLessonChunkPrompt, buildResponsePrompt } from './prompts';
 import { LESSON_DONE_MARKER } from './claude/types';
 
 describe('prompt builders', () => {
@@ -28,6 +28,19 @@ describe('prompt builders', () => {
     expect(p.user).toContain('Write chunk 3');
     expect(p.system).toContain(LESSON_DONE_MARKER);
     expect(p.system).toContain('next single chunk');
+  });
+
+  it('response prompt frames the learner answer for feedback', () => {
+    const p = buildResponsePrompt({
+      sessionId: 's',
+      question: 'because the brain ignores quiet sounds near loud ones',
+      quotedText: 'can you think of situations where a sound is masked?',
+      contextMd: '## MP3\n\nbody',
+      intent: 'respond',
+    });
+    expect(p.user).toContain('can you think of situations');
+    expect(p.user).toContain('because the brain ignores');
+    expect(p.system).toContain('feedback');
   });
 
   it('instructs the model to mirror the learner language', () => {

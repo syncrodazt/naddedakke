@@ -8,7 +8,7 @@ import styles from './GyakusanNodes.module.css';
 export function GoalNode({ data }: NodeProps<RFlowNode>) {
   const { node } = data;
   return (
-    <NodeShell label={strings.goalLabel} accent="guard">
+    <NodeShell nodeId={node.id} seq={node.seq} label={strings.goalLabel} accent="guard">
       <MarkdownContent nodeId={node.id} md={node.content.md} highlights={node.content.highlights} />
       {node.value !== undefined && (
         <div key={node.value} className={styles.value}>

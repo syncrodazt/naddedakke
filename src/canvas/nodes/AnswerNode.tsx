@@ -21,7 +21,12 @@ export function AnswerNode({ data }: NodeProps<RFlowNode>) {
   );
 
   return (
-    <NodeShell label={streaming ? strings.thinking : strings.answerLabel} accent="alias">
+    <NodeShell
+      nodeId={node.id}
+      seq={node.seq}
+      label={streaming ? strings.thinking : strings.answerLabel}
+      accent="alias"
+    >
       <MarkdownContent
         nodeId={node.id}
         md={node.content.md}

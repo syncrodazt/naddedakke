@@ -31,6 +31,21 @@ export function buildAnswerPrompt(req: AnswerRequest): ChatPrompt {
   };
 }
 
+export function buildResponsePrompt(req: AnswerRequest): ChatPrompt {
+  return {
+    system:
+      `${TUTOR_PERSONA}\n` +
+      'The learner highlighted a prompt/question in the lesson and wrote their own ' +
+      'answer to it. Give warm, specific feedback: say what is correct, gently correct ' +
+      'what is wrong or incomplete, fill the key gap, and end with one sentence that ' +
+      'moves their understanding forward. Keep it around 120-200 words.',
+    user:
+      `## Lesson context (ancestor chain)\n\n${req.contextMd || '(none)'}\n\n` +
+      `## The prompt they answered\n\n> ${req.quotedText}\n\n` +
+      `## Their answer\n\n${req.question}`,
+  };
+}
+
 export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
   const previous =
     req.previousChunksMd.length > 0

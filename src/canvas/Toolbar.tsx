@@ -6,6 +6,7 @@ import { useReplayStore } from '../replay/replayStore';
 import { exportSession, validateImport } from '../db/exportImport';
 import { fireFixture } from '../gyakusan/fireFixture';
 import { nextLessonChunk, startLesson } from '../services/lesson';
+import { useModelStore } from '../store/modelStore';
 import { useCameraNav } from './useCameraNav';
 import { db } from '../db/db';
 import { strings } from '../strings';
@@ -16,6 +17,9 @@ export function Toolbar() {
   const streaming = useGraphStore((s) => s.streamingNodeId !== null);
   const lessonComplete = useGraphStore((s) => s.lessonComplete);
   const startReplay = useReplayStore((s) => s.start);
+  const models = useModelStore((s) => s.available);
+  const selectedModel = useModelStore((s) => s.selected);
+  const setModel = useModelStore((s) => s.setSelected);
   const fileInput = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const { fitView } = useReactFlow();
@@ -133,6 +137,20 @@ export function Toolbar() {
           e.target.value = '';
         }}
       />
+      <label className={styles.modelPicker} title={strings.modelLabel}>
+        <span className={styles.modelIcon}>🤖</span>
+        <select
+          className={styles.modelSelect}
+          value={selectedModel}
+          onChange={(e) => setModel(e.target.value)}
+        >
+          {models.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </label>
     </div>
   );
 }

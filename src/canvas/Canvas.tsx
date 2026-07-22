@@ -41,9 +41,9 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
     [setNodePosition],
   );
 
-  const onAsk = useCallback(
-    (active: ActiveSelection) => {
-      const questionId = useGraphStore.getState().addWhyBranch(active.nodeId, active.sel);
+  const onAct = useCallback(
+    (active: ActiveSelection, intent: 'why' | 'respond') => {
+      const questionId = useGraphStore.getState().addWhyBranch(active.nodeId, active.sel, intent);
       window.getSelection()?.removeAllRanges();
       clearSelection();
       panToNode(questionId);
@@ -67,7 +67,7 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
         <MiniMap pannable zoomable nodeColor="var(--grid)" maskColor="rgb(18 32 46 / 0.08)" />
         <Controls />
       </ReactFlow>
-      {selection && !readOnly && <WhyButton selection={selection} onAsk={onAsk} />}
+      {selection && !readOnly && <WhyButton selection={selection} onAct={onAct} />}
     </>
   );
 }

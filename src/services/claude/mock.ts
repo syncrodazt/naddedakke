@@ -37,6 +37,13 @@ const CANNED: { keywords: string[]; md: string }[] = [
 let roundRobin = 0;
 
 function pickAnswer(req: AnswerRequest): string {
+  if (req.intent === 'respond') {
+    return (
+      `なるほど、「${req.question}」という答えですね。よい着眼点です。\n\n` +
+      'これはモックのフィードバックです。本物のフィードバックは ' +
+      '`.env.local` に `GEMINI_API_KEY` を設定すると生成されます。'
+    );
+  }
   const haystack = `${req.quotedText} ${req.question}`.toLowerCase();
   for (const c of CANNED) {
     if (c.keywords.some((k) => haystack.includes(k.toLowerCase()))) return c.md;

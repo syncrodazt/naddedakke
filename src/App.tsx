@@ -8,6 +8,7 @@ import { visibleGraph } from './replay/visibility';
 import { fixture } from './fixture/fixture';
 import { db } from './db/db';
 import { useGraphStore } from './store/graphStore';
+import { useModelStore } from './store/modelStore';
 import { toFlowEdge, toFlowNode } from './store/selectors';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
       }
       if (!cancelled) setReady(true);
     })();
+    void useModelStore.getState().loadModels();
     return () => {
       cancelled = true;
     };

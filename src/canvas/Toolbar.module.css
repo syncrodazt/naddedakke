@@ -32,6 +32,32 @@
   max-width: 180px;
 }
 
+.modelPicker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--grid);
+}
+
+.modelIcon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.modelSelect {
+  font: inherit;
+  font-size: 12px;
+  color: var(--alias);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 6px;
+  padding: 3px 6px;
+  max-width: 200px;
+  cursor: pointer;
+}
+
 .button {
   font: inherit;
   font-size: 12px;

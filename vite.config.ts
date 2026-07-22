@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { DEFAULT_GEMINI_MODEL, isChatPayload, proxyChat } from './server/gemini.ts';
+import { DEFAULT_GEMINI_MODEL, isChatPayload, listModels, proxyChat } from './server/gemini.ts';
 
 // Dev-mode /api/chat handler — mirrors api/chat.ts (the Vercel edge function)
 // so the browser code is identical in dev and production. The GEMINI_API_KEY
@@ -10,6 +10,17 @@ function chatProxy(env: Record<string, string>): Plugin {
   return {
     name: 'nandedakke-chat-proxy',
     configureServer(server) {
+      server.middlewares.use('/api/models', (_req, res) => {
+        void (async () => {
+          res.setHeader('Content-Type', 'application/json');
+          const apiKey = env.GEMINI_API_KEY;
+          const models = apiKey ? await listModels(apiKey) : [];
+          res.end(JSON.stringify({ models }));
+        })().catch(() => {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ models: [] }));
+        });
+      });
       server.middlewares.use('/api/chat', (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405;

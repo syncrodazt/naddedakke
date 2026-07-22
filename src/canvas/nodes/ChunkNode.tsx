@@ -21,7 +21,11 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
   );
 
   return (
-    <NodeShell label={streaming ? strings.thinking : strings.chunkLabel}>
+    <NodeShell
+      nodeId={node.id}
+      seq={node.seq}
+      label={streaming ? strings.thinking : strings.chunkLabel}
+    >
       <MarkdownContent
         nodeId={node.id}
         md={node.content.md}

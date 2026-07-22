@@ -1,5 +1,6 @@
 import { useGraphStore } from '../store/graphStore';
 import { mockService, teachService } from './claude';
+import type { AnswerRequest } from './claude/types';
 import { withFallback } from './stream';
 
 /** The ancestor chain (root chunk → … → parent), NOT the whole graph. */
@@ -21,10 +22,15 @@ export function ancestorChainMd(nodeId: string): string {
 }
 
 /**
- * Finalize a pending question, create its answer node, and stream the
- * (mock) Claude reply into it. Returns the answer node id.
+ * Finalize a pending question, create its answer node, and stream the LLM
+ * reply into it. `intent` picks the prompt: 'why' explains the highlight,
+ * 'respond' gives feedback on the learner's own answer. Returns the answer id.
  */
-export async function askQuestion(questionId: string, questionText: string): Promise<string> {
+export async function askQuestion(
+  questionId: string,
+  questionText: string,
+  intent: 'why' | 'respond' = 'why',
+): Promise<string> {
   const store = useGraphStore.getState();
   const { session, nodes, edges } = store;
   if (!session) throw new Error('no active session');
@@ -36,11 +42,12 @@ export async function askQuestion(questionId: string, questionText: string): Pro
   const contextMd = parent ? ancestorChainMd(parent.id) : '';
 
   const answerId = store.submitQuestion(questionId, questionText);
-  const req = {
+  const req: AnswerRequest = {
     sessionId: session.id,
     question: questionText,
     quotedText,
     contextMd,
+    intent,
   };
   try {
     const stream = withFallback(teachService.streamAnswer(req), () =>
