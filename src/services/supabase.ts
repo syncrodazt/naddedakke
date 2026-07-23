@@ -8,8 +8,13 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 //
 // When the two env vars are absent the client is null and the whole cloud/login
 // feature stays dormant: the app runs exactly as before, purely local (Dexie).
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+//
+// The URL must be the bare project origin (https://<ref>.supabase.co). Trim
+// stray whitespace and any trailing slash so a copy-pasted "…supabase.co/"
+// doesn't become a malformed "…supabase.co//auth/v1/…" request path.
+const rawUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const url = rawUrl?.trim().replace(/\/+$/, '');
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
 
 export const isCloudEnabled = Boolean(url && anonKey);
 
