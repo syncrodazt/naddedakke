@@ -7,13 +7,13 @@ import { NodeShell } from './NodeShell';
 import styles from './GyakusanNodes.module.css';
 
 export function VariableNode({ data }: NodeProps<RFlowNode>) {
-  const { node } = data;
+  const { node, displayNum } = data;
   const setVariableValue = useGraphStore((s) => s.setVariableValue);
   const value = node.value ?? 0;
   const input = node.varInput ?? { min: 0, max: 100, step: 1 };
 
   return (
-    <NodeShell nodeId={node.id} seq={node.seq} label={strings.variableLabel}>
+    <NodeShell nodeId={node.id} displayNum={displayNum} label={strings.variableLabel}>
       <MarkdownContent nodeId={node.id} md={node.content.md} highlights={node.content.highlights} />
       <div className={styles.valueRow}>
         <input

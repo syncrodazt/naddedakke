@@ -8,7 +8,7 @@ import { playgroundRegistry } from '../../playgrounds/registry';
 import { NodeShell } from './NodeShell';
 
 export function PlaygroundNode({ data }: NodeProps<RFlowNode>) {
-  const { node } = data;
+  const { node, displayNum } = data;
   const setPlaygroundParams = useGraphStore((s) => s.setPlaygroundParams);
 
   const onParamsChange = useCallback(
@@ -20,7 +20,12 @@ export function PlaygroundNode({ data }: NodeProps<RFlowNode>) {
   const Component = entry?.component;
 
   return (
-    <NodeShell nodeId={node.id} seq={node.seq} label={strings.playgroundLabel} accent="guard">
+    <NodeShell
+      nodeId={node.id}
+      displayNum={displayNum}
+      label={strings.playgroundLabel}
+      accent="guard"
+    >
       {node.content.md !== '' && (
         <MarkdownContent
           nodeId={node.id}

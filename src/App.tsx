@@ -39,12 +39,24 @@ function App() {
     };
   }, []);
 
+  // Rank each node 1..N by seq so the visible #N badge stays contiguous even
+  // after deletes (seq itself never renumbers). Computed over ALL nodes so a
+  // node keeps the same number during replay.
+  const rankMap = useMemo(() => {
+    const m = new Map<string, number>();
+    Object.values(nodes)
+      .sort((a, b) => a.seq - b.seq)
+      .forEach((n, i) => m.set(n.id, i + 1));
+    return m;
+  }, [nodes]);
+
   const flowNodes = useMemo(() => {
+    const toFlow = (n: (typeof nodes)[string]) => toFlowNode(n, rankMap.get(n.id) ?? 0);
     const all = Object.values(nodes);
-    if (!replayActive) return all.map(toFlowNode);
+    if (!replayActive) return all.map(toFlow);
     const { nodeIds } = visibleGraph(nodes, edges, replayCursor);
-    return all.filter((n) => nodeIds.has(n.id)).map(toFlowNode);
-  }, [nodes, edges, replayActive, replayCursor]);
+    return all.filter((n) => nodeIds.has(n.id)).map(toFlow);
+  }, [nodes, edges, replayActive, replayCursor, rankMap]);
 
   const flowEdges = useMemo(() => {
     const all = Object.values(edges);

@@ -8,7 +8,7 @@ import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
 
 export function AnswerNode({ data }: NodeProps<RFlowNode>) {
-  const { node } = data;
+  const { node, displayNum } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
   const nodes = useGraphStore((s) => s.nodes);
   const { panToNode } = useCameraNav();
@@ -36,7 +36,7 @@ export function AnswerNode({ data }: NodeProps<RFlowNode>) {
   return (
     <NodeShell
       nodeId={node.id}
-      seq={node.seq}
+      displayNum={displayNum}
       label={streaming ? strings.thinking : strings.answerLabel}
       accent="alias"
       showUnderstood

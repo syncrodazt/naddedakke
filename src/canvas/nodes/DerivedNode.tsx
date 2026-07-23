@@ -13,11 +13,11 @@ function formatValue(value: number): string {
 }
 
 export function DerivedNode({ data }: NodeProps<RFlowNode>) {
-  const { node } = data;
+  const { node, displayNum } = data;
   const issue = useGraphStore((s) => s.computeIssues[node.id]);
 
   return (
-    <NodeShell nodeId={node.id} seq={node.seq} label={strings.derivedLabel} accent="alias">
+    <NodeShell nodeId={node.id} displayNum={displayNum} label={strings.derivedLabel} accent="alias">
       <MarkdownContent nodeId={node.id} md={node.content.md} highlights={node.content.highlights} />
       {issue !== undefined ? (
         <span className={styles.errorBadge}>

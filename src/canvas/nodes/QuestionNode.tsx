@@ -10,7 +10,7 @@ import { NodeShell } from './NodeShell';
 import styles from './QuestionNode.module.css';
 
 export function QuestionNode({ data }: NodeProps<RFlowNode>) {
-  const { node } = data;
+  const { node, displayNum } = data;
   const intent = node.branchIntent ?? 'why';
   const pending = useGraphStore((s) => s.pendingQuestionId === node.id);
   const { panToNode, panToHighlight } = useCameraNav();
@@ -58,7 +58,7 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
   return (
     <NodeShell
       nodeId={node.id}
-      seq={node.seq}
+      displayNum={displayNum}
       label={
         intent === 'respond'
           ? strings.yourAnswerLabel

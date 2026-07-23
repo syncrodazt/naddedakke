@@ -26,3 +26,11 @@
 .item:hover {
   background: var(--bg);
 }
+
+.danger {
+  color: var(--branch);
+}
+
+.danger:hover {
+  background: color-mix(in srgb, var(--branch) 10%, var(--bg));
+}

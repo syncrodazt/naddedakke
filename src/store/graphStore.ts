@@ -4,6 +4,7 @@ import { newId } from '../model/ids';
 import { recomputeGraph } from '../gyakusan/engine';
 import { db } from '../db/db';
 import { flushNow, initPersistence, markDirty } from '../db/persistence';
+import { collectSubtree } from './subtree';
 import {
   answerPosition,
   branchDepth,
@@ -35,6 +36,7 @@ type GraphActions = {
     intent?: 'why' | 'respond' | 'idea',
   ) => string;
   addIdeaBranch: (parentId: string) => string;
+  deleteNode: (nodeId: string) => void;
   submitQuestion: (questionId: string, questionText: string) => string;
   appendToNode: (nodeId: string, delta: string) => void;
   setNodeMd: (nodeId: string, md: string) => void;
@@ -213,6 +215,58 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
     // underlining the entire note).
     addIdeaBranch(parentId) {
       return get().addWhyBranch(parentId, { start: 0, end: 0, text: '' }, 'idea');
+    },
+
+    // Remove a node and its whole branch subtree (its question→answer chain and
+    // any deeper branches). Edges touching a removed node go too, and the parent
+    // node's highlight that anchored this branch is cleaned up. seq is NOT
+    // decremented — the chronological counter never rewinds (spec invariant);
+    // only the visible #N badge renumbers, because it shows rank among current
+    // nodes (see App.tsx).
+    deleteNode(nodeId) {
+      const { nodes, edges } = get();
+      if (!nodes[nodeId]) return;
+
+      const doomed = collectSubtree(nodeId, edges);
+      const doomedEdgeIds = Object.values(edges)
+        .filter((e) => doomed.has(e.source) || doomed.has(e.target))
+        .map((e) => e.id);
+
+      const nextNodes = { ...nodes };
+      const parentUpdates: RNode[] = [];
+      for (const n of Object.values(nodes)) {
+        if (doomed.has(n.id)) continue;
+        const highlights = n.content.highlights;
+        if (highlights.some((h) => h.childNodeId && doomed.has(h.childNodeId))) {
+          const updated: RNode = {
+            ...n,
+            content: {
+              ...n.content,
+              highlights: highlights.filter((h) => !(h.childNodeId && doomed.has(h.childNodeId))),
+            },
+          };
+          nextNodes[n.id] = updated;
+          parentUpdates.push(updated);
+        }
+      }
+      for (const id of doomed) delete nextNodes[id];
+
+      const nextEdges = { ...edges };
+      for (const id of doomedEdgeIds) delete nextEdges[id];
+
+      set((s) => ({
+        nodes: nextNodes,
+        edges: nextEdges,
+        pendingQuestionId:
+          s.pendingQuestionId && doomed.has(s.pendingQuestionId) ? null : s.pendingQuestionId,
+        streamingNodeId:
+          s.streamingNodeId && doomed.has(s.streamingNodeId) ? null : s.streamingNodeId,
+      }));
+      markDirty({
+        nodeIds: parentUpdates.map((n) => n.id),
+        deletedNodeIds: [...doomed],
+        deletedEdgeIds: doomedEdgeIds,
+      });
     },
 
     submitQuestion(questionId, questionText) {

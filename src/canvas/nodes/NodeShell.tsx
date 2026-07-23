@@ -6,7 +6,7 @@ import styles from './NodeShell.module.css';
 
 type NodeShellProps = {
   nodeId: string;
-  seq: number;
+  displayNum: number; // contiguous rank shown in the #N badge (renumbers on delete)
   label: string;
   accent?: 'branch' | 'alias' | 'guard';
   children: ReactNode;
@@ -23,7 +23,7 @@ type NodeShellProps = {
 // resize; the committed size persists through the store.
 export function NodeShell({
   nodeId,
-  seq,
+  displayNum,
   label,
   accent,
   children,
@@ -59,7 +59,7 @@ export function NodeShell({
       <div className={styles.card} data-accent={accent} data-understood={understood || undefined}>
         <div className={`${styles.header} drag-handle`}>
           <span className={styles.seq} title="chronological order">
-            #{seq}
+            #{displayNum}
           </span>
           <span className={styles.label}>{label}</span>
           {headerExtra}

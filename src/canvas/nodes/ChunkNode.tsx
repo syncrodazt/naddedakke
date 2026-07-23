@@ -10,7 +10,7 @@ import { NodeShell } from './NodeShell';
 import styles from './ChunkNode.module.css';
 
 export function ChunkNode({ data }: NodeProps<RFlowNode>) {
-  const { node } = data;
+  const { node, displayNum } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
   const nodes = useGraphStore((s) => s.nodes);
   const { panToNode } = useCameraNav();
@@ -57,7 +57,7 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
   return (
     <NodeShell
       nodeId={node.id}
-      seq={node.seq}
+      displayNum={displayNum}
       label={streaming ? strings.thinking : strings.chunkLabel}
       showUnderstood
       onAddIdea={addIdea}

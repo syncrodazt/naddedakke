@@ -14,6 +14,11 @@ export const strings = {
   ideaPlaceholder: '「もし〜だったら？」など、自分の問いを入力… / Your own question or idea…',
   newIdea: '💡 自分の問い / Ask your own',
   nextChunkMenu: '→ 次のチャンク / Next chunk',
+  regenerate: '↻ 再生成 / Regenerate',
+  deleteNode: '🗑 削除 / Delete',
+  deleteConfirmOne: 'このノードを削除しますか？ / Delete this node?',
+  deleteConfirmMany: (n: number) =>
+    `このノードと${n - 1}個の子ノードを削除しますか？ / Delete this node and ${n - 1} descendant(s)?`,
   backToSource: '↩ 元のテキストへ',
   askPlaceholder: '質問を入力… (Enter で送信)',
   send: '送信',

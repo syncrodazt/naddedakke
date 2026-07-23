@@ -17,6 +17,7 @@ import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
 import { NodeContextMenu, type MenuState } from './NodeContextMenu';
 import { nextLessonChunk } from '../services/lesson';
+import { reprompt } from '../services/reprompt';
 
 type CanvasProps = {
   nodes: Node[];
@@ -46,6 +47,14 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   const onNextChunk = useCallback(() => {
     void nextLessonChunk().then((chunkId) => panToNode(chunkId));
   }, [panToNode]);
+
+  const onRegenerate = useCallback((nodeId: string) => {
+    void reprompt(nodeId);
+  }, []);
+
+  const onDelete = useCallback((nodeId: string) => {
+    useGraphStore.getState().deleteNode(nodeId);
+  }, []);
 
   // The store is the single source of truth: only position changes (drags) are
   // applied back; structural changes always originate from store actions.
@@ -94,6 +103,8 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
           onClose={() => setMenu(null)}
           onNewIdea={onNewIdea}
           onNextChunk={onNextChunk}
+          onRegenerate={onRegenerate}
+          onDelete={onDelete}
         />
       )}
     </>
