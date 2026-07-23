@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/authStore';
 import { useCameraNav } from './useCameraNav';
 import { AuthPanel } from './AuthPanel';
 import { db } from '../db/db';
+import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
 import { strings } from '../strings';
 import styles from './Toolbar.module.css';
 
@@ -31,7 +32,7 @@ export function Toolbar() {
   const { panToNode } = useCameraNav();
 
   async function handleNewLesson() {
-    const topic = window.prompt(strings.topicPrompt)?.trim();
+    const topic = (await promptDialog(strings.topicPrompt, '', strings.topicPlaceholder))?.trim();
     if (!topic) return;
     const chunkId = await startLesson(topic);
     await refreshSessions();
@@ -100,10 +101,12 @@ export function Toolbar() {
     try {
       const payload = validateImport(JSON.parse(await file.text()));
       const existing = await db.sessions.get(payload.session.id);
-      if (existing && !window.confirm(strings.overwriteConfirm)) return;
+      if (existing && !(await confirmDialog(strings.overwriteConfirm))) return;
       await useGraphStore.getState().applyImport(payload);
     } catch (err) {
-      window.alert(`${strings.importFailed}: ${err instanceof Error ? err.message : String(err)}`);
+      await alertDialog(
+        `${strings.importFailed}: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 

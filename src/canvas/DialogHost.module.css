@@ -1,0 +1,85 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(18 32 46 / 0.28);
+}
+
+.card {
+  width: min(420px, calc(100vw - 40px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(18 32 46 / 0.3);
+}
+
+.message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.input {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--alias);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ok,
+.danger,
+.cancel {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+
+.ok {
+  color: #fff;
+  background: var(--alias);
+  border: 1px solid var(--alias);
+}
+
+.danger {
+  color: #fff;
+  background: var(--branch);
+  border: 1px solid var(--branch);
+}
+
+.cancel {
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+}
+
+.cancel:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}

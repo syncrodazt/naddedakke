@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useGraphStore } from '../store/graphStore';
 import { collectSubtree } from '../store/subtree';
+import { confirmDialog } from '../store/uiStore';
 import { strings } from '../strings';
 import styles from './NodeContextMenu.module.css';
 
@@ -54,8 +55,11 @@ export function NodeContextMenu({
   function handleDelete() {
     const count = collectSubtree(menu.nodeId, edges).size;
     const message = count > 1 ? strings.deleteConfirmMany(count) : strings.deleteConfirmOne;
-    if (window.confirm(message)) onDelete(menu.nodeId);
+    const nodeId = menu.nodeId;
     onClose();
+    void confirmDialog(message, true).then((ok) => {
+      if (ok) onDelete(nodeId);
+    });
   }
 
   return createPortal(

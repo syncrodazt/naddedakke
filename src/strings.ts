@@ -26,6 +26,7 @@ export const strings = {
   modelLabel: '使用中のモデル / Model',
   newLesson: '新しいレッスン',
   topicPrompt: '何を学びたい？（トピックを入力）',
+  topicPlaceholder: '例: MP3の仕組み / How MP3 works …',
   nextChunk: '次へ',
   tidy: '⤢ 整列 / Tidy',
   replay: 'リプレイ',
@@ -48,6 +49,11 @@ export const strings = {
   examples: '📚 例 / Examples',
   questionLabel: '質問',
   answerLabel: '回答',
+  // In-page dialog buttons
+  dialogOk: 'OK',
+  dialogCancel: 'キャンセル / Cancel',
+  dialogSubmit: '送信 / Submit',
+  dialogClose: '閉じる / Close',
   // Cloud login / sync
   cloudTitle: 'ログイン / Sign in to sync',
   cloudSynced: 'クラウド同期中 / Synced to cloud',

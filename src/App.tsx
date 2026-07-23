@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { Canvas } from './canvas/Canvas';
 import { Toolbar } from './canvas/Toolbar';
+import { DialogHost } from './canvas/DialogHost';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
 import { visibleGraph } from './replay/visibility';
@@ -72,6 +73,7 @@ function App() {
       <Toolbar />
       <Canvas nodes={flowNodes} edges={flowEdges} readOnly={replayActive} />
       {replayActive && <ReplayBar />}
+      <DialogHost />
     </ReactFlowProvider>
   );
 }
