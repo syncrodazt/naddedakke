@@ -7,13 +7,22 @@ import type { REdge, RNode, Session } from '../model/types';
 
 const FLUSH_DELAY_MS = 300;
 
-type Snapshot = {
+export type Snapshot = {
   session: Session | null;
   nodes: Record<string, RNode>;
   edges: Record<string, REdge>;
 };
 
 let getSnapshot: (() => Snapshot) | null = null;
+
+// Fires after every successful Dexie flush with the current snapshot. Cloud
+// sync (optional, only when logged in) hooks in here so persistence stays
+// decoupled from Supabase — this module knows nothing about the cloud.
+let onFlushed: ((snapshot: Snapshot) => void) | null = null;
+
+export function setFlushListener(fn: ((snapshot: Snapshot) => void) | null): void {
+  onFlushed = fn;
+}
 
 const dirty = {
   session: false,
@@ -88,6 +97,8 @@ export async function flushNow(): Promise<void> {
     if (nodeDeletes.length) await db.nodes.bulkDelete(nodeDeletes);
     if (edgeDeletes.length) await db.edges.bulkDelete(edgeDeletes);
   });
+
+  onFlushed?.(snap);
 }
 
 if (typeof window !== 'undefined') {

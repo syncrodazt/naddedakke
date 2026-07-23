@@ -9,6 +9,7 @@ import { fixture } from './fixture/fixture';
 import { db } from './db/db';
 import { useGraphStore } from './store/graphStore';
 import { useModelStore } from './store/modelStore';
+import { useAuthStore } from './store/authStore';
 import { toFlowEdge, toFlowNode } from './store/selectors';
 
 function App() {
@@ -31,6 +32,8 @@ function App() {
       if (!cancelled) setReady(true);
     })();
     void useModelStore.getState().loadModels();
+    // Wire up cloud login/sync (a no-op unless Supabase env vars are set).
+    useAuthStore.getState().init();
     return () => {
       cancelled = true;
     };

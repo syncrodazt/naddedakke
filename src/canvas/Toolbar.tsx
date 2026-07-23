@@ -7,7 +7,9 @@ import { exportSession, validateImport } from '../db/exportImport';
 import { examples } from '../fixture/examples';
 import { nextLessonChunk, startLesson } from '../services/lesson';
 import { useModelStore } from '../store/modelStore';
+import { useAuthStore } from '../store/authStore';
 import { useCameraNav } from './useCameraNav';
+import { AuthPanel } from './AuthPanel';
 import { db } from '../db/db';
 import { strings } from '../strings';
 import styles from './Toolbar.module.css';
@@ -21,6 +23,8 @@ export function Toolbar() {
   const models = useModelStore((s) => s.available);
   const selectedModel = useModelStore((s) => s.selected);
   const setModel = useModelStore((s) => s.setSelected);
+  // A cloud login pulls other devices' sessions into Dexie; refresh the list.
+  const syncNonce = useAuthStore((s) => s.syncNonce);
   const fileInput = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const { fitView } = useReactFlow();
@@ -57,7 +61,7 @@ export function Toolbar() {
 
   useEffect(() => {
     void refreshSessions();
-  }, [session?.id, session?.title]);
+  }, [session?.id, session?.title, syncNonce]);
 
   async function switchSession(id: string) {
     await useGraphStore.getState().loadSession(id);
@@ -188,6 +192,7 @@ export function Toolbar() {
           ))}
         </select>
       </label>
+      <AuthPanel />
     </div>
   );
 }

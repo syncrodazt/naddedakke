@@ -43,4 +43,12 @@ export const strings = {
   examples: '📚 例 / Examples',
   questionLabel: '質問',
   answerLabel: '回答',
+  // Cloud login / sync
+  cloudTitle: 'ログイン / Sign in to sync',
+  cloudSynced: 'クラウド同期中 / Synced to cloud',
+  signIn: 'ログイン',
+  signUp: '新規登録',
+  signOut: 'ログアウト',
+  emailPlaceholder: 'メール / Email',
+  passwordPlaceholder: 'パスワード / Password',
 } as const;
