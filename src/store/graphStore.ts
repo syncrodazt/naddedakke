@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Highlight, REdge, RNode, Session, SessionExport } from '../model/types';
 import { newId } from '../model/ids';
 import { recomputeGraph } from '../gyakusan/engine';
+import { reanchorHighlights } from '../markdown/reanchor';
 import { db } from '../db/db';
 import { flushNow, initPersistence, markDirty } from '../db/persistence';
 import { collectSubtree } from './subtree';
@@ -41,6 +42,7 @@ type GraphActions = {
   submitQuestion: (questionId: string, questionText: string) => string;
   appendToNode: (nodeId: string, delta: string) => void;
   setNodeMd: (nodeId: string, md: string) => void;
+  reanchorNodeHighlights: (nodeId: string) => void;
   setStreamingNode: (nodeId: string | null) => void;
   setLessonComplete: (complete: boolean) => void;
   finishStreaming: () => void;
@@ -314,6 +316,19 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       const node = get().nodes[nodeId];
       if (!node) return;
       putNode({ ...node, content: { ...node.content, md } });
+    },
+
+    // Re-point this node's highlights at their quoted text. Call after the
+    // node's markdown has been replaced (Regenerate) — the stored offsets refer
+    // to the old text and would otherwise underline whatever now sits at those
+    // character positions.
+    reanchorNodeHighlights(nodeId) {
+      const node = get().nodes[nodeId];
+      if (!node || node.content.highlights.length === 0) return;
+      const highlights = reanchorHighlights(node.content.md, node.content.highlights);
+      const changed = highlights.some((h, i) => h !== node.content.highlights[i]);
+      if (!changed) return;
+      putNode({ ...node, content: { ...node.content, highlights } });
     },
 
     setStreamingNode(nodeId) {

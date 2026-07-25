@@ -44,6 +44,10 @@ async function regenerateAnswer(answerId: string): Promise<void> {
   };
 
   store.setNodeMd(answerId, '');
+  // Park the existing highlights while the replacement streams in, so stale
+  // offsets don't underline random words mid-stream. They are re-anchored to
+  // their quoted text once the new markdown is complete.
+  store.reanchorNodeHighlights(answerId);
   store.setStreamingNode(answerId);
   try {
     const stream = withFallback(teachService.streamAnswer(req), () =>
@@ -54,6 +58,7 @@ async function regenerateAnswer(answerId: string): Promise<void> {
     }
   } finally {
     useGraphStore.getState().finishStreaming();
+    useGraphStore.getState().reanchorNodeHighlights(answerId);
   }
 }
 
@@ -77,6 +82,8 @@ async function regenerateChunk(chunkId: string): Promise<void> {
   };
 
   store.setNodeMd(chunkId, '');
+  // See regenerateAnswer: park the highlights, re-anchor once the text settles.
+  store.reanchorNodeHighlights(chunkId);
   store.setStreamingNode(chunkId);
   store.setLessonComplete(false);
   try {
@@ -96,6 +103,8 @@ async function regenerateChunk(chunkId: string): Promise<void> {
     useGraphStore.getState().setNodeMd(chunkId, stripped);
     useGraphStore.getState().setLessonComplete(true);
   }
+  // Re-anchor last, so it runs against the final text (marker already stripped).
+  useGraphStore.getState().reanchorNodeHighlights(chunkId);
 }
 
 /** Regenerate a node's model output in place. No-op for other node kinds. */

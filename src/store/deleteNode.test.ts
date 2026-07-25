@@ -101,3 +101,41 @@ describe('deleteNode', () => {
     expect(useGraphStore.getState().pendingQuestionId).toBeNull();
   });
 });
+
+describe('reanchorNodeHighlights', () => {
+  beforeEach(resetAll);
+
+  it('re-points a highlight after the node markdown is regenerated', async () => {
+    const store = useGraphStore.getState();
+    await store.createSession('t');
+    const chunk = store.addChunk('the sky scatters blue light');
+    const q = store.addWhyBranch(chunk, { start: 8, end: 16, text: 'scatters' });
+
+    // Regenerate rewrites the markdown; the stored offsets now refer to text
+    // that is no longer there.
+    useGraphStore.getState().setNodeMd(chunk, 'air molecules make sunlight scatters sideways');
+    const stale = useGraphStore.getState().nodes[chunk]!;
+    expect(stale.content.md.slice(8, 16)).not.toBe('scatters'); // silently wrong
+
+    useGraphStore.getState().reanchorNodeHighlights(chunk);
+    const fixed = useGraphStore.getState().nodes[chunk]!;
+    const h = fixed.content.highlights[0]!;
+    expect(fixed.content.md.slice(h.start, h.end)).toBe('scatters');
+    expect(h.childNodeId).toBe(q); // still linked to its question node
+  });
+
+  it('keeps the branch anchored when the quote is gone from the new text', async () => {
+    const store = useGraphStore.getState();
+    await store.createSession('t');
+    const chunk = store.addChunk('the sky scatters blue light');
+    const q = store.addWhyBranch(chunk, { start: 8, end: 16, text: 'scatters' });
+
+    useGraphStore.getState().setNodeMd(chunk, 'a completely rewritten lesson chunk');
+    useGraphStore.getState().reanchorNodeHighlights(chunk);
+
+    const h = useGraphStore.getState().nodes[chunk]!.content.highlights[0]!;
+    expect(h.start).toBe(h.end); // zero width — draws no underline
+    expect(h.childNodeId).toBe(q); // but the branch link survives
+    expect(useGraphStore.getState().nodes[q]).toBeDefined();
+  });
+});
