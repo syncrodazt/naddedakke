@@ -17,11 +17,15 @@ import { currentModel } from '../store/modelStore';
 // Streams from the /api/chat proxy (Vite middleware in dev, Vercel edge
 // function in production). The Gemini API key never reaches the browser.
 export class GeminiService implements TeachService {
-  private async *streamChat(prompt: ChatPrompt, signal?: AbortSignal): AsyncGenerator<string> {
+  private async *streamChat(
+    prompt: ChatPrompt,
+    signal?: AbortSignal,
+    opts: { json?: boolean; noThinking?: boolean } = {},
+  ): AsyncGenerator<string> {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...prompt, model: currentModel() }),
+      body: JSON.stringify({ ...prompt, ...opts, model: currentModel() }),
       signal,
     });
     if (!res.ok || !res.body) {
@@ -42,7 +46,13 @@ export class GeminiService implements TeachService {
 
   async decomposeGoal(req: GoalPlanRequest): Promise<string> {
     let out = '';
-    for await (const delta of this.streamChat(buildGoalPlanPrompt(req), req.signal)) out += delta;
+    // Structured output, and no thinking: we want a parseable object, not
+    // deliberation that eats the token budget and returns empty text.
+    const stream = this.streamChat(buildGoalPlanPrompt(req), req.signal, {
+      json: true,
+      noThinking: true,
+    });
+    for await (const delta of stream) out += delta;
     return out;
   }
 }

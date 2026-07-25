@@ -28,8 +28,13 @@ describe('extractJson', () => {
     expect(extractJson('Sure! {"a":1} hope that helps')).toBe('{"a":1}');
   });
 
-  it('rejects a reply with no object at all', () => {
-    expect(() => extractJson('I cannot help with that')).toThrow(/JSON object/);
+  it('quotes a non-JSON reply so the failure is diagnosable', () => {
+    expect(() => extractJson('I cannot help with that')).toThrow(/It said: I cannot help/);
+  });
+
+  it('names an empty reply for what it is', () => {
+    // The thinking-budget failure mode: the call succeeds but the text is blank.
+    expect(() => extractJson('   ')).toThrow(/empty response/);
   });
 });
 

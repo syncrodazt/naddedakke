@@ -12,7 +12,18 @@ export const config = { runtime: 'edge' };
 // gemini-2.5-flash can 404 for new keys). Override via GEMINI_MODEL.
 const DEFAULT_GEMINI_MODEL = 'gemini-flash-latest';
 
-type ChatPayload = { system: string; user: string; model?: string };
+type ChatPayload = {
+  system: string;
+  user: string;
+  model?: string;
+  json?: boolean;
+  noThinking?: boolean;
+};
+
+// Thinking tokens are billed against maxOutputTokens, so a budget sized for the
+// answer alone comes back EMPTY once the model deliberates — the text parts are
+// simply absent. 2048 was low enough to hit that on a JSON request.
+const MAX_OUTPUT_TOKENS = 8192;
 
 function isChatPayload(v: unknown): v is ChatPayload {
   if (typeof v !== 'object' || v === null) return false;
@@ -20,7 +31,9 @@ function isChatPayload(v: unknown): v is ChatPayload {
   return (
     typeof o.system === 'string' &&
     typeof o.user === 'string' &&
-    (o.model === undefined || typeof o.model === 'string')
+    (o.model === undefined || typeof o.model === 'string') &&
+    (o.json === undefined || typeof o.json === 'boolean') &&
+    (o.noThinking === undefined || typeof o.noThinking === 'boolean')
   );
 }
 
@@ -54,15 +67,30 @@ export default async function handler(req: Request): Promise<Response> {
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/` +
     `${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: payload.system }] },
-      contents: [{ role: 'user', parts: [{ text: payload.user }] }],
-      generationConfig: { maxOutputTokens: 2048 },
-    }),
-  });
+  const generationConfig = (withOptional: boolean): object => {
+    const base: Record<string, unknown> = { maxOutputTokens: MAX_OUTPUT_TOKENS };
+    if (!withOptional) return base;
+    if (payload.json) base.responseMimeType = 'application/json';
+    if (payload.noThinking) base.thinkingConfig = { thinkingBudget: 0 };
+    return base;
+  };
+
+  const send = (withOptional: boolean): Promise<Response> =>
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: payload.system }] },
+        contents: [{ role: 'user', parts: [{ text: payload.user }] }],
+        generationConfig: generationConfig(withOptional),
+      }),
+    });
+
+  const wantsOptional = Boolean(payload.json || payload.noThinking);
+  let upstream = await send(wantsOptional);
+  // Models that don't understand responseMimeType/thinkingConfig reject the
+  // whole request; drop the optional hints and ask again plainly.
+  if (wantsOptional && upstream.status === 400) upstream = await send(false);
 
   return new Response(upstream.body, {
     status: upstream.status,

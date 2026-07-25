@@ -87,7 +87,17 @@ export function extractJson(raw: string): string {
   const body = fenced?.[1] ?? raw;
   const start = body.indexOf('{');
   const end = body.lastIndexOf('}');
-  if (start === -1 || end <= start) fail('the model did not return a JSON object');
+  if (start === -1 || end <= start) {
+    // Quote what actually came back. "did not return a JSON object" on its own
+    // is unactionable — an empty reply (the model spent its whole token budget
+    // thinking) and a refusal look identical to the reader otherwise.
+    const shown = raw.trim();
+    fail(
+      shown === ''
+        ? 'the model returned an empty response'
+        : `the model did not return a JSON object. It said: ${shown.slice(0, 200)}`,
+    );
+  }
   return body.slice(start, end + 1);
 }
 
