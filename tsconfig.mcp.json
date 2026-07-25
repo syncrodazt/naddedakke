@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Emitted for `node mcp/dist/index.js`. rootDir spans src/ because the
+       server imports the app's model types — type-only, so nothing from src/
+       is actually emitted. */
+    "rootDir": ".",
+    "outDir": "mcp/dist",
+    "noEmit": false
+  },
+  "include": ["mcp/**/*.ts"],
+  "exclude": ["mcp/dist", "mcp/**/*.test.ts"]
+}

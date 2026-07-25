@@ -9,10 +9,13 @@
     "test": "vitest run",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:mcp": "tsc -p tsconfig.mcp.json",
+    "mcp": "node mcp/dist/mcp/index.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@supabase/supabase-js": "^2.110.8",
     "@xyflow/react": "^12.11.2",
     "dexie": "^4.4.4",
@@ -25,6 +28,7 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "unist-util-visit": "^5.1.0",
+    "zod": "^4.4.3",
     "zundo": "^2.3.0",
     "zustand": "^5.0.14"
   },

@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage'] },
+  { ignores: ['dist', 'mcp/dist', 'node_modules', 'coverage'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -20,7 +20,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['server/**/*.ts', 'api/**/*.ts', 'vite.config.ts'],
+    files: ['server/**/*.ts', 'api/**/*.ts', 'mcp/**/*.ts', 'vite.config.ts'],
     languageOptions: {
       globals: globals.node,
     },
