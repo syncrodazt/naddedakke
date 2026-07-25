@@ -8,12 +8,13 @@ export type RFlowNode = Node<{ node: RNode; displayNum: number }>;
 
 const DEFAULT_NODE_WIDTH = 360;
 
-export function toFlowNode(rnode: RNode, displayNum: number): RFlowNode {
+export function toFlowNode(rnode: RNode, displayNum: number, selected = false): RFlowNode {
   return {
     id: rnode.id,
     type: rnode.kind,
     position: rnode.position,
     data: { node: rnode, displayNum },
+    selected,
     dragHandle: '.drag-handle',
     // NodeResizer controls these once the user resizes; default width keeps
     // the card at its designed size, height stays auto until resized.

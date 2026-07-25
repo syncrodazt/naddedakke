@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useGraphStore } from '../store/graphStore';
 import { collectSubtree } from '../store/subtree';
 import { confirmDialog } from '../store/uiStore';
-import { strings } from '../strings';
+import { useStrings } from '../i18n';
 import styles from './NodeContextMenu.module.css';
 
 export type MenuState = { x: number; y: number; nodeId: string };
@@ -27,6 +27,7 @@ export function NodeContextMenu({
   onRegenerate,
   onDelete,
 }: NodeContextMenuProps) {
+  const strings = useStrings();
   const session = useGraphStore((s) => s.session);
   const lessonComplete = useGraphStore((s) => s.lessonComplete);
   const streaming = useGraphStore((s) => s.streamingNodeId !== null);
@@ -47,8 +48,9 @@ export function NodeContextMenu({
   }, [onClose]);
 
   if (!node) return null;
-  const isLearnContent =
-    node.kind === 'chunk' || node.kind === 'question' || node.kind === 'answer';
+  // Every node kind can be branched from and marked understood — gyakusan
+  // notebooks use the same system as learn notebooks.
+  const isLearnContent = node.kind !== 'video';
   const canAdvance = session?.mode === 'learn' && !lessonComplete && !streaming;
   const canRegenerate = (node.kind === 'chunk' || node.kind === 'answer') && !streaming;
 

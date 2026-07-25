@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isCloudEnabled } from '../services/supabase';
 import { initCloudSync, setCurrentUser, syncOnLogin } from '../services/cloudSync';
+import { getStrings } from '../i18n';
 
 type AuthState = {
   enabled: boolean; // cloud configured (env vars present)
@@ -84,9 +85,7 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
     // If email confirmation is enabled in the Supabase project, no session is
     // returned until the user clicks the link in their inbox.
     if (!data.session) {
-      set({
-        info: 'メールを確認してアカウントを有効化してください / Check your email to confirm.',
-      });
+      set({ info: getStrings().confirmEmailInfo });
     }
   },
 

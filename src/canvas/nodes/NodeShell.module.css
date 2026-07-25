@@ -6,28 +6,52 @@
   height: 100%;
 }
 
+/* Miro-ish card: hairline border, soft lifted shadow, no heavy chrome. Depth
+   comes from the shadow, and accents are a thin coloured top rule rather than a
+   full outline — so a dense canvas stays calm. Only shadow/border transition;
+   never width/height, which would lag behind a live resize drag. */
 .card {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--card);
-  border: 1px solid var(--grid);
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgb(18 32 46 / 0.06);
+  border: 1px solid color-mix(in srgb, var(--grid) 75%, transparent);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 2px rgb(18 32 46 / 0.05),
+    0 4px 14px rgb(18 32 46 / 0.07);
   overflow: hidden;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.card[data-accent='branch'] {
-  border-color: var(--branch);
+.wrap:hover .card {
+  box-shadow:
+    0 1px 2px rgb(18 32 46 / 0.06),
+    0 8px 22px rgb(18 32 46 / 0.11);
 }
 
-.card[data-accent='alias'] {
+/* Selected: a crisp accent ring, the way a Miro frame reads when picked up. */
+.wrap[data-selected] .card {
   border-color: var(--alias);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--alias) 30%, transparent),
+    0 8px 22px rgb(18 32 46 / 0.13);
 }
 
-.card[data-accent='guard'] {
-  border-color: var(--guard);
+/* Accent = a 3px colour rule on the header edge, not a full coloured outline. */
+.card[data-accent='branch'] .header {
+  box-shadow: inset 0 3px 0 var(--branch);
+}
+
+.card[data-accent='alias'] .header {
+  box-shadow: inset 0 3px 0 var(--alias);
+}
+
+.card[data-accent='guard'] .header {
+  box-shadow: inset 0 3px 0 var(--guard);
 }
 
 .header {
@@ -98,28 +122,9 @@
   border-color: var(--alias);
 }
 
-/* Understood nodes get a calm teal frame + a subtle wash. */
+/* Understood nodes get a calm teal frame. */
 .card[data-understood] {
-  border-color: var(--alias);
-  box-shadow: 0 0 0 1px var(--alias) inset;
-}
-
-/* Bigger, easier-to-grab resize handles + grabbable edges. */
-.resizeHandle {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  background: var(--muted);
-  border: 2px solid var(--card);
-}
-
-.resizeLine {
-  border-width: 3px;
-  border-color: transparent;
-}
-
-.resizeLine:hover {
-  border-color: color-mix(in srgb, var(--alias) 55%, transparent);
+  border-color: color-mix(in srgb, var(--alias) 65%, transparent);
 }
 
 /* "+" branch-a-new-idea button — hidden until the card is hovered. */
@@ -151,9 +156,14 @@
   filter: brightness(1.1);
 }
 
+/* Edges anchor here, but we don't support hand-drawn connections — so the dots
+   stay invisible rather than speckling every card. */
 .handle {
-  width: 6px;
-  height: 6px;
-  background: var(--muted);
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
   border: none;
+  opacity: 0;
 }

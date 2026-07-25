@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import { useGraphStore } from '../../store/graphStore';
-import { strings } from '../../strings';
+import { useStrings } from '../../i18n';
 import styles from './NodeShell.module.css';
 
 type NodeShellProps = {
   nodeId: string;
   displayNum: number; // contiguous rank shown in the #N badge (renumbers on delete)
   label: string;
+  // React Flow's selection state — resize handles show only on the selected
+  // node (Miro-style), so an idle canvas stays clean.
+  selected?: boolean;
   accent?: 'branch' | 'alias' | 'guard';
   children: ReactNode;
   headerExtra?: ReactNode;
@@ -25,32 +28,37 @@ export function NodeShell({
   nodeId,
   displayNum,
   label,
+  selected,
   accent,
   children,
   headerExtra,
   showUnderstood,
   onAddIdea,
 }: NodeShellProps) {
+  const strings = useStrings();
   const understood = useGraphStore((s) => s.nodes[nodeId]?.understood ?? false);
   const toggleUnderstood = useGraphStore((s) => s.toggleUnderstood);
 
   return (
     // The wrapper is unclipped so the hover "+" can poke below; the card clips.
-    <div className={styles.wrap}>
+    <div className={styles.wrap} data-selected={selected || undefined}>
       <NodeResizer
         minWidth={240}
         minHeight={120}
-        color="var(--muted)"
-        // Inline styles beat React Flow's own control CSS (higher specificity),
-        // so the handles are actually big enough to grab easily.
+        // Handles appear only while this node is selected. No `color` prop —
+        // React Flow applies it after our styles and would repaint the invisible
+        // grab lines a solid colour.
+        isVisible={selected}
         handleStyle={{
-          width: 14,
-          height: 14,
-          borderRadius: 4,
-          background: 'var(--muted)',
-          border: '2px solid var(--card)',
+          width: 10,
+          height: 10,
+          borderRadius: '50%',
+          background: 'var(--card)',
+          border: '1.5px solid var(--alias)',
+          boxShadow: '0 1px 3px rgb(18 32 46 / 0.25)',
         }}
-        lineStyle={{ borderWidth: 4, borderColor: 'transparent' }}
+        // A wide, invisible grab zone along each edge: easy to hit, nothing to see.
+        lineStyle={{ borderWidth: 6, borderColor: 'transparent' }}
         onResizeEnd={(_e, p) =>
           useGraphStore.getState().setNodeSize(nodeId, { width: p.width, height: p.height })
         }

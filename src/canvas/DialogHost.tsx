@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useUIStore, type Dialog } from '../store/uiStore';
-import { strings } from '../strings';
+import { useStrings } from '../i18n';
 import styles from './DialogHost.module.css';
 
 // Renders the active in-page dialog (alert / confirm / prompt). Mounted once.
@@ -15,6 +15,7 @@ export function DialogHost() {
 }
 
 function DialogView({ dialog }: { dialog: Dialog }) {
+  const strings = useStrings();
   const [text, setText] = useState(dialog.kind === 'prompt' ? dialog.defaultValue : '');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const okRef = useRef<HTMLButtonElement>(null);

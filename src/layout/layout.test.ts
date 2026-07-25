@@ -125,3 +125,51 @@ describe('computeLayout (tidy)', () => {
     expect(p.q3.x).toBe(p.c1.x + BRANCH_INDENT_X); // sibling of q1
   });
 });
+
+describe('computeLayout — gyakusan dependency graphs', () => {
+  // v1, v2 (variables) → d1 (derived) → g1 (goal), plus a disconnected note.
+  const nodes = byId([
+    node('v1', 'variable', 0, 0, 1),
+    node('v2', 'variable', 0, 0, 2),
+    node('d1', 'derived', 0, 0, 3),
+    node('g1', 'goal', 0, 0, 4),
+    node('note', 'chunk', 0, 0, 5),
+  ]);
+  const edges = edgesById([
+    edge('e1', 'depends', 'v1', 'd1'),
+    edge('e2', 'depends', 'v2', 'd1'),
+    edge('e3', 'depends', 'd1', 'g1'),
+  ]);
+
+  it('lays dependencies out in left-to-right layers', () => {
+    const p = computeLayout(nodes, edges);
+    // Sources share the first column; each hop moves one column right.
+    expect(p.v1.x).toBe(p.v2.x);
+    expect(p.d1.x).toBeGreaterThan(p.v1.x);
+    expect(p.g1.x).toBeGreaterThan(p.d1.x);
+  });
+
+  it('stacks same-layer nodes vertically without overlap', () => {
+    const p = computeLayout(nodes, edges);
+    expect(p.v1.y).toBe(SPINE_Y);
+    expect(p.v2.y).toBeGreaterThan(p.v1.y);
+  });
+
+  it('parks nodes with no depends edges in a trailing column', () => {
+    const p = computeLayout(nodes, edges);
+    expect(p.note.x).toBeGreaterThan(p.g1.x);
+  });
+
+  it('packs a question branched off a gyakusan node below it', () => {
+    const withBranch = {
+      ...nodes,
+      q1: node('q1', 'question', 0, 0, 6),
+    };
+    const withBranchEdges = { ...edges, e4: edge('e4', 'why', 'v1', 'q1') };
+    const p = computeLayout(withBranch, withBranchEdges);
+    expect(p.q1.x).toBe(p.v1.x + BRANCH_INDENT_X);
+    expect(p.q1.y).toBeGreaterThan(p.v1.y);
+    // v2 shifts down past the branch instead of colliding with it.
+    expect(p.v2.y).toBeGreaterThan(p.q1.y);
+  });
+});

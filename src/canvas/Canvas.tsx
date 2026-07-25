@@ -16,6 +16,7 @@ import { useTextSelection, type ActiveSelection } from './useTextSelection';
 import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
 import { NodeContextMenu, type MenuState } from './NodeContextMenu';
+import { useSelectionStore } from './selectionStore';
 import { nextLessonChunk } from '../services/lesson';
 import { reprompt } from '../services/reprompt';
 
@@ -56,13 +57,18 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
     useGraphStore.getState().deleteNode(nodeId);
   }, []);
 
-  // The store is the single source of truth: only position changes (drags) are
-  // applied back; structural changes always originate from store actions.
+  // The store is the single source of truth: only position changes (drags) and
+  // selection are applied back; structural changes always originate from store
+  // actions. Selection must be captured explicitly — React Flow is controlled
+  // here, so a dropped 'select' change would leave nodes permanently unselected.
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const { setSelected } = useSelectionStore.getState();
       for (const change of changes) {
         if (change.type === 'position' && change.position) {
           setNodePosition(change.id, change.position);
+        } else if (change.type === 'select') {
+          setSelected(change.id, change.selected);
         }
       }
     },

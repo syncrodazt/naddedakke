@@ -3,6 +3,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { Canvas } from './canvas/Canvas';
 import { Toolbar } from './canvas/Toolbar';
 import { DialogHost } from './canvas/DialogHost';
+import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
 import { useRevealStore } from './replay/revealStore';
@@ -23,6 +24,7 @@ function App() {
   const revealActive = useRevealStore((s) => s.active);
   const revealBaseSeq = useRevealStore((s) => s.baseSeq);
   const revealCount = useRevealStore((s) => s.count);
+  const selectedIds = useSelectionStore((s) => s.selected);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,11 +67,12 @@ function App() {
   }, [nodes, edges, replayActive, replayCursor, revealActive, revealBaseSeq, revealCount]);
 
   const flowNodes = useMemo(() => {
-    const toFlow = (n: (typeof nodes)[string]) => toFlowNode(n, rankMap.get(n.id) ?? 0);
+    const toFlow = (n: (typeof nodes)[string]) =>
+      toFlowNode(n, rankMap.get(n.id) ?? 0, selectedIds.has(n.id));
     const all = Object.values(nodes);
     if (!visible) return all.map(toFlow);
     return all.filter((n) => visible.nodeIds.has(n.id)).map(toFlow);
-  }, [nodes, visible, rankMap]);
+  }, [nodes, visible, rankMap, selectedIds]);
 
   const flowEdges = useMemo(() => {
     const all = Object.values(edges);

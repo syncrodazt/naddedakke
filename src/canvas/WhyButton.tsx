@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { strings } from '../strings';
+import { useStrings } from '../i18n';
 import type { ActiveSelection } from './useTextSelection';
 import styles from './WhyButton.module.css';
 
@@ -11,6 +11,7 @@ type WhyButtonProps = {
 // Medium-style floating pill above the current text selection, with two
 // actions: なんで？ (ask why) and 答える (submit your own answer for feedback).
 export function WhyButton({ selection, onAct }: WhyButtonProps) {
+  const strings = useStrings();
   const { rect } = selection;
   return createPortal(
     <div className={styles.pill} style={{ top: rect.top - 44, left: rect.left + rect.width / 2 }}>

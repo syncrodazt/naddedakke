@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import type { RFlowNode } from '../../store/selectors';
-import { strings } from '../../strings';
+import { useStrings } from '../../i18n';
 import { MarkdownContent } from '../../markdown/MarkdownContent';
 import { useGraphStore } from '../../store/graphStore';
 import { findCheckRange } from '../../services/checkQuestion';
@@ -9,7 +9,8 @@ import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
 import styles from './ChunkNode.module.css';
 
-export function ChunkNode({ data }: NodeProps<RFlowNode>) {
+export function ChunkNode({ data, selected }: NodeProps<RFlowNode>) {
+  const strings = useStrings();
   const { node, displayNum } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
   const nodes = useGraphStore((s) => s.nodes);
@@ -58,6 +59,7 @@ export function ChunkNode({ data }: NodeProps<RFlowNode>) {
     <NodeShell
       nodeId={node.id}
       displayNum={displayNum}
+      selected={selected}
       label={streaming ? strings.thinking : strings.chunkLabel}
       showUnderstood
       onAddIdea={addIdea}

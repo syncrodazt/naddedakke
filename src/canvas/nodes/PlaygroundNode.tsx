@@ -1,13 +1,14 @@
 import { useCallback } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import type { RFlowNode } from '../../store/selectors';
-import { strings } from '../../strings';
+import { useStrings } from '../../i18n';
 import { MarkdownContent } from '../../markdown/MarkdownContent';
 import { useGraphStore } from '../../store/graphStore';
 import { playgroundRegistry } from '../../playgrounds/registry';
 import { NodeShell } from './NodeShell';
 
-export function PlaygroundNode({ data }: NodeProps<RFlowNode>) {
+export function PlaygroundNode({ data, selected }: NodeProps<RFlowNode>) {
+  const strings = useStrings();
   const { node, displayNum } = data;
   const setPlaygroundParams = useGraphStore((s) => s.setPlaygroundParams);
 
@@ -23,6 +24,7 @@ export function PlaygroundNode({ data }: NodeProps<RFlowNode>) {
     <NodeShell
       nodeId={node.id}
       displayNum={displayNum}
+      selected={selected}
       label={strings.playgroundLabel}
       accent="guard"
     >

@@ -14,10 +14,11 @@ import { useCameraNav } from './useCameraNav';
 import { AuthPanel } from './AuthPanel';
 import { db } from '../db/db';
 import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
-import { strings } from '../strings';
+import { LANGS, useLangStore, useStrings, type Lang } from '../i18n';
 import styles from './Toolbar.module.css';
 
 export function Toolbar() {
+  const strings = useStrings();
   const session = useGraphStore((s) => s.session);
   const streaming = useGraphStore((s) => s.streamingNodeId !== null);
   const lessonComplete = useGraphStore((s) => s.lessonComplete);
@@ -26,6 +27,8 @@ export function Toolbar() {
   const models = useModelStore((s) => s.available);
   const selectedModel = useModelStore((s) => s.selected);
   const setModel = useModelStore((s) => s.setSelected);
+  const lang = useLangStore((s) => s.lang);
+  const setLang = useLangStore((s) => s.setLang);
   // A cloud login pulls other devices' sessions into Dexie; refresh the list.
   const syncNonce = useAuthStore((s) => s.syncNonce);
   // Re-learn progressive-reveal state.
@@ -64,9 +67,10 @@ export function Toolbar() {
     window.setTimeout(() => void fitView({ duration: 500 }), 60);
   }
 
-  // Learn-mode understanding progress: understood nodes / total content nodes.
+  // Understanding progress: understood nodes / total content nodes. Counts
+  // gyakusan nodes too — the 分かった loop is the same system in every notebook.
   const learnNodes = Object.values(nodes).filter(
-    (n) => n.kind === 'chunk' || n.kind === 'question' || n.kind === 'answer',
+    (n) => n.kind !== 'playground' && n.kind !== 'video',
   );
   const understoodCount = learnNodes.filter((n) => n.understood).length;
 
@@ -224,12 +228,12 @@ export function Toolbar() {
           {strings.nextChunk} →
         </button>
       )}
-      {session?.mode === 'learn' && (
+      {session && (
         <button type="button" className={styles.button} onClick={handleTidy}>
           {strings.tidy}
         </button>
       )}
-      {session?.mode === 'learn' && learnNodes.length > 0 && (
+      {learnNodes.length > 0 && (
         <span className={styles.progress} title={strings.understoodTitle}>
           ✓ {strings.understoodProgress} {understoodCount}/{learnNodes.length}
         </span>
@@ -262,6 +266,18 @@ export function Toolbar() {
           e.target.value = '';
         }}
       />
+      <span className={styles.langSwitch} title={strings.languageLabel}>
+        {LANGS.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            className={l.id === lang ? styles.langOn : styles.lang}
+            onClick={() => setLang(l.id as Lang)}
+          >
+            {l.label}
+          </button>
+        ))}
+      </span>
       <label className={styles.modelPicker} title={strings.modelLabel}>
         <span className={styles.modelIcon}>🤖</span>
         <select

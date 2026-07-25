@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useGraphStore } from '../store/graphStore';
 import { useCameraNav } from '../canvas/useCameraNav';
-import { strings } from '../strings';
+import { useStrings } from '../i18n';
 import { BEAT_MS, useReplayStore, type ReplaySpeed } from './replayStore';
 import { sortedBySeq } from './visibility';
 import styles from './ReplayBar.module.css';
@@ -9,6 +9,7 @@ import styles from './ReplayBar.module.css';
 const SPEEDS: ReplaySpeed[] = [0.5, 1, 2];
 
 export function ReplayBar() {
+  const strings = useStrings();
   const { playing, cursor, speed, exit, setPlaying, setCursor, setSpeed } = useReplayStore();
   const nodes = useGraphStore((s) => s.nodes);
   const { panToNode } = useCameraNav();

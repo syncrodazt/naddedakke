@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { strings } from '../strings';
+import { useStrings } from '../i18n';
 import styles from './AuthPanel.module.css';
 
 // Login / signup control for the toolbar. Renders nothing when the cloud is not
 // configured (no Supabase env vars) — the app stays purely local in that case.
 export function AuthPanel() {
+  const strings = useStrings();
   const enabled = useAuthStore((s) => s.enabled);
   const user = useAuthStore((s) => s.user);
   const busy = useAuthStore((s) => s.busy);

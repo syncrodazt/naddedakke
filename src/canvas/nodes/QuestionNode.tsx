@@ -1,7 +1,7 @@
 import { useCallback, useState, type KeyboardEvent } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import type { RFlowNode } from '../../store/selectors';
-import { strings } from '../../strings';
+import { useStrings } from '../../i18n';
 import { MarkdownContent } from '../../markdown/MarkdownContent';
 import { useGraphStore } from '../../store/graphStore';
 import { useCameraNav } from '../useCameraNav';
@@ -9,7 +9,8 @@ import { askQuestion } from '../../services/ask';
 import { NodeShell } from './NodeShell';
 import styles from './QuestionNode.module.css';
 
-export function QuestionNode({ data }: NodeProps<RFlowNode>) {
+export function QuestionNode({ data, selected }: NodeProps<RFlowNode>) {
+  const strings = useStrings();
   const { node, displayNum } = data;
   const intent = node.branchIntent ?? 'why';
   const pending = useGraphStore((s) => s.pendingQuestionId === node.id);
@@ -59,6 +60,7 @@ export function QuestionNode({ data }: NodeProps<RFlowNode>) {
     <NodeShell
       nodeId={node.id}
       displayNum={displayNum}
+      selected={selected}
       label={
         intent === 'respond'
           ? strings.yourAnswerLabel
