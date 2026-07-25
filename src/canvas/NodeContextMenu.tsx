@@ -57,7 +57,7 @@ export function NodeContextMenu({
     const message = count > 1 ? strings.deleteConfirmMany(count) : strings.deleteConfirmOne;
     const nodeId = menu.nodeId;
     onClose();
-    void confirmDialog(message, true).then((ok) => {
+    void confirmDialog(message, { danger: true }).then((ok) => {
       if (ok) onDelete(nodeId);
     });
   }

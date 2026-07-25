@@ -3,6 +3,8 @@ import { useReactFlow } from '@xyflow/react';
 import type { Session } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { useReplayStore } from '../replay/replayStore';
+import { useRevealStore } from '../replay/revealStore';
+import { sortedBySeq } from '../replay/visibility';
 import { exportSession, validateImport } from '../db/exportImport';
 import { examples } from '../fixture/examples';
 import { nextLessonChunk, startLesson } from '../services/lesson';
@@ -26,10 +28,22 @@ export function Toolbar() {
   const setModel = useModelStore((s) => s.setSelected);
   // A cloud login pulls other devices' sessions into Dexie; refresh the list.
   const syncNonce = useAuthStore((s) => s.syncNonce);
+  // Re-learn progressive-reveal state.
+  const revealActive = useRevealStore((s) => s.active);
+  const revealCount = useRevealStore((s) => s.count);
+  const revealBaseSeq = useRevealStore((s) => s.baseSeq);
   const fileInput = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const { fitView } = useReactFlow();
   const { panToNode } = useCameraNav();
+
+  // Built-in examples not yet loaded as sessions (once loaded they live in the
+  // Sessions group instead — so the single dropdown never shows a duplicate).
+  const unloadedExamples = examples.filter((ex) => !sessions.some((s) => s.id === ex.id));
+  // Original nodes for the reveal counter (nodes present when reveal began).
+  const revealTotal = revealActive
+    ? Object.values(nodes).filter((n) => n.seq <= revealBaseSeq).length
+    : 0;
 
   async function handleNewLesson() {
     const topic = (await promptDialog(strings.topicPrompt, '', strings.topicPlaceholder))?.trim();
@@ -64,7 +78,15 @@ export function Toolbar() {
     void refreshSessions();
   }, [session?.id, session?.title, syncNonce]);
 
+  // The single project dropdown routes to a saved session or a fresh example.
+  async function handleSelect(value: string) {
+    if (!value) return;
+    if (sessions.some((s) => s.id === value)) await switchSession(value);
+    else await loadExample(value);
+  }
+
   async function switchSession(id: string) {
+    useRevealStore.getState().showAll();
     await useGraphStore.getState().loadSession(id);
     void fitView({ duration: 500 });
   }
@@ -72,6 +94,7 @@ export function Toolbar() {
   async function loadExample(exampleId: string) {
     const example = examples.find((ex) => ex.id === exampleId);
     if (!example) return;
+    useRevealStore.getState().showAll();
     const existing = await db.sessions.get(example.id);
     if (existing) {
       await useGraphStore.getState().loadSession(existing.id);
@@ -82,6 +105,33 @@ export function Toolbar() {
       await refreshSessions();
     }
     void fitView({ duration: 500 });
+  }
+
+  // Re-learn: ask whether to show the whole graph or reveal from the first node.
+  async function handleRelearn() {
+    if (!session) return;
+    const fromFirst = await confirmDialog(strings.relearnPrompt, {
+      okLabel: strings.relearnFromFirst,
+      cancelLabel: strings.relearnShowAll,
+    });
+    if (!fromFirst) {
+      useRevealStore.getState().showAll();
+      void fitView({ duration: 500 });
+      return;
+    }
+    useRevealStore.getState().begin(session.seqCounter);
+    const first = sortedBySeq(useGraphStore.getState().nodes)[0];
+    if (first) window.setTimeout(() => panToNode(first.id), 60);
+  }
+
+  function handleRevealNext() {
+    const base = useRevealStore.getState().baseSeq;
+    const original = sortedBySeq(useGraphStore.getState().nodes).filter((n) => n.seq <= base);
+    const count = useRevealStore.getState().count;
+    if (count >= original.length) return;
+    useRevealStore.getState().next();
+    const newly = original[count]; // 0-based index `count` = the newly revealed node
+    if (newly) panToNode(newly.id);
   }
 
   function handleExport() {
@@ -115,17 +165,55 @@ export function Toolbar() {
       <select
         className={styles.sessionSelect}
         value={session?.id ?? ''}
-        onChange={(e) => void switchSession(e.target.value)}
+        onChange={(e) => void handleSelect(e.target.value)}
       >
-        {sessions.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.title || s.id}
-          </option>
-        ))}
+        <optgroup label={strings.sessionsGroup}>
+          {sessions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.title || s.id}
+            </option>
+          ))}
+        </optgroup>
+        {unloadedExamples.length > 0 && (
+          <optgroup label={strings.examplesGroup}>
+            {unloadedExamples.map((ex) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <button type="button" className={styles.button} onClick={() => void handleNewLesson()}>
         ＋ {strings.newLesson}
       </button>
+      {session && !revealActive && (
+        <button type="button" className={styles.button} onClick={() => void handleRelearn()}>
+          {strings.relearn}
+        </button>
+      )}
+      {revealActive && (
+        <>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={handleRevealNext}
+            disabled={revealCount >= revealTotal}
+          >
+            {strings.revealNext} {Math.min(revealCount, revealTotal)}/{revealTotal}
+          </button>
+          <button
+            type="button"
+            className={styles.button}
+            onClick={() => {
+              useRevealStore.getState().showAll();
+              void fitView({ duration: 500 });
+            }}
+          >
+            {strings.revealShowAll}
+          </button>
+        </>
+      )}
       {session?.mode === 'learn' && !lessonComplete && (
         <button
           type="button"
@@ -146,24 +234,17 @@ export function Toolbar() {
           ✓ {strings.understoodProgress} {understoodCount}/{learnNodes.length}
         </span>
       )}
-      <button type="button" className={styles.button} onClick={startReplay} disabled={!session}>
+      <button
+        type="button"
+        className={styles.button}
+        onClick={() => {
+          useRevealStore.getState().showAll();
+          startReplay();
+        }}
+        disabled={!session}
+      >
         ▶ {strings.replay}
       </button>
-      <select
-        className={styles.button}
-        value=""
-        onChange={(e) => {
-          if (e.target.value) void loadExample(e.target.value);
-          e.target.value = '';
-        }}
-      >
-        <option value="">{strings.examples}</option>
-        {examples.map((ex) => (
-          <option key={ex.id} value={ex.id}>
-            {ex.label}
-          </option>
-        ))}
-      </select>
       <button type="button" className={styles.button} onClick={handleExport} disabled={!session}>
         {strings.exportSession}
       </button>

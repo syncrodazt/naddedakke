@@ -22,3 +22,28 @@ export function visibleGraph(
   );
   return { nodeIds, edgeIds };
 }
+
+// Interactive re-learn reveal: show the first `count` original nodes (seq <=
+// baseSeq, in seq order) plus everything created since reveal began (seq >
+// baseSeq — the learner's fresh branches). `originalTotal` is how many original
+// nodes exist, so the UI knows when everything is revealed.
+export function revealVisible(
+  nodes: Record<string, RNode>,
+  edges: Record<string, REdge>,
+  baseSeq: number,
+  count: number,
+): { nodeIds: Set<string>; edgeIds: Set<string>; originalTotal: number } {
+  const original = sortedBySeq(nodes).filter((n) => n.seq <= baseSeq);
+  const revealedSeq = original[Math.max(0, count - 1)]?.seq ?? baseSeq;
+  const nodeIds = new Set(
+    Object.values(nodes)
+      .filter((n) => n.seq <= revealedSeq || n.seq > baseSeq)
+      .map((n) => n.id),
+  );
+  const edgeIds = new Set(
+    Object.values(edges)
+      .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
+      .map((e) => e.id),
+  );
+  return { nodeIds, edgeIds, originalTotal: original.length };
+}

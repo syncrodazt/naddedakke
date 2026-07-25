@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sortedBySeq, visibleGraph } from './visibility';
+import { revealVisible, sortedBySeq, visibleGraph } from './visibility';
 import type { REdge, RNode } from '../model/types';
 
 function node(id: string, seq: number): RNode {
@@ -43,5 +43,26 @@ describe('replay visibility', () => {
     expect(visibleGraph(nodes, edges, 1).edgeIds.size).toBe(0);
     expect([...visibleGraph(nodes, edges, 2).edgeIds]).toEqual(['e1']);
     expect(visibleGraph(nodes, edges, 3).edgeIds.size).toBe(2);
+  });
+});
+
+describe('reveal visibility (re-learn)', () => {
+  // Three original nodes (seq 1..3, baseSeq = 3).
+  it('reveals original nodes progressively by seq', () => {
+    expect([...revealVisible(nodes, edges, 3, 1).nodeIds]).toEqual(['a']);
+    expect([...revealVisible(nodes, edges, 3, 2).nodeIds].sort()).toEqual(['a', 'b']);
+    const all = revealVisible(nodes, edges, 3, 3);
+    expect(all.nodeIds.size).toBe(3);
+    expect(all.originalTotal).toBe(3);
+  });
+
+  it('always shows nodes created after reveal began (seq > baseSeq)', () => {
+    // A learner branches a new question off node `a` — seq 4, above baseSeq 3.
+    const withBranch = { ...nodes, q: node('q', 4) };
+    const vis = revealVisible(withBranch, edges, 3, 1);
+    // Only original node `a` is revealed, but the fresh branch `q` shows too.
+    expect([...vis.nodeIds].sort()).toEqual(['a', 'q']);
+    // originalTotal ignores the new node.
+    expect(vis.originalTotal).toBe(3);
   });
 });

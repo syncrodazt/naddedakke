@@ -5,7 +5,8 @@ import { Toolbar } from './canvas/Toolbar';
 import { DialogHost } from './canvas/DialogHost';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
-import { visibleGraph } from './replay/visibility';
+import { useRevealStore } from './replay/revealStore';
+import { revealVisible, visibleGraph } from './replay/visibility';
 import { fixture } from './fixture/fixture';
 import { db } from './db/db';
 import { useGraphStore } from './store/graphStore';
@@ -19,6 +20,9 @@ function App() {
   const edges = useGraphStore((s) => s.edges);
   const replayActive = useReplayStore((s) => s.active);
   const replayCursor = useReplayStore((s) => s.cursor);
+  const revealActive = useRevealStore((s) => s.active);
+  const revealBaseSeq = useRevealStore((s) => s.baseSeq);
+  const revealCount = useRevealStore((s) => s.count);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,20 +55,27 @@ function App() {
     return m;
   }, [nodes]);
 
+  // Replay (auto-play, read-only) takes precedence; re-learn reveal is the
+  // interactive progressive view. Either one filters the visible set; otherwise
+  // everything shows.
+  const visible = useMemo(() => {
+    if (replayActive) return visibleGraph(nodes, edges, replayCursor);
+    if (revealActive) return revealVisible(nodes, edges, revealBaseSeq, revealCount);
+    return null;
+  }, [nodes, edges, replayActive, replayCursor, revealActive, revealBaseSeq, revealCount]);
+
   const flowNodes = useMemo(() => {
     const toFlow = (n: (typeof nodes)[string]) => toFlowNode(n, rankMap.get(n.id) ?? 0);
     const all = Object.values(nodes);
-    if (!replayActive) return all.map(toFlow);
-    const { nodeIds } = visibleGraph(nodes, edges, replayCursor);
-    return all.filter((n) => nodeIds.has(n.id)).map(toFlow);
-  }, [nodes, edges, replayActive, replayCursor, rankMap]);
+    if (!visible) return all.map(toFlow);
+    return all.filter((n) => visible.nodeIds.has(n.id)).map(toFlow);
+  }, [nodes, visible, rankMap]);
 
   const flowEdges = useMemo(() => {
     const all = Object.values(edges);
-    if (!replayActive) return all.map(toFlowEdge);
-    const { edgeIds } = visibleGraph(nodes, edges, replayCursor);
-    return all.filter((e) => edgeIds.has(e.id)).map(toFlowEdge);
-  }, [nodes, edges, replayActive, replayCursor]);
+    if (!visible) return all.map(toFlowEdge);
+    return all.filter((e) => visible.edgeIds.has(e.id)).map(toFlowEdge);
+  }, [edges, visible]);
 
   if (!ready) return null;
 

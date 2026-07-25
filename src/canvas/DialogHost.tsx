@@ -52,8 +52,10 @@ function DialogView({ dialog }: { dialog: Dialog }) {
     dialog.kind === 'prompt'
       ? strings.dialogSubmit
       : dialog.kind === 'confirm'
-        ? strings.dialogOk
+        ? (dialog.okLabel ?? strings.dialogOk)
         : strings.dialogClose;
+  const cancelLabel =
+    (dialog.kind === 'confirm' ? dialog.cancelLabel : undefined) ?? strings.dialogCancel;
   const danger = dialog.kind === 'confirm' && dialog.danger;
 
   return createPortal(
@@ -79,7 +81,7 @@ function DialogView({ dialog }: { dialog: Dialog }) {
         <div className={styles.actions}>
           {dialog.kind !== 'alert' && (
             <button type="button" className={styles.cancel} onClick={cancel}>
-              {strings.dialogCancel}
+              {cancelLabel}
             </button>
           )}
           <button

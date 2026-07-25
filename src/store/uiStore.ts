@@ -9,7 +9,14 @@ import { create } from 'zustand';
 
 type DialogBody =
   | { kind: 'alert'; message: string; resolve: () => void }
-  | { kind: 'confirm'; message: string; danger?: boolean; resolve: (ok: boolean) => void }
+  | {
+      kind: 'confirm';
+      message: string;
+      danger?: boolean;
+      okLabel?: string;
+      cancelLabel?: string;
+      resolve: (ok: boolean) => void;
+    }
   | {
       kind: 'prompt';
       message: string;
@@ -50,8 +57,11 @@ export function alertDialog(message: string): Promise<void> {
   return settle<void>((resolve) => ({ kind: 'alert', message, resolve }));
 }
 
-export function confirmDialog(message: string, danger = false): Promise<boolean> {
-  return settle<boolean>((resolve) => ({ kind: 'confirm', message, danger, resolve }));
+export function confirmDialog(
+  message: string,
+  opts: { danger?: boolean; okLabel?: string; cancelLabel?: string } = {},
+): Promise<boolean> {
+  return settle<boolean>((resolve) => ({ kind: 'confirm', message, ...opts, resolve }));
 }
 
 export function promptDialog(
