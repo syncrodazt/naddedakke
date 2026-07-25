@@ -1,16 +1,26 @@
 import { create } from 'zustand';
 
-export type ModelOption = { id: string; label: string };
+export type Provider = 'gemini' | 'claude';
+export type ModelOption = { id: string; label: string; provider?: Provider };
 
 // Fallback list when /api/models can't be reached (no key locally, offline).
+// Claude is omitted: every id here is offered before any key is known to exist,
+// and offering a Claude model that then 503s is worse than not offering it.
 const FALLBACK: ModelOption[] = [
-  { id: 'gemini-flash-latest', label: 'gemini-flash-latest' },
-  { id: 'gemini-flash-lite-latest', label: 'gemini-flash-lite-latest' },
-  { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash' },
+  { id: 'gemini-flash-latest', label: 'gemini-flash-latest', provider: 'gemini' },
+  { id: 'gemini-flash-lite-latest', label: 'gemini-flash-lite-latest', provider: 'gemini' },
+  { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash', provider: 'gemini' },
 ];
 
 const STORAGE_KEY = 'nandedakke.model';
+// Preferred in order: the best Claude model, then the free Gemini default.
+const PREFERRED_IDS = ['claude-opus-5', 'gemini-flash-latest'];
 const DEFAULT_ID = 'gemini-flash-latest';
+
+/** The provider that owns a model id. Mirrors the routing in services/claude. */
+export function providerOf(model: ModelOption): Provider {
+  return model.provider ?? (model.id.startsWith('claude-') ? 'claude' : 'gemini');
+}
 
 function loadStored(): string | null {
   try {
@@ -31,9 +41,11 @@ type ModelActions = {
   setSelected: (id: string) => void;
 };
 
-function pickDefault(available: ModelOption[], stored: string | null): string {
+export function pickDefault(available: ModelOption[], stored: string | null): string {
   if (stored && available.some((m) => m.id === stored)) return stored;
-  if (available.some((m) => m.id === DEFAULT_ID)) return DEFAULT_ID;
+  for (const id of PREFERRED_IDS) {
+    if (available.some((m) => m.id === id)) return id;
+  }
   return available[0]?.id ?? DEFAULT_ID;
 }
 

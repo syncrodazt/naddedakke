@@ -41,7 +41,7 @@ function pickAnswer(req: AnswerRequest): string {
     return (
       `なるほど、「${req.question}」という答えですね。よい着眼点です。\n\n` +
       'これはモックのフィードバックです。本物のフィードバックは ' +
-      '`.env.local` に `GEMINI_API_KEY` を設定すると生成されます。'
+      '`.env.local` に `ANTHROPIC_API_KEY`（または `GEMINI_API_KEY`）を設定すると生成されます。'
     );
   }
   const haystack = `${req.quotedText} ${req.question}`.toLowerCase();
@@ -77,7 +77,8 @@ export class MockClaudeService implements TeachService {
     let md =
       `## ${req.topic} — その${n}\n\n` +
       `これはモックのレッスンチャンク${n}です。本物のレッスンは ` +
-      `\`.env.local\` に \`GEMINI_API_KEY\` を設定すると生成されます。\n\n` +
+      `\`.env.local\` に \`ANTHROPIC_API_KEY\`（または \`GEMINI_API_KEY\`）を` +
+      `設定すると生成されます。\n\n` +
       `> ❓ このチャンク${n}の要点を一言で言うと？`;
     if (n >= MOCK_LESSON_CHUNKS) md += `\n${LESSON_DONE_MARKER}`;
     const tokens = md.match(/\S+\s*/g) ?? [md];
@@ -95,7 +96,8 @@ export class MockClaudeService implements TeachService {
     return JSON.stringify({
       title: `${req.goal}（モック）`,
       goalLabel: req.goal,
-      goalNote: 'これはモックの逆算プランです。本物は GEMINI_API_KEY を設定すると生成されます。',
+      goalNote:
+        'これはモックの逆算プランです。本物は ANTHROPIC_API_KEY（または GEMINI_API_KEY）を設定すると生成されます。',
       variables: [
         {
           name: 'target_amount',

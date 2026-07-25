@@ -54,7 +54,9 @@ export function sanitizeModel(model: string | undefined): string | null {
   return /^[a-zA-Z0-9.-]{1,64}$/.test(model) ? model : null;
 }
 
-export async function listModels(apiKey: string): Promise<{ id: string; label: string }[]> {
+export type ModelOption = { id: string; label: string; provider: 'gemini' | 'claude' };
+
+export async function listModels(apiKey: string): Promise<ModelOption[]> {
   const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
     headers: { 'x-goog-api-key': apiKey },
   });
@@ -69,7 +71,7 @@ export async function listModels(apiKey: string): Promise<{ id: string; label: s
     .filter(
       (id) => id !== '' && (id.startsWith('gemini') || id.startsWith('gemma')) && !exclude.test(id),
     )
-    .map((id) => ({ id, label: id }));
+    .map((id) => ({ id, label: id, provider: 'gemini' as const }));
 }
 
 export async function proxyChat(

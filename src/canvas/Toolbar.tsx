@@ -8,7 +8,7 @@ import { sortedBySeq } from '../replay/visibility';
 import { exportSession, validateImport } from '../db/exportImport';
 import { examples } from '../fixture/examples';
 import { nextLessonChunk, startLesson } from '../services/lesson';
-import { useModelStore } from '../store/modelStore';
+import { providerOf, useModelStore } from '../store/modelStore';
 import { useAuthStore } from '../store/authStore';
 import { useCameraNav } from './useCameraNav';
 import { AuthPanel } from './AuthPanel';
@@ -361,11 +361,19 @@ export function Toolbar() {
           value={selectedModel}
           onChange={(e) => setModel(e.target.value)}
         >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
+          {(['claude', 'gemini'] as const).map((provider) => {
+            const group = models.filter((m) => providerOf(m) === provider);
+            if (group.length === 0) return null;
+            return (
+              <optgroup key={provider} label={provider === 'claude' ? 'Claude' : 'Gemini'}>
+                {group.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
         </select>
       </label>
       <AuthPanel />
