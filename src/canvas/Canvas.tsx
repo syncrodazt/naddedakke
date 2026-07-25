@@ -29,6 +29,7 @@ type CanvasProps = {
 
 export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   const setNodePosition = useGraphStore((s) => s.setNodePosition);
+  const setNodeSize = useGraphStore((s) => s.setNodeSize);
   const [selection, clearSelection] = useTextSelection();
   const { panToNode } = useCameraNav();
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -57,10 +58,11 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
     useGraphStore.getState().deleteNode(nodeId);
   }, []);
 
-  // The store is the single source of truth: only position changes (drags) and
-  // selection are applied back; structural changes always originate from store
-  // actions. Selection must be captured explicitly — React Flow is controlled
-  // here, so a dropped 'select' change would leave nodes permanently unselected.
+  // The store is the single source of truth: position (drags), size (resizes)
+  // and selection are applied back; structural changes always originate from
+  // store actions. React Flow is controlled here, so anything we don't apply
+  // simply never happens on screen — a dropped change leaves nodes unselectable
+  // or frozen at their old size until the pointer is released.
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const { setSelected } = useSelectionStore.getState();
@@ -69,10 +71,17 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
           setNodePosition(change.id, change.position);
         } else if (change.type === 'select') {
           setSelected(change.id, change.selected);
+        } else if (change.type === 'dimensions' && change.dimensions && change.setAttributes) {
+          // Live resize: the resizer streams dimensions while the pointer is
+          // down, so applying them here is what makes the card follow the
+          // cursor. `setAttributes` marks an authoritative resize — plain
+          // measurement changes carry no such flag and must be ignored, or
+          // every node would get pinned to its first measured height.
+          setNodeSize(change.id, change.dimensions);
         }
       }
     },
-    [setNodePosition],
+    [setNodePosition, setNodeSize],
   );
 
   const onAct = useCallback(
