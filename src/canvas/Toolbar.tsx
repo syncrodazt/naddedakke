@@ -10,6 +10,7 @@ import { examples } from '../fixture/examples';
 import { nextLessonChunk, startLesson } from '../services/lesson';
 import { providerOf, useModelStore } from '../store/modelStore';
 import { useAuthStore } from '../store/authStore';
+import { pullFromCloud } from '../services/cloudSync';
 import { useCameraNav } from './useCameraNav';
 import { AuthPanel } from './AuthPanel';
 import { db } from '../db/db';
@@ -37,6 +38,8 @@ export function Toolbar() {
   const cancelStream = useLlmStore((s) => s.cancel);
   // A cloud login pulls other devices' sessions into Dexie; refresh the list.
   const syncNonce = useAuthStore((s) => s.syncNonce);
+  const user = useAuthStore((s) => s.user);
+  const [pulling, setPulling] = useState(false);
   const sessionsRevision = useGraphStore((s) => s.sessionsRevision);
   // Re-learn progressive-reveal state.
   const revealActive = useRevealStore((s) => s.active);
@@ -61,6 +64,26 @@ export function Toolbar() {
     const chunkId = await startLesson(topic);
     await refreshSessions();
     panToNode(chunkId);
+  }
+
+  // Pick up changes made outside this browser — another device, or the MCP
+  // server writing on Claude's behalf. Cloud wins, so the open session is
+  // reloaded from what was just pulled.
+  async function handleCloudPull() {
+    setPulling(true);
+    try {
+      const pulled = await pullFromCloud();
+      if (pulled === null) {
+        await alertDialog(strings.cloudPullFailed);
+        return;
+      }
+      const openId = useGraphStore.getState().session?.id;
+      if (openId) await useGraphStore.getState().loadSession(openId);
+      await refreshSessions();
+      await alertDialog(`${strings.cloudPulled} (${pulled})`);
+    } finally {
+      setPulling(false);
+    }
   }
 
   // Back-cast: describe a goal, review the model's decomposition, then insert.
@@ -325,6 +348,17 @@ export function Toolbar() {
       >
         ▶ {strings.replay}
       </button>
+      {user && (
+        <button
+          type="button"
+          className={styles.button}
+          title={strings.cloudPullTitle}
+          onClick={() => void handleCloudPull()}
+          disabled={pulling}
+        >
+          {strings.cloudPull}
+        </button>
+      )}
       <button type="button" className={styles.button} onClick={handleExport} disabled={!session}>
         {strings.exportSession}
       </button>

@@ -103,6 +103,36 @@ async function readLocalExport(session: Session): Promise<SessionExport> {
 }
 
 /**
+ * Pull cloud sessions into Dexie WITHOUT pushing first. This is how a change
+ * made outside this browser — the MCP server writing an answer, or another
+ * device — actually arrives.
+ *
+ * Deliberately not the login sync: that pushes local up first, which would
+ * overwrite the very row we are trying to pick up. Here the cloud wins, so any
+ * local edit not yet pushed (under ~900ms of debounce) is superseded.
+ *
+ * Returns the number of sessions pulled, or null if the cloud is unavailable.
+ */
+export async function pullFromCloud(): Promise<number | null> {
+  if (!supabase || !currentUser) return null;
+  const { data, error } = await supabase.from(SESSIONS_TABLE).select('data');
+  if (error) {
+    console.warn('[cloudSync] pull failed:', error.message);
+    return null;
+  }
+  let pulled = 0;
+  for (const row of (data ?? []) as { data: unknown }[]) {
+    try {
+      await saveExportToDexie(validateImport(row.data));
+      pulled += 1;
+    } catch (err) {
+      console.warn('[cloudSync] skipped invalid cloud session:', err);
+    }
+  }
+  return pulled;
+}
+
+/**
  * Reconcile local and cloud on login: push every local session up, then pull
  * every cloud session into Dexie so all devices' work converges. Returns the
  * number of cloud sessions pulled, or null if the cloud is unavailable.

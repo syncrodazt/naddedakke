@@ -10,8 +10,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "preview": "vite preview",
-    "build:mcp": "tsc -p tsconfig.mcp.json",
-    "mcp": "node mcp/dist/mcp/index.js"
+    "build:mcp": "vite build --config vite.mcp.config.ts",
+    "mcp": "node mcp/dist/index.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

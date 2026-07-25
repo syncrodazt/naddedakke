@@ -1,4 +1,4 @@
-import type { Highlight, REdge, RNode, SessionExport } from '../src/model/types.js';
+import type { Highlight, REdge, RNode, SessionExport } from '../src/model/types';
 
 // Pure queries over one exported session. Kept free of I/O so the interesting
 // logic — what counts as an open question, what the reasoning chain actually

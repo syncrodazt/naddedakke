@@ -4,14 +4,25 @@ Exposes your なんでだっけ？ learning graphs to Claude Desktop / Claude Co
 can ask Claude about a session it can actually read — including the chain of
 なんで？ questions in the order you asked them, and which threads you left open.
 
-**Read-only by design.** The canvas is your record of how your understanding was
-built; an assistant editing it would corrupt the one thing the app exists to
-preserve. Every tool answers questions about the graph. None writes to it.
+**Reads, and additive writes.** Claude can read the graph and append to it —
+new chunks, questions branched off a passage, answers, the 分かった flag,
+back-cast variables. Nothing here edits or deletes existing node text: the canvas
+is your record of how your understanding was actually built, and adding to that
+record is useful where silently rewriting it is corruption.
+
+Three invariants are enforced in `mutate.ts`, not trusted to the caller:
+
+- `seq` (the chronological timeline) comes from the session counter. Never
+  reused, never renumbered, never rewound.
+- Every question anchors to a passage that really occurs in its parent's
+  markdown. A paraphrased quote is **refused**, not stored as a dangling branch.
+- Placement calls the app's own layout helpers, so a node written from here
+  lands where the same node created in the browser would.
 
 ## Build
 
 ```bash
-npm run build:mcp     # → mcp/dist/mcp/index.js
+npm run build:mcp     # → mcp/dist/index.js
 ```
 
 ## Where it reads sessions from
@@ -53,7 +64,7 @@ Claude Desktop — `claude_desktop_config.json`:
   "mcpServers": {
     "nandedakke": {
       "command": "node",
-      "args": ["/absolute/path/to/naddedakke/mcp/dist/mcp/index.js"],
+      "args": ["/absolute/path/to/naddedakke/mcp/dist/index.js"],
       "env": { "NANDEDAKKE_DIR": "/absolute/path/to/your/sessions" }
     }
   }
@@ -64,7 +75,7 @@ Claude Code:
 
 ```bash
 claude mcp add nandedakke -e NANDEDAKKE_DIR=/path/to/sessions \
-  -- node /absolute/path/to/naddedakke/mcp/dist/mcp/index.js
+  -- node /absolute/path/to/naddedakke/mcp/dist/index.js
 ```
 
 ## Tools
@@ -81,6 +92,33 @@ claude mcp add nandedakke -e NANDEDAKKE_DIR=/path/to/sessions \
 `seq` is the app's chronological timeline and is never renumbered, so every
 ordering here is the order you actually learned things in — not layout order.
 
+### Write tools
+
+| Tool              | What it does                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `create_session`  | Start a new empty notebook (`learn` or `gyakusan`).                                                 |
+| `add_chunk`       | Append a lesson step to the spine.                                                                  |
+| `add_question`    | Branch a なんで？ off an exact passage. `quotedText` must be verbatim from the parent, or it fails. |
+| `add_answer`      | Answer a question node that has none. One answer per question.                                      |
+| `mark_understood` | Set/clear the 分かった flag. Your judgement — only when you've said so.                             |
+| `set_variable`    | Move a back-cast variable; downstream values recompute with the canvas's own engine.                |
+
+Not provided, on purpose: editing existing node text, and deleting anything.
+
+## Seeing the writes in the app
+
+A write lands in the source the session came from. **Only the cloud source
+reaches a running app** — a file write still has to be Imported by hand.
+
+The app does not poll. After Claude writes, press **☁ Pull** in the toolbar
+(visible when signed in) to pull the latest and reload the open session.
+
+Concurrent edits are guarded: a cloud write only lands if the row has not
+changed since it was read. If the app has the session open and pushed an edit
+underneath, the write is **refused** and Claude is told to re-read — your edits
+are never quietly overwritten. A file write has no such guard, so avoid editing
+the same session in both places at once.
+
 ## Troubleshooting
 
 Diagnostics go to **stderr** (stdout is the MCP protocol channel). On startup the
@@ -89,3 +127,7 @@ server prints the directory it is reading and whether the cloud source is on.
 If the cloud source fails, tools still return your local files and add a
 `cloudError` field explaining why — they do not silently pretend the cloud
 sessions never existed.
+
+A write that reports _"this session changed in the cloud since it was read"_ is
+the concurrency guard doing its job: nothing was written. Ask Claude to re-read
+the session and retry.

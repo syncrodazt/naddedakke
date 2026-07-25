@@ -1,8 +1,8 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { SessionExport } from '../src/model/types.js';
+import type { SessionExport } from '../src/model/types';
 
 // Where the MCP server gets sessions from. The app is local-first and stores
 // its graphs in the browser's IndexedDB, which no external process can read —
@@ -16,7 +16,14 @@ import type { SessionExport } from '../src/model/types.js';
 // empty library rather than failing, so a misconfigured client still connects.
 
 export type Source = 'file' | 'cloud';
-export type LoadedSession = { export: SessionExport; source: Source; path?: string };
+export type LoadedSession = {
+  export: SessionExport;
+  source: Source;
+  /** file source: where it was read from, so a write lands in the same file. */
+  path?: string;
+  /** cloud source: the row version a conditional write must still match. */
+  updatedAt?: string;
+};
 
 export type SourceConfig = {
   /** Directory of exported *.json sessions. */
@@ -114,13 +121,21 @@ function signedInClient(cfg: NonNullable<SourceConfig['supabase']>): Promise<Sup
 
 async function loadCloud(cfg: NonNullable<SourceConfig['supabase']>): Promise<LoadedSession[]> {
   const client = await signedInClient(cfg);
-  const { data, error } = await client.from(SESSIONS_TABLE).select('data');
+  const { data, error } = await client.from(SESSIONS_TABLE).select('data, updated_at');
   if (error) throw new Error(`Supabase read failed: ${error.message}`);
 
-  return (data ?? [])
-    .map((row) => (row as { data: unknown }).data)
-    .filter(isSessionExport)
-    .map((exp) => ({ export: exp, source: 'cloud' as const }));
+  const rows = (data ?? []) as { data: unknown; updated_at: string }[];
+  return (
+    rows
+      .filter((row) => isSessionExport(row.data))
+      // updated_at travels with the session so a later write can be conditional
+      // on it — see saveSession.
+      .map((row) => ({
+        export: row.data as SessionExport,
+        source: 'cloud' as const,
+        updatedAt: row.updated_at,
+      }))
+  );
 }
 
 /**
@@ -151,4 +166,88 @@ export async function loadAll(cfg: SourceConfig): Promise<{
     (a, b) => b.export.session.createdAt - a.export.session.createdAt,
   );
   return cloudError === undefined ? { sessions } : { sessions, cloudError };
+}
+
+// ---- Writing -----------------------------------------------------------------
+// A session is stored as one blob, so a write is a whole-row/whole-file replace.
+// That makes concurrent edits a real hazard: the app pushes the session it has
+// in memory on a 900ms debounce, and it does not merge. So the cloud write below
+// is conditional on `updated_at` being unchanged since we read it — if the
+// browser (or another client) moved underneath us, the write is refused and the
+// caller is told to re-read, rather than quietly discarding the learner's edits.
+
+/** Filename for a session's export. Stable, so writes overwrite in place. */
+export function fileNameFor(exp: SessionExport): string {
+  const slug = exp.session.title.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+  return `${slug === '' ? 'session' : slug}-${exp.session.id}.json`;
+}
+
+export class ConflictError extends Error {}
+
+async function writeFileSession(dir: string, exp: SessionExport, path?: string): Promise<string> {
+  await mkdir(dir, { recursive: true });
+  const target = path ?? join(dir, fileNameFor(exp));
+  await writeFile(target, `${JSON.stringify(exp, null, 2)}\n`, 'utf8');
+  return target;
+}
+
+async function writeCloudSession(
+  cfg: NonNullable<SourceConfig['supabase']>,
+  exp: SessionExport,
+  expectedUpdatedAt: string | null,
+): Promise<void> {
+  const client = await signedInClient(cfg);
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error('not signed in to Supabase');
+
+  const row = {
+    id: exp.session.id,
+    user_id: user.id,
+    title: exp.session.title,
+    updated_at: new Date().toISOString(),
+    data: exp,
+  };
+
+  if (expectedUpdatedAt === null) {
+    // New row: insert, so a session that appeared since our read is not clobbered.
+    const { error } = await client.from(SESSIONS_TABLE).insert(row);
+    if (error) throw new ConflictError(`could not create cloud session: ${error.message}`);
+    return;
+  }
+
+  const { data, error } = await client
+    .from(SESSIONS_TABLE)
+    .update(row)
+    .eq('id', exp.session.id)
+    .eq('updated_at', expectedUpdatedAt)
+    .select('id');
+  if (error) throw new Error(`Supabase write failed: ${error.message}`);
+  if (!data || data.length === 0) {
+    throw new ConflictError(
+      'this session changed in the cloud since it was read (most likely the app has it ' +
+        'open and pushed an edit). Nothing was written — re-read the session and retry.',
+    );
+  }
+}
+
+/**
+ * Persist a session back to where it came from: cloud sessions to Supabase,
+ * file sessions to their file. A brand-new session goes to the cloud when it is
+ * configured — that is the only source the running app actually picks up.
+ */
+export async function saveSession(
+  cfg: SourceConfig,
+  exp: SessionExport,
+  origin?: LoadedSession,
+): Promise<{ source: Source; path?: string }> {
+  const target: Source = origin?.source ?? (cfg.supabase ? 'cloud' : 'file');
+  if (target === 'cloud') {
+    if (!cfg.supabase) throw new Error('cloud source is not configured');
+    await writeCloudSession(cfg.supabase, exp, origin?.updatedAt ?? null);
+    return { source: 'cloud' };
+  }
+  const path = await writeFileSession(cfg.dir, exp, origin?.path);
+  return { source: 'file', path };
 }

@@ -19,6 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "server", "api", "mcp"],
-  "exclude": ["mcp/dist"]
+  "include": ["vite.config.ts", "vite.mcp.config.ts", "server", "api"]
 }

@@ -1,15 +1,35 @@
-#!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { configFromEnv, loadAll, type LoadedSession, type SourceConfig } from './sources.js';
-import { nodeDetail, openQuestions, outline, reasoningChain, searchNodes } from './graph.js';
+import {
+  ConflictError,
+  configFromEnv,
+  loadAll,
+  saveSession,
+  type LoadedSession,
+  type SourceConfig,
+} from './sources';
+import { nodeDetail, openQuestions, outline, reasoningChain, searchNodes } from './graph';
+import {
+  WriteError,
+  addAnswer,
+  addChunk,
+  addQuestion,
+  createSession,
+  describeWrite,
+  markUnderstood,
+  setVariable,
+} from './mutate';
+import type { SessionExport } from '../src/model/types';
 
 // MCP server exposing a learner's なんでだっけ？ graphs to Claude Desktop / Claude
-// Code. It is READ-ONLY by design: the canvas is the learner's own record of how
-// their understanding was built, and an assistant silently rewriting it would
-// corrupt exactly the thing the app exists to preserve. Everything here answers
-// questions about the graph; nothing edits it.
+// Code: read the graph, and append to it.
+//
+// The writes are strictly additive. Nothing here edits or deletes existing node
+// markdown, because the canvas is the learner's record of how their
+// understanding was actually built — adding to that record is useful, silently
+// rewriting it is corruption. Invariants (seq never rewinds, every branch
+// anchors to a real highlighted passage) are enforced in mutate.ts.
 //
 // Setup lives in mcp/README.md.
 
@@ -43,7 +63,28 @@ async function findSession(sessionId: string) {
   };
 }
 
-const server = new McpServer({ name: 'nandedakke', version: '1.0.0' });
+/**
+ * Read a session, transform it, write it back where it came from. The read is
+ * deliberately fresh on every call rather than cached: the learner may have the
+ * app open, and writing from a stale copy is how their edits get lost.
+ */
+async function mutate(
+  sessionId: string,
+  apply: (exp: SessionExport) => { next: SessionExport; result?: Record<string, unknown> },
+) {
+  const { found, error } = await findSession(sessionId);
+  if (!found) return problem(error);
+  try {
+    const { next, result } = apply(found.export);
+    const saved = await saveSession(config, next, found);
+    return json({ ...describeWrite(next), ...result, savedTo: saved.source });
+  } catch (err) {
+    if (err instanceof WriteError || err instanceof ConflictError) return problem(err.message);
+    throw err;
+  }
+}
+
+const server = new McpServer({ name: 'nandedakke', version: '2.0.0' });
 
 server.registerTool(
   'list_sessions',
@@ -187,6 +228,158 @@ server.registerTool(
     );
     return json({ query, hits, ...(cloudError ? { cloudError } : {}) });
   },
+);
+
+// ---- Writes ------------------------------------------------------------------
+// All additive. `openWorldHint: false` because everything acts on the learner's
+// own session store, and `idempotentHint: false` because calling add_chunk twice
+// really does create two chunks — the client should not silently retry.
+
+const WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false } as const;
+
+server.registerTool(
+  'create_session',
+  {
+    title: 'Create a session',
+    description:
+      'Start a new empty notebook. Use mode "learn" for a lesson graph, ' +
+      '"gyakusan" for a back-cast goal graph. Add content with add_chunk.',
+    inputSchema: {
+      title: z.string().describe("the notebook's title, in the learner's language"),
+      mode: z.enum(['learn', 'gyakusan']).optional().describe('default: learn'),
+    },
+    annotations: WRITE,
+  },
+  async ({ title, mode }) => {
+    if (title.trim() === '') return problem('title is empty');
+    const exp = createSession(title.trim(), mode ?? 'learn', Date.now());
+    try {
+      const saved = await saveSession(config, exp);
+      return json({
+        ...describeWrite(exp),
+        savedTo: saved.source,
+        ...(saved.path ? { path: saved.path } : {}),
+      });
+    } catch (err) {
+      if (err instanceof ConflictError) return problem(err.message);
+      throw err;
+    }
+  },
+);
+
+server.registerTool(
+  'add_chunk',
+  {
+    title: 'Append a lesson step',
+    description:
+      'Add a lesson step to the end of the spine. Markdown; KaTeX ($…$) is ' +
+      "rendered, raw HTML is not. Write in the learner's language. Keep it to one " +
+      'small step — the whole pedagogy is chunk-by-chunk, not a dumped lesson.',
+    inputSchema: {
+      sessionId: z.string().describe('id from list_sessions'),
+      md: z.string().describe('the chunk body, starting with "## <title>"'),
+    },
+    annotations: WRITE,
+  },
+  ({ sessionId, md }) =>
+    mutate(sessionId, (exp) => {
+      const { next, nodeId } = addChunk(exp, md);
+      return { next, result: describeWrite(next, nodeId) };
+    }),
+);
+
+server.registerTool(
+  'add_question',
+  {
+    title: 'Branch a question off a passage',
+    description:
+      'Add a なんで？ question hanging off an exact passage of another node. ' +
+      "`quotedText` MUST be copied verbatim from that node's markdown (get_node " +
+      'returns it) — it becomes the pink underline in the parent and the link back ' +
+      'from the question, and a branch with no anchor is a bug. Answer it with ' +
+      'add_answer.',
+    inputSchema: {
+      sessionId: z.string().describe('id from list_sessions'),
+      parentNodeId: z.string().describe('the node the question is about'),
+      quotedText: z.string().describe("verbatim passage from the parent's markdown"),
+      question: z.string().describe("the question itself, in the learner's language"),
+    },
+    annotations: WRITE,
+  },
+  ({ sessionId, parentNodeId, quotedText, question }) =>
+    mutate(sessionId, (exp) => {
+      const { next, nodeId } = addQuestion(exp, parentNodeId, quotedText, question);
+      return { next, result: describeWrite(next, nodeId) };
+    }),
+);
+
+server.registerTool(
+  'add_answer',
+  {
+    title: 'Answer a question',
+    description:
+      'Attach an answer to a question node that has none. Explain from first ' +
+      'principles: conclusion first, derivation after. Read get_reasoning_chain ' +
+      'first so the answer builds on what the learner already covered.',
+    inputSchema: {
+      sessionId: z.string().describe('id from list_sessions'),
+      questionId: z.string().describe('a question node id, e.g. from list_open_questions'),
+      md: z.string().describe('the answer body in Markdown'),
+    },
+    annotations: WRITE,
+  },
+  ({ sessionId, questionId, md }) =>
+    mutate(sessionId, (exp) => {
+      const { next, nodeId } = addAnswer(exp, questionId, md);
+      return { next, result: describeWrite(next, nodeId) };
+    }),
+);
+
+server.registerTool(
+  'mark_understood',
+  {
+    title: 'Mark a node understood',
+    description:
+      "Set or clear the learner's “I get this now” flag on a node. This is their " +
+      'own judgement — only set it when they have said so, not because an ' +
+      'explanation was given.',
+    inputSchema: {
+      sessionId: z.string().describe('id from list_sessions'),
+      nodeId: z.string().describe('the node to flag'),
+      understood: z.boolean().describe('true to mark understood, false to clear'),
+    },
+    annotations: WRITE,
+  },
+  ({ sessionId, nodeId, understood }) =>
+    mutate(sessionId, (exp) => ({ next: markUnderstood(exp, nodeId, understood) })),
+);
+
+server.registerTool(
+  'set_variable',
+  {
+    title: 'Move a back-cast variable',
+    description:
+      'Set a gyakusan variable node’s value and recompute every downstream ' +
+      'derived quantity with the same engine the canvas uses. Only input ' +
+      'variables can be set — a derived node follows from its formula.',
+    inputSchema: {
+      sessionId: z.string().describe('id from list_sessions'),
+      nodeId: z.string().describe('a variable node id'),
+      value: z.number().describe('the new value'),
+    },
+    annotations: WRITE,
+  },
+  ({ sessionId, nodeId, value }) =>
+    mutate(sessionId, (exp) => {
+      const { next, issues } = setVariable(exp, nodeId, value);
+      const changed = next.nodes
+        .filter((n) => n.value !== undefined)
+        .map((n) => ({ id: n.id, varName: n.varName, value: n.value, unit: n.unit }));
+      return {
+        next,
+        result: { values: changed, ...(Object.keys(issues).length > 0 ? { issues } : {}) },
+      };
+    }),
 );
 
 async function main(): Promise<void> {

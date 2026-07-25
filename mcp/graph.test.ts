@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { REdge, RNode, SessionExport } from '../src/model/types.js';
+import type { REdge, RNode, SessionExport } from '../src/model/types';
 import {
   nodeDetail,
   nodeTitle,
@@ -7,8 +7,8 @@ import {
   outline,
   reasoningChain,
   searchNodes,
-} from './graph.js';
-import { isSessionExport } from './sources.js';
+} from './graph';
+import { isSessionExport } from './sources';
 
 function node(
   p: Partial<RNode> & { id: string; seq: number; kind: RNode['kind']; md: string },
