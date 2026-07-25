@@ -12,6 +12,7 @@ import {
   computeLayout,
   spinePosition,
   whySiblingCount,
+  type NodeMetrics,
 } from '../layout/layout';
 
 export type SelectionRange = { start: number; end: number; text: string };
@@ -46,7 +47,7 @@ type GraphActions = {
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   setNodeSize: (nodeId: string, size: { width: number; height: number }) => void;
   toggleUnderstood: (nodeId: string) => void;
-  tidyLayout: () => void;
+  tidyLayout: (metrics?: NodeMetrics) => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
   recompute: () => void;
@@ -345,9 +346,12 @@ export const useGraphStore = create<GraphState & GraphActions>()((set, get) => {
       putNode({ ...node, understood: !node.understood });
     },
 
-    tidyLayout() {
+    // `metrics` carries the sizes React Flow actually measured on screen —
+    // without them a long lesson card gets laid out as if it were EST_H tall
+    // and everything packed below it ends up underneath it.
+    tidyLayout(metrics) {
       const { nodes, edges } = get();
-      const positions = computeLayout(nodes, edges);
+      const positions = computeLayout(nodes, edges, metrics);
       for (const [id, position] of Object.entries(positions)) {
         const node = nodes[id];
         if (node && (node.position.x !== position.x || node.position.y !== position.y)) {

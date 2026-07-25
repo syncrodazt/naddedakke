@@ -173,3 +173,65 @@ describe('computeLayout — gyakusan dependency graphs', () => {
     expect(p.v2.y).toBeGreaterThan(p.q1.y);
   });
 });
+
+describe('computeLayout — real measured sizes', () => {
+  // A very tall lesson card (the model wrote a lot) with a question + answer
+  // branched off it, then a second chunk on the spine.
+  const nodes = byId([
+    node('c1', 'chunk', 0, 0, 1),
+    node('q1', 'question', 0, 0, 2),
+    node('a1', 'answer', 0, 0, 3),
+    node('c2', 'chunk', 0, 0, 4),
+  ]);
+  const edges = edgesById([
+    edge('e1', 'why', 'c1', 'q1'),
+    edge('e2', 'reply', 'q1', 'a1'),
+    edge('e3', 'next', 'c1', 'c2'),
+  ]);
+  const metrics = {
+    c1: { width: 360, height: 1200 }, // long prose card
+    q1: { width: 360, height: 300 },
+    a1: { width: 360, height: 900 },
+    c2: { width: 360, height: 400 },
+  };
+
+  /** True when two axis-aligned boxes share any area. */
+  function overlaps(
+    a: { x: number; y: number; w: number; h: number },
+    b: { x: number; y: number; w: number; h: number },
+  ): boolean {
+    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  }
+
+  it('keeps tall cards from overlapping what is packed below them', () => {
+    const p = computeLayout(nodes, edges, metrics);
+    const boxes = Object.entries(metrics).map(([id, m]) => ({
+      id,
+      x: p[id].x,
+      y: p[id].y,
+      w: m.width,
+      h: m.height,
+    }));
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        expect(overlaps(boxes[i], boxes[j]), `${boxes[i].id} overlaps ${boxes[j].id}`).toBe(false);
+      }
+    }
+  });
+
+  it('starts the first branch below the full height of a tall parent', () => {
+    const p = computeLayout(nodes, edges, metrics);
+    expect(p.q1.y).toBeGreaterThanOrEqual(p.c1.y + metrics.c1.height);
+  });
+
+  it('places the next spine chunk clear of the previous branch subtree', () => {
+    const p = computeLayout(nodes, edges, metrics);
+    expect(p.c2.x).toBeGreaterThanOrEqual(p.a1.x + metrics.a1.width);
+  });
+
+  it('falls back to estimates for nodes with no measurement', () => {
+    const p = computeLayout(nodes, edges); // no metrics at all
+    expect(p.q1.y).toBeGreaterThan(p.c1.y);
+    expect(p.c2.x).toBeGreaterThan(p.c1.x);
+  });
+});

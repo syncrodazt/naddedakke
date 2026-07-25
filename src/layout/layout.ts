@@ -68,14 +68,33 @@ const COLUMN_GAP_Y = 48; // gap between stacked nodes in a gyakusan column
 const COMPACT_KINDS: ReadonlySet<RNode['kind']> = new Set(['variable', 'derived', 'goal']);
 const COMPACT_H = 150;
 
-function nodeHeight(node: RNode): number {
+/**
+ * Rendered sizes measured by React Flow, keyed by node id. A lesson card's real
+ * height depends entirely on how much prose the model wrote — it ranges from a
+ * couple of hundred pixels to a couple of thousand — so laying out against a
+ * fixed estimate makes tall cards overlap whatever is packed below them. The
+ * caller passes what the canvas actually measured; the estimates below are only
+ * the fallback for nodes that have never been rendered.
+ */
+export type NodeMetrics = Record<string, { width?: number; height?: number } | undefined>;
+
+function nodeHeight(node: RNode, metrics?: NodeMetrics): number {
+  const measured = metrics?.[node.id]?.height;
+  if (measured !== undefined && measured > 0) return measured;
   if (node.size?.height !== undefined) return node.size.height;
   return COMPACT_KINDS.has(node.kind) ? COMPACT_H : EST_H;
+}
+
+function nodeWidth(node: RNode, metrics?: NodeMetrics): number {
+  const measured = metrics?.[node.id]?.width;
+  if (measured !== undefined && measured > 0) return measured;
+  return node.size?.width ?? NODE_W;
 }
 
 export function computeLayout(
   nodes: Record<string, RNode>,
   edges: Record<string, REdge>,
+  metrics?: NodeMetrics,
 ): Record<string, { x: number; y: number }> {
   const pos: Record<string, { x: number; y: number }> = {};
   const edgeList = Object.values(edges);
@@ -101,17 +120,26 @@ export function computeLayout(
 
   /**
    * Pre-order walk of a root's branch subtree, packing tightly by actual
-   * height. Returns the y just past the subtree so callers can stack below it.
+   * height. Returns the y just past the subtree (so callers can stack below it)
+   * and the rightmost edge it reaches (so callers can place the next column
+   * clear of it — deep branches indent, and a resized card can be wide).
    */
-  function packBranches(rootId: string, x: number, startY: number): number {
+  function packBranches(
+    rootId: string,
+    x: number,
+    startY: number,
+  ): { endY: number; right: number } {
     let y = startY;
+    let right = x + nodeWidth(nodes[rootId] as RNode, metrics);
     const visited = new Set<string>([rootId]);
     const place = (id: string, depth: number): void => {
       const node = nodes[id];
       if (!node || visited.has(id)) return;
       visited.add(id);
-      pos[id] = { x: x + depth * BRANCH_INDENT_X, y };
-      y += nodeHeight(node) + BRANCH_GAP_Y;
+      const nodeX = x + depth * BRANCH_INDENT_X;
+      pos[id] = { x: nodeX, y };
+      right = Math.max(right, nodeX + nodeWidth(node, metrics));
+      y += nodeHeight(node, metrics) + BRANCH_GAP_Y;
       for (const { child, kind } of childrenOf(id)) {
         place(child.id, kind === 'why' ? depth + 1 : depth);
       }
@@ -119,7 +147,7 @@ export function computeLayout(
     for (const { child, kind } of childrenOf(rootId)) {
       place(child.id, kind === 'why' ? 1 : 0);
     }
-    return y;
+    return { endY: y, right };
   }
 
   const dependsEdges = edgeList.filter((e) => e.kind === 'depends');
@@ -159,27 +187,42 @@ export function computeLayout(
       columns.set(depth, [...(columns.get(depth) ?? []), node]);
     }
 
-    for (const [depth, columnNodes] of columns) {
-      const x = depth * (NODE_W + SPINE_GAP_X);
+    // Walk depths in order so each column starts clear of the widest thing in
+    // the one before it.
+    let x = 0;
+    for (const depth of [...columns.keys()].sort((a, b) => a - b)) {
+      const columnNodes = (columns.get(depth) ?? []).sort((a, b) => a.seq - b.seq);
       let y = SPINE_Y;
-      for (const node of columnNodes.sort((a, b) => a.seq - b.seq)) {
+      let right = x;
+      for (const node of columnNodes) {
         pos[node.id] = { x, y };
+        right = Math.max(right, x + nodeWidth(node, metrics));
         if (childrenOf(node.id).length === 0) {
-          y += nodeHeight(node) + COLUMN_GAP_Y;
+          y += nodeHeight(node, metrics) + COLUMN_GAP_Y;
         } else {
           // Questions branched off this node stack directly beneath it, so the
           // column's next node starts past the whole subtree.
-          y = packBranches(node.id, x, y + nodeHeight(node) + BRANCH_TOP_GAP) + COLUMN_GAP_Y;
+          const packed = packBranches(node.id, x, y + nodeHeight(node, metrics) + BRANCH_TOP_GAP);
+          y = packed.endY + COLUMN_GAP_Y;
+          right = Math.max(right, packed.right);
         }
       }
+      x = right + SPINE_GAP_X;
     }
   } else {
     // Learn: chronological spine left→right, branch subtree packed below each.
-    roots.forEach((spineNode, i) => {
-      const spineX = i * (NODE_W + SPINE_GAP_X);
-      pos[spineNode.id] = { x: spineX, y: SPINE_Y };
-      packBranches(spineNode.id, spineX, SPINE_Y + nodeHeight(spineNode) + BRANCH_TOP_GAP);
-    });
+    // The next chunk starts past the widest point of the previous one's branch
+    // subtree, so a deep or wide branch never collides with the next chunk.
+    let x = 0;
+    for (const spineNode of roots) {
+      pos[spineNode.id] = { x, y: SPINE_Y };
+      const packed = packBranches(
+        spineNode.id,
+        x,
+        SPINE_Y + nodeHeight(spineNode, metrics) + BRANCH_TOP_GAP,
+      );
+      x = packed.right + SPINE_GAP_X;
+    }
   }
 
   // Any node not reached (e.g. orphaned) keeps its current position.

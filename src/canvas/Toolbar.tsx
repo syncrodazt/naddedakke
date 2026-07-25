@@ -37,7 +37,7 @@ export function Toolbar() {
   const revealBaseSeq = useRevealStore((s) => s.baseSeq);
   const fileInput = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const { fitView } = useReactFlow();
+  const { fitView, getNodes, getInternalNode } = useReactFlow();
   const { panToNode } = useCameraNav();
 
   // Built-in examples not yet loaded as sessions (once loaded they live in the
@@ -62,7 +62,18 @@ export function Toolbar() {
   }
 
   function handleTidy() {
-    useGraphStore.getState().tidyLayout();
+    // Feed Tidy the sizes React Flow measured on screen. Card heights are
+    // driven by however much prose the model wrote, so laying out from an
+    // estimate is what made tall cards overlap their branches.
+    // Measured sizes live on the *internal* node — getNodes() hands back the
+    // controlled nodes we passed in, whose `measured` is always empty.
+    const metrics = Object.fromEntries(
+      getNodes().map((n) => {
+        const measured = getInternalNode(n.id)?.measured;
+        return [n.id, { width: measured?.width, height: measured?.height }];
+      }),
+    );
+    useGraphStore.getState().tidyLayout(metrics);
     // Let the position updates flush to React Flow before fitting.
     window.setTimeout(() => void fitView({ duration: 500 }), 60);
   }
@@ -157,6 +168,9 @@ export function Toolbar() {
       const existing = await db.sessions.get(payload.session.id);
       if (existing && !(await confirmDialog(strings.overwriteConfirm))) return;
       await useGraphStore.getState().applyImport(payload);
+      // applyImport resolves after the Dexie flush, so the imported session is
+      // now on disk — refresh so it appears (and is selected) in the dropdown.
+      await refreshSessions();
     } catch (err) {
       await alertDialog(
         `${strings.importFailed}: ${err instanceof Error ? err.message : String(err)}`,
