@@ -3,6 +3,8 @@ import { mockService, teachService } from './claude';
 import { LESSON_DONE_MARKER, type AnswerRequest, type LessonChunkRequest } from './claude/types';
 import { withFallback } from './stream';
 import { ancestorChainMd } from './ask';
+import { isAbort, useLlmStore } from '../store/llmStore';
+import { pauseHistory, resumeHistory } from '../store/history';
 
 // Re-run the model for an existing node, replacing its content in place. Works
 // on answer nodes (re-answer the same question) and chunk nodes (regenerate the
@@ -43,22 +45,36 @@ async function regenerateAnswer(answerId: string): Promise<void> {
     intent,
   };
 
+  const llm = useLlmStore.getState();
+  req.signal = llm.begin();
+
+  // Clear the old body while history is still live: that single write is the
+  // undo step, and its snapshot holds both the original markdown and the
+  // original highlight offsets.
   store.setNodeMd(answerId, '');
+  pauseHistory();
   // Park the existing highlights while the replacement streams in, so stale
   // offsets don't underline random words mid-stream. They are re-anchored to
   // their quoted text once the new markdown is complete.
   store.reanchorNodeHighlights(answerId);
   store.setStreamingNode(answerId);
   try {
-    const stream = withFallback(teachService.streamAnswer(req), () =>
-      mockService.streamAnswer(req),
+    const stream = withFallback(
+      teachService.streamAnswer(req),
+      () => mockService.streamAnswer(req),
+      llm.noteFallback,
     );
     for await (const delta of stream) {
+      if (req.signal?.aborted) break; // also halts a mock fallback stream
       useGraphStore.getState().appendToNode(answerId, delta);
     }
+  } catch (err) {
+    if (!isAbort(err)) throw err;
   } finally {
+    useLlmStore.getState().end();
     useGraphStore.getState().finishStreaming();
     useGraphStore.getState().reanchorNodeHighlights(answerId);
+    resumeHistory();
   }
 }
 
@@ -81,19 +97,30 @@ async function regenerateChunk(chunkId: string): Promise<void> {
     chunkIndex: previousChunksMd.length,
   };
 
+  const llm = useLlmStore.getState();
+  req.signal = llm.begin();
+
+  // See regenerateAnswer: this write is the undo step; everything after it is
+  // the machine burst and is not recorded.
   store.setNodeMd(chunkId, '');
-  // See regenerateAnswer: park the highlights, re-anchor once the text settles.
+  pauseHistory();
   store.reanchorNodeHighlights(chunkId);
   store.setStreamingNode(chunkId);
   store.setLessonComplete(false);
   try {
-    const stream = withFallback(teachService.streamLessonChunk(req), () =>
-      mockService.streamLessonChunk(req),
+    const stream = withFallback(
+      teachService.streamLessonChunk(req),
+      () => mockService.streamLessonChunk(req),
+      llm.noteFallback,
     );
     for await (const delta of stream) {
+      if (req.signal?.aborted) break; // also halts a mock fallback stream
       useGraphStore.getState().appendToNode(chunkId, delta);
     }
+  } catch (err) {
+    if (!isAbort(err)) throw err;
   } finally {
+    useLlmStore.getState().end();
     useGraphStore.getState().finishStreaming();
   }
 
@@ -105,6 +132,7 @@ async function regenerateChunk(chunkId: string): Promise<void> {
   }
   // Re-anchor last, so it runs against the final text (marker already stripped).
   useGraphStore.getState().reanchorNodeHighlights(chunkId);
+  resumeHistory();
 }
 
 /** Regenerate a node's model output in place. No-op for other node kinds. */

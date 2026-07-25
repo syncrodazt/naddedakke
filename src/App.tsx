@@ -3,6 +3,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { Canvas } from './canvas/Canvas';
 import { Toolbar } from './canvas/Toolbar';
 import { DialogHost } from './canvas/DialogHost';
+import { FallbackBanner } from './canvas/FallbackBanner';
 import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
@@ -86,6 +87,7 @@ function App() {
     <ReactFlowProvider>
       <Toolbar />
       <Canvas nodes={flowNodes} edges={flowEdges} readOnly={replayActive} />
+      <FallbackBanner />
       {replayActive && <ReplayBar />}
       <DialogHost />
     </ReactFlowProvider>

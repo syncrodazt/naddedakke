@@ -2,6 +2,8 @@ import { useGraphStore } from '../store/graphStore';
 import { mockService, teachService } from './claude';
 import type { AnswerRequest } from './claude/types';
 import { withFallback } from './stream';
+import { isAbort, useLlmStore } from '../store/llmStore';
+import { pauseHistory, resumeHistory } from '../store/history';
 
 /** The ancestor chain (root chunk → … → parent), NOT the whole graph. */
 export function ancestorChainMd(nodeId: string): string {
@@ -41,23 +43,39 @@ export async function askQuestion(
     parent?.content.highlights.find((h) => h.childNodeId === questionId)?.text ?? '';
   const contextMd = parent ? ancestorChainMd(parent.id) : '';
 
+  // Recorded while history is still live, so undo removes the answer node.
   const answerId = store.submitQuestion(questionId, questionText);
+
+  const llm = useLlmStore.getState();
   const req: AnswerRequest = {
     sessionId: session.id,
     question: questionText,
     quotedText,
     contextMd,
     intent,
+    signal: llm.begin(),
   };
+  // A streamed reply writes to the store per token; recording those would bury
+  // the learner's own edits under hundreds of undo steps.
+  pauseHistory();
   try {
-    const stream = withFallback(teachService.streamAnswer(req), () =>
-      mockService.streamAnswer(req),
+    const stream = withFallback(
+      teachService.streamAnswer(req),
+      () => mockService.streamAnswer(req),
+      llm.noteFallback,
     );
     for await (const delta of stream) {
+      // Checking here (not just on the fetch) means Stop also halts a mock
+      // fallback stream, which no AbortSignal reaches.
+      if (req.signal?.aborted) break;
       useGraphStore.getState().appendToNode(answerId, delta);
     }
+  } catch (err) {
+    if (!isAbort(err)) throw err; // cancelling keeps whatever streamed so far
   } finally {
+    useLlmStore.getState().end();
     useGraphStore.getState().finishStreaming();
+    resumeHistory();
   }
   return answerId;
 }

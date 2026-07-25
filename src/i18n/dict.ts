@@ -73,6 +73,13 @@ const ja = {
   signOut: 'ログアウト',
   emailPlaceholder: 'メールアドレス',
   passwordPlaceholder: 'パスワード',
+  undo: '元に戻す',
+  redo: 'やり直す',
+  stopStream: '■ 停止',
+  fallbackTitle: 'モデルに接続できませんでした',
+  fallbackBody:
+    '下の回答はAIのものではなく、オフライン用のサンプル文です。APIキーと接続を確認してください。',
+  dismiss: '閉じる',
   confirmEmailInfo: 'メールを確認してアカウントを有効化してください。',
 };
 
@@ -146,6 +153,13 @@ const th: Strings = {
   signOut: 'ออกจากระบบ',
   emailPlaceholder: 'อีเมล',
   passwordPlaceholder: 'รหัสผ่าน',
+  undo: 'ย้อนกลับ',
+  redo: 'ทำซ้ำ',
+  stopStream: '■ หยุด',
+  fallbackTitle: 'เชื่อมต่อโมเดลไม่ได้',
+  fallbackBody:
+    'คำตอบด้านล่างไม่ได้มาจาก AI แต่เป็นข้อความตัวอย่างสำรอง กรุณาตรวจสอบ API key และการเชื่อมต่อ',
+  dismiss: 'ปิด',
   confirmEmailInfo: 'กรุณาเช็กอีเมลเพื่อยืนยันบัญชี',
 };
 
@@ -217,6 +231,13 @@ const en: Strings = {
   signOut: 'Sign out',
   emailPlaceholder: 'Email',
   passwordPlaceholder: 'Password',
+  undo: 'Undo',
+  redo: 'Redo',
+  stopStream: '■ Stop',
+  fallbackTitle: 'Could not reach the model',
+  fallbackBody:
+    'The answer below is not from the AI — it is offline sample text. Check the API key and your connection.',
+  dismiss: 'Dismiss',
   confirmEmailInfo: 'Check your email to confirm your account.',
 };
 

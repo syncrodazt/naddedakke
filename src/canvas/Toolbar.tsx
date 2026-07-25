@@ -14,6 +14,8 @@ import { useCameraNav } from './useCameraNav';
 import { AuthPanel } from './AuthPanel';
 import { db } from '../db/db';
 import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
+import { redo, undo, useCanRedo, useCanUndo } from '../store/history';
+import { useLlmStore } from '../store/llmStore';
 import { LANGS, useLangStore, useStrings, type Lang } from '../i18n';
 import styles from './Toolbar.module.css';
 
@@ -29,6 +31,9 @@ export function Toolbar() {
   const setModel = useModelStore((s) => s.setSelected);
   const lang = useLangStore((s) => s.lang);
   const setLang = useLangStore((s) => s.setLang);
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+  const cancelStream = useLlmStore((s) => s.cancel);
   // A cloud login pulls other devices' sessions into Dexie; refresh the list.
   const syncNonce = useAuthStore((s) => s.syncNonce);
   // Re-learn progressive-reveal state.
@@ -92,6 +97,26 @@ export function Toolbar() {
   useEffect(() => {
     void refreshSessions();
   }, [session?.id, session?.title, syncNonce]);
+
+  // Ctrl/⌘+Z to undo, +Shift (or Ctrl+Y) to redo — ignored while typing, so a
+  // compose box keeps its own native undo.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z') {
+        e.preventDefault();
+        void (e.shiftKey ? redo() : undo());
+      } else if (key === 'y') {
+        e.preventDefault();
+        void redo();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // The single project dropdown routes to a saved session or a fresh example.
   async function handleSelect(value: string) {
@@ -205,6 +230,31 @@ export function Toolbar() {
       <button type="button" className={styles.button} onClick={() => void handleNewLesson()}>
         ＋ {strings.newLesson}
       </button>
+      <span className={styles.undoGroup}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => void undo()}
+          disabled={!canUndo}
+          title={`${strings.undo} (Ctrl/⌘+Z)`}
+        >
+          ↶
+        </button>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => void redo()}
+          disabled={!canRedo}
+          title={`${strings.redo} (Ctrl/⌘+Shift+Z)`}
+        >
+          ↷
+        </button>
+      </span>
+      {streaming && (
+        <button type="button" className={styles.stop} onClick={cancelStream}>
+          {strings.stopStream}
+        </button>
+      )}
       {session && !revealActive && (
         <button type="button" className={styles.button} onClick={() => void handleRelearn()}>
           {strings.relearn}

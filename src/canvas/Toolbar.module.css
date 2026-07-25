@@ -124,3 +124,26 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* Undo/redo sit together as one control pair. */
+.undoGroup {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* Stop only appears mid-stream, so it reads as the one urgent action. */
+.stop {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--branch);
+  border: 1px solid var(--branch);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.stop:hover {
+  filter: brightness(1.08);
+}
