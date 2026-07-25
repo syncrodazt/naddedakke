@@ -1,4 +1,4 @@
-import type { AnswerRequest, LessonChunkRequest, TeachService } from './types';
+import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest, TeachService } from './types';
 import { LESSON_DONE_MARKER } from './types';
 
 const CANNED: { keywords: string[]; md: string }[] = [
@@ -86,5 +86,54 @@ export class MockClaudeService implements TeachService {
       await delay(20 + Math.random() * 20);
       yield token;
     }
+  }
+
+  // A small but genuinely solvable back-cast, so the review dialog and the
+  // dataflow engine can be exercised with no API key configured.
+  async decomposeGoal(req: GoalPlanRequest): Promise<string> {
+    await delay(400);
+    return JSON.stringify({
+      title: `${req.goal}（モック）`,
+      goalLabel: req.goal,
+      goalNote: 'これはモックの逆算プランです。本物は GEMINI_API_KEY を設定すると生成されます。',
+      variables: [
+        {
+          name: 'target_amount',
+          label: '目標金額',
+          value: 1000,
+          unit: '万円',
+          min: 100,
+          max: 10000,
+          step: 100,
+        },
+        { name: 'years_left', label: '残り年数', value: 10, unit: '年', min: 1, max: 40, step: 1 },
+        {
+          name: 'return_pct',
+          label: '期待リターン',
+          value: 4,
+          unit: '%',
+          min: 0,
+          max: 10,
+          step: 1,
+        },
+      ],
+      derived: [
+        {
+          name: 'growth_factor',
+          label: '複利の伸び',
+          formula: '(1 + return_pct / 100) ^ years_left',
+          unit: '倍',
+          note: '元本が何倍になるか。',
+        },
+        {
+          name: 'monthly_saving',
+          label: '必要な毎月の積立',
+          formula: 'target_amount / growth_factor / (years_left * 12)',
+          unit: '万円/月',
+          note: '目標から逆算した概算。',
+        },
+      ],
+      goalOf: 'monthly_saving',
+    });
   }
 }

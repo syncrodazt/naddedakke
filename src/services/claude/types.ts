@@ -15,6 +15,11 @@ export type LessonChunkRequest = {
   signal?: AbortSignal;
 };
 
+export type GoalPlanRequest = {
+  goal: string; // the learner's goal, in their own words
+  signal?: AbortSignal;
+};
+
 // A lesson-chunk stream may end with this marker on its own final line,
 // signaling the lesson is complete. Callers strip it from the node body.
 export const LESSON_DONE_MARKER = 'LESSON_DONE';
@@ -24,4 +29,7 @@ export const LESSON_DONE_MARKER = 'LESSON_DONE';
 export interface TeachService {
   streamAnswer(req: AnswerRequest): AsyncGenerator<string>; // yields markdown deltas
   streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string>; // yields markdown deltas
+  // Back-cast decomposition returns one JSON document, so it resolves whole
+  // rather than streaming — a half-parsed plan is of no use to anyone.
+  decomposeGoal(req: GoalPlanRequest): Promise<string>;
 }

@@ -1,6 +1,12 @@
-import type { AnswerRequest, LessonChunkRequest, TeachService } from './claude/types';
+import type {
+  AnswerRequest,
+  GoalPlanRequest,
+  LessonChunkRequest,
+  TeachService,
+} from './claude/types';
 import {
   buildAnswerPrompt,
+  buildGoalPlanPrompt,
   buildLessonChunkPrompt,
   buildResponsePrompt,
   type ChatPrompt,
@@ -32,5 +38,11 @@ export class GeminiService implements TeachService {
 
   streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {
     return this.streamChat(buildLessonChunkPrompt(req), req.signal);
+  }
+
+  async decomposeGoal(req: GoalPlanRequest): Promise<string> {
+    let out = '';
+    for await (const delta of this.streamChat(buildGoalPlanPrompt(req), req.signal)) out += delta;
+    return out;
   }
 }

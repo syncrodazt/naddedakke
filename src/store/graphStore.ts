@@ -28,6 +28,11 @@ type GraphState = {
   pendingQuestionId: string | null; // question node showing its compose box
   computeIssues: Record<string, string>; // gyakusan: nodeId → cycle/eval issue
   lessonComplete: boolean; // learn mode: model signaled the lesson is finished
+  // Bumped once a session create/import has actually reached Dexie. Views that
+  // list sessions must watch this, not session.id: the id changes on the render
+  // before the flush, so refreshing on it alone reads the database too early
+  // and misses the session that was just written.
+  sessionsRevision: number;
 };
 
 type GraphActions = {
@@ -174,6 +179,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
         pendingQuestionId: null,
         computeIssues: {},
         lessonComplete: false,
+        sessionsRevision: 0,
 
         async createSession(title) {
           const session: Session = {
@@ -193,6 +199,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
           });
           markDirty({ session: true });
           await flushNow();
+          set((s) => ({ sessionsRevision: s.sessionsRevision + 1 }));
           clearHistory();
           return session.id;
         },
@@ -507,6 +514,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             edgeIds: payload.edges.map((e) => e.id),
           });
           await flushNow();
+          set((s) => ({ sessionsRevision: s.sessionsRevision + 1 }));
           clearHistory();
         },
       };

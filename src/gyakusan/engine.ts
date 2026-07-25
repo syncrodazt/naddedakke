@@ -21,11 +21,17 @@ export function recomputeGraph(
 ): ComputeResult {
   const values: Record<string, number> = {};
   const issues: Record<string, string> = {};
+  // Results are keyed by node id; the evaluation scope is keyed by the name the
+  // formulas actually use. Fixtures whose ids are already identifiers get the
+  // same key in both.
+  const scope: Record<string, number> = {};
+  const nameOf = (node: RNode): string => node.varName ?? node.id;
 
   // Seed the scope with all input (non-formula) node values.
   for (const node of Object.values(nodes)) {
     if (node.formula === undefined && node.value !== undefined) {
       values[node.id] = node.value;
+      scope[nameOf(node)] = node.value;
     }
   }
 
@@ -65,11 +71,12 @@ export function recomputeGraph(
   for (const id of order) {
     const node = nodes[id]!;
     try {
-      const result: unknown = evaluate(node.formula!, { ...values });
+      const result: unknown = evaluate(node.formula!, { ...scope });
       if (typeof result !== 'number' || !Number.isFinite(result)) {
         throw new Error(`non-numeric result`);
       }
       values[id] = result;
+      scope[nameOf(node)] = result;
     } catch (err) {
       issues[id] = err instanceof Error ? err.message : String(err);
     }

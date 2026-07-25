@@ -4,6 +4,7 @@ import { Canvas } from './canvas/Canvas';
 import { Toolbar } from './canvas/Toolbar';
 import { DialogHost } from './canvas/DialogHost';
 import { FallbackBanner } from './canvas/FallbackBanner';
+import { GoalReview } from './canvas/GoalReview';
 import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
@@ -90,6 +91,7 @@ function App() {
       <FallbackBanner />
       {replayActive && <ReplayBar />}
       <DialogHost />
+      <GoalReview />
     </ReactFlowProvider>
   );
 }

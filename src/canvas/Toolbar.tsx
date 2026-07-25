@@ -16,6 +16,7 @@ import { db } from '../db/db';
 import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
 import { redo, undo, useCanRedo, useCanUndo } from '../store/history';
 import { useLlmStore } from '../store/llmStore';
+import { decomposeGoal } from '../services/goal';
 import { LANGS, useLangStore, useStrings, type Lang } from '../i18n';
 import styles from './Toolbar.module.css';
 
@@ -36,6 +37,7 @@ export function Toolbar() {
   const cancelStream = useLlmStore((s) => s.cancel);
   // A cloud login pulls other devices' sessions into Dexie; refresh the list.
   const syncNonce = useAuthStore((s) => s.syncNonce);
+  const sessionsRevision = useGraphStore((s) => s.sessionsRevision);
   // Re-learn progressive-reveal state.
   const revealActive = useRevealStore((s) => s.active);
   const revealCount = useRevealStore((s) => s.count);
@@ -59,6 +61,13 @@ export function Toolbar() {
     const chunkId = await startLesson(topic);
     await refreshSessions();
     panToNode(chunkId);
+  }
+
+  // Back-cast: describe a goal, review the model's decomposition, then insert.
+  async function handleBackcast() {
+    const goal = (await promptDialog(strings.goalPrompt, '', strings.goalPlaceholder))?.trim();
+    if (!goal) return;
+    await decomposeGoal(goal);
   }
 
   async function handleNextChunk() {
@@ -96,7 +105,7 @@ export function Toolbar() {
 
   useEffect(() => {
     void refreshSessions();
-  }, [session?.id, session?.title, syncNonce]);
+  }, [session?.id, session?.title, syncNonce, sessionsRevision]);
 
   // Ctrl/⌘+Z to undo, +Shift (or Ctrl+Y) to redo — ignored while typing, so a
   // compose box keeps its own native undo.
@@ -255,6 +264,9 @@ export function Toolbar() {
           {strings.stopStream}
         </button>
       )}
+      <button type="button" className={styles.button} onClick={() => void handleBackcast()}>
+        {strings.backcast}
+      </button>
       {session && !revealActive && (
         <button type="button" className={styles.button} onClick={() => void handleRelearn()}>
           {strings.relearn}

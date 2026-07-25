@@ -96,6 +96,10 @@ function validateNode(v: unknown, sessionId: string): RNode {
     if (typeof v.understood !== 'boolean') fail(`node ${id} understood`);
     node.understood = v.understood;
   }
+  if (v.varName !== undefined) {
+    if (typeof v.varName !== 'string') fail(`node ${id} varName`);
+    node.varName = v.varName;
+  }
   if (v.formula !== undefined) {
     if (typeof v.formula !== 'string') fail(`node ${id} formula`);
     node.formula = v.formula;

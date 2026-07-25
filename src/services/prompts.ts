@@ -1,4 +1,4 @@
-import type { AnswerRequest, LessonChunkRequest } from './claude/types';
+import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest } from './claude/types';
 import { LESSON_DONE_MARKER } from './claude/types';
 
 // Prompt construction is provider-agnostic: every service receives a plain
@@ -43,6 +43,35 @@ export function buildResponsePrompt(req: AnswerRequest): ChatPrompt {
       `## Lesson context (ancestor chain)\n\n${req.contextMd || '(none)'}\n\n` +
       `## The prompt they answered\n\n> ${req.quotedText}\n\n` +
       `## Their answer\n\n${req.question}`,
+  };
+}
+
+export function buildGoalPlanPrompt(req: GoalPlanRequest): ChatPrompt {
+  return {
+    system:
+      'You decompose a goal backwards into the quantities it depends on, as a ' +
+      'spreadsheet-style dependency graph.\n' +
+      'Reply with ONE JSON object and nothing else — no prose, no code fence.\n' +
+      'Shape:\n' +
+      '{"title":string,"goalLabel":string,"goalNote":string,' +
+      '"variables":[{"name":string,"label":string,"value":number,"unit":string,' +
+      '"min":number,"max":number,"step":number}],' +
+      '"derived":[{"name":string,"label":string,"formula":string,"unit":string,"note":string}],' +
+      '"goalOf":string}\n' +
+      'Rules:\n' +
+      '- "name" is a snake_case identifier (letters, digits, underscore). All names unique.\n' +
+      '- "variables" are the inputs the learner can move; give each a realistic ' +
+      'starting value and a sensible slider min/max/step that contains it.\n' +
+      '- "derived" are computed quantities. "formula" is a mathjs expression that may ' +
+      'reference ONLY the names defined in this object. No cycles. Functions like ' +
+      'max(), min(), sqrt(), ^ are allowed.\n' +
+      '- "goalOf" is the name of the derived quantity that answers the goal.\n' +
+      '- Aim for 4-7 variables and 2-5 derived quantities: enough to be honest, ' +
+      'few enough to reason about.\n' +
+      '- "label", "goalLabel", "goalNote" and "note" are shown to the learner, so write ' +
+      "them in the learner's own language (detect it from the goal). Names and formulas " +
+      'stay ASCII identifiers.',
+    user: `Goal:\n\n${req.goal}`,
   };
 }
 

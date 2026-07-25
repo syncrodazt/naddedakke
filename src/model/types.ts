@@ -30,7 +30,13 @@ export type RNode = {
     highlights: Highlight[];
   };
   // gyakusan only:
-  formula?: string; // mathjs expr referencing other node ids by name
+  formula?: string; // mathjs expr referencing other nodes by their varName
+  // The identifier this node is known by inside formulas. Defaults to `id` for
+  // hand-authored fixtures whose ids are already readable identifiers. Generated
+  // graphs need the two separated: `id` is the Dexie primary key and must be
+  // globally unique, while the formula name is short, readable and only unique
+  // within its own session — two back-cast plans may both want `current_age`.
+  varName?: string;
   value?: number;
   unit?: string;
   // playground only: registered component key + serializable params

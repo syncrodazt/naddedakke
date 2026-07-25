@@ -80,6 +80,21 @@ const ja = {
   fallbackBody:
     '下の回答はAIのものではなく、オフライン用のサンプル文です。APIキーと接続を確認してください。',
   dismiss: '閉じる',
+  backcast: '🎯 逆算',
+  goalPrompt: '達成したい目標は？（例：35歳でFIRE）',
+  goalPlaceholder: '例：35歳でFIRE / 3年で英語を話せるように',
+  goalThinking: '目標を分解しています…',
+  planTitle: '逆算プランの確認',
+  planIntro:
+    'AIが提案した分解です。数値はあくまで出発点なので、挿入後にスライダーで調整してください。',
+  planVariables: '動かせる変数',
+  planDerived: '計算される値',
+  planGoal: 'ゴール',
+  planInsert: 'このプランを挿入',
+  planFailed: 'プランを解釈できませんでした',
+  planRetry: 'もう一度',
+  gyakusanDisclaimer:
+    '⚠️ これは教育用の簡易モデルです。前提を単純化しているため、税・インフレ・変動リスクなどは考慮していません。専門的な助言ではありません。',
   confirmEmailInfo: 'メールを確認してアカウントを有効化してください。',
 };
 
@@ -160,6 +175,21 @@ const th: Strings = {
   fallbackBody:
     'คำตอบด้านล่างไม่ได้มาจาก AI แต่เป็นข้อความตัวอย่างสำรอง กรุณาตรวจสอบ API key และการเชื่อมต่อ',
   dismiss: 'ปิด',
+  backcast: '🎯 ย้อนคำนวณ',
+  goalPrompt: 'เป้าหมายที่อยากไปให้ถึงคืออะไร? (เช่น เกษียณตอน 40)',
+  goalPlaceholder: 'เช่น เกษียณตอน 40 / พูดอังกฤษได้ใน 3 ปี',
+  goalThinking: 'กำลังแตกเป้าหมาย…',
+  planTitle: 'ตรวจสอบแผนย้อนคำนวณ',
+  planIntro:
+    'นี่คือการแตกเป้าหมายที่ AI เสนอ ตัวเลขเป็นแค่จุดตั้งต้น ปรับด้วยสไลเดอร์ได้หลังใส่ลงกระดาน',
+  planVariables: 'ตัวแปรที่ปรับได้',
+  planDerived: 'ค่าที่คำนวณ',
+  planGoal: 'เป้าหมาย',
+  planInsert: 'ใส่แผนนี้',
+  planFailed: 'ตีความแผนไม่ได้',
+  planRetry: 'ลองใหม่',
+  gyakusanDisclaimer:
+    '⚠️ นี่เป็นโมเดลอย่างง่ายเพื่อการเรียนรู้ ตั้งสมมติฐานแบบง่าย ไม่ได้คิดภาษี เงินเฟ้อ หรือความผันผวน และไม่ใช่คำแนะนำจากผู้เชี่ยวชาญ',
   confirmEmailInfo: 'กรุณาเช็กอีเมลเพื่อยืนยันบัญชี',
 };
 
@@ -238,6 +268,21 @@ const en: Strings = {
   fallbackBody:
     'The answer below is not from the AI — it is offline sample text. Check the API key and your connection.',
   dismiss: 'Dismiss',
+  backcast: '🎯 Back-cast',
+  goalPrompt: 'What goal do you want to reach? (e.g. FIRE by 35)',
+  goalPlaceholder: 'e.g. FIRE by 35 / speak English in 3 years',
+  goalThinking: 'Decomposing the goal…',
+  planTitle: 'Review the back-cast plan',
+  planIntro:
+    "This is the model's proposed decomposition. The numbers are a starting point — adjust them with the sliders once inserted.",
+  planVariables: 'Variables you can move',
+  planDerived: 'Computed values',
+  planGoal: 'Goal',
+  planInsert: 'Insert this plan',
+  planFailed: 'Could not read the plan',
+  planRetry: 'Try again',
+  gyakusanDisclaimer:
+    '⚠️ This is a simplified educational model. It ignores tax, inflation and volatility, and is not professional advice.',
   confirmEmailInfo: 'Check your email to confirm your account.',
 };
 

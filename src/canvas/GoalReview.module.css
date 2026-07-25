@@ -1,0 +1,169 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(18 32 46 / 0.28);
+}
+
+.card {
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(18 32 46 / 0.3);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.intro,
+.thinking {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.thinking {
+  padding: 24px 0;
+  text-align: center;
+}
+
+.sectionLabel {
+  margin-top: 14px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--grid);
+  vertical-align: baseline;
+}
+
+.label {
+  color: var(--ink);
+}
+
+.value {
+  text-align: right;
+  font-weight: 600;
+  color: var(--alias);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.name {
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.formula {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.goal {
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--guard) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--guard) 55%, transparent);
+  border-radius: 8px;
+}
+
+.goalLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.goalNote {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.errorTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--branch);
+}
+
+.errorDetail {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.primary,
+.cancel {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+
+.primary {
+  color: #fff;
+  background: var(--alias);
+  border: 1px solid var(--alias);
+}
+
+.cancel {
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+}
+
+.cancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
