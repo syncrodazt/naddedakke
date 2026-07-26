@@ -1,6 +1,7 @@
 import { useGraphStore } from '../store/graphStore';
 import { mockService, teachService } from './claude';
-import { LESSON_DONE_MARKER, type AnswerRequest, type LessonChunkRequest } from './claude/types';
+import type { AnswerRequest, LessonChunkRequest } from './claude/types';
+import { consumeChunkStream } from './lesson';
 import { withFallback } from './stream';
 import { ancestorChainMd } from './ask';
 import { isAbort, useLlmStore } from '../store/llmStore';
@@ -113,10 +114,7 @@ async function regenerateChunk(chunkId: string): Promise<void> {
       () => mockService.streamLessonChunk(req),
       llm.noteFallback,
     );
-    for await (const delta of stream) {
-      if (req.signal?.aborted) break; // also halts a mock fallback stream
-      useGraphStore.getState().appendToNode(chunkId, delta);
-    }
+    await consumeChunkStream(chunkId, stream, req.signal);
   } catch (err) {
     if (!isAbort(err)) throw err;
   } finally {
@@ -124,13 +122,7 @@ async function regenerateChunk(chunkId: string): Promise<void> {
     useGraphStore.getState().finishStreaming();
   }
 
-  const md = useGraphStore.getState().nodes[chunkId]?.content.md ?? '';
-  if (md.trimEnd().endsWith(LESSON_DONE_MARKER)) {
-    const stripped = md.trimEnd().slice(0, -LESSON_DONE_MARKER.length).trimEnd();
-    useGraphStore.getState().setNodeMd(chunkId, stripped);
-    useGraphStore.getState().setLessonComplete(true);
-  }
-  // Re-anchor last, so it runs against the final text (marker already stripped).
+  // Re-anchor last, so it runs against the final composed text.
   useGraphStore.getState().reanchorNodeHighlights(chunkId);
   resumeHistory();
 }

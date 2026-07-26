@@ -1,5 +1,4 @@
 import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest, TeachService } from './types';
-import { LESSON_DONE_MARKER } from './types';
 
 const CANNED: { keywords: string[]; md: string }[] = [
   {
@@ -72,20 +71,25 @@ export class MockClaudeService implements TeachService {
     }
   }
 
+  // Emits the same JSON envelope a real provider is asked for, so the streaming
+  // parser and the check-question composition are exercised offline too.
   async *streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {
     const n = req.chunkIndex + 1;
-    let md =
-      `## ${req.topic} — その${n}\n\n` +
-      `これはモックのレッスンチャンク${n}です。本物のレッスンは ` +
-      `\`.env.local\` に \`ANTHROPIC_API_KEY\`（または \`GEMINI_API_KEY\`）を` +
-      `設定すると生成されます。\n\n` +
-      `> ❓ このチャンク${n}の要点を一言で言うと？`;
-    if (n >= MOCK_LESSON_CHUNKS) md += `\n${LESSON_DONE_MARKER}`;
-    const tokens = md.match(/\S+\s*/g) ?? [md];
-    for (const token of tokens) {
+    const payload = JSON.stringify({
+      chunkTitle: `${req.topic} — その${n}`,
+      md:
+        `## ${req.topic} — その${n}\n\n` +
+        `これはモックのレッスンチャンク${n}です。本物のレッスンは ` +
+        `\`.env.local\` に \`ANTHROPIC_API_KEY\`（または \`GEMINI_API_KEY\`）を` +
+        `設定すると生成されます。`,
+      checkQuestion: `このチャンク${n}の要点を一言で言うと？`,
+      done: n >= MOCK_LESSON_CHUNKS,
+    });
+    // Arbitrary split points: the parser must not care where deltas land.
+    for (let i = 0; i < payload.length; i += 12) {
       if (req.signal?.aborted) return;
       await delay(20 + Math.random() * 20);
-      yield token;
+      yield payload.slice(i, i + 12);
     }
   }
 

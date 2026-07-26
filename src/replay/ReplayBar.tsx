@@ -17,6 +17,14 @@ export function ReplayBar() {
   const ordered = useMemo(() => sortedBySeq(nodes), [nodes]);
   const total = ordered.length;
 
+  // Understanding as of this point in the timeline, counted over revealed nodes
+  // only. Replay is the "how did my understanding actually build up" view, so
+  // the number has to climb with the scrubber rather than show today's total.
+  const understood = useMemo(
+    () => ordered.slice(0, cursor).filter((n) => n.understood).length,
+    [ordered, cursor],
+  );
+
   // Auto-advance one node per beat while playing.
   useEffect(() => {
     if (!playing) return;
@@ -74,6 +82,9 @@ export function ReplayBar() {
       />
       <span className={styles.counter}>
         {cursor}/{total}
+      </span>
+      <span className={styles.understood} title={strings.understoodTitle}>
+        ✓ {strings.understoodProgress} {understood}
       </span>
       <span className={styles.speeds}>
         {SPEEDS.map((s) => (

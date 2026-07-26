@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildAnswerPrompt, buildLessonChunkPrompt, buildResponsePrompt } from './prompts';
-import { LESSON_DONE_MARKER } from './claude/types';
 
 describe('prompt builders', () => {
   it('answer prompt carries the quote, question, and ancestor context', () => {
@@ -26,7 +25,7 @@ describe('prompt builders', () => {
     expect(p.user).toContain('ทฤษฎีบทของเบย์');
     expect(p.user).toContain('body B');
     expect(p.user).toContain('Write chunk 3');
-    expect(p.system).toContain(LESSON_DONE_MARKER);
+    expect(p.system).toContain('"done":boolean');
     expect(p.system).toContain('next single chunk');
   });
 

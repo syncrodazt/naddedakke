@@ -41,7 +41,9 @@ export class GeminiService implements TeachService {
   }
 
   streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {
-    return this.streamChat(buildLessonChunkPrompt(req), req.signal);
+    // JSON, but still streamed: LessonStreamParser renders the md field live as
+    // it arrives, so structured output costs no interactivity.
+    return this.streamChat(buildLessonChunkPrompt(req), req.signal, { json: true });
   }
 
   async decomposeGoal(req: GoalPlanRequest): Promise<string> {

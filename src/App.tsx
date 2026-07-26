@@ -9,6 +9,7 @@ import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
 import { useRevealStore } from './replay/revealStore';
+import { useVisibilityStore } from './replay/visibilityStore';
 import { revealVisible, visibleGraph } from './replay/visibility';
 import { fixture } from './fixture/fixture';
 import { db } from './db/db';
@@ -67,6 +68,15 @@ function App() {
     if (revealActive) return revealVisible(nodes, edges, revealBaseSeq, revealCount);
     return null;
   }, [nodes, edges, replayActive, replayCursor, revealActive, revealBaseSeq, revealCount]);
+
+  // Publish the filtered set so node components can tell what is on screen.
+  // A node's look can depend on other nodes (a resolved highlight goes teal),
+  // and reading that from the graph store alone would consult nodes replay has
+  // not revealed yet.
+  const setVisibleIds = useVisibilityStore((s) => s.setVisibleIds);
+  useEffect(() => {
+    setVisibleIds(visible?.nodeIds ?? null);
+  }, [visible, setVisibleIds]);
 
   // toFlowNode is memoized per RNode, so unchanged nodes keep their object
   // identity here and React Flow leaves them alone (see store/selectors.ts).

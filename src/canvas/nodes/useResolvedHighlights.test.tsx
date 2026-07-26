@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Highlight, RNode } from '../../model/types';
 import { useGraphStore } from '../../store/graphStore';
+import { useVisibilityStore } from '../../replay/visibilityStore';
 import { useResolvedHighlights } from './useResolvedHighlights';
 
 function node(id: string, understood?: boolean): RNode {
@@ -26,6 +27,8 @@ beforeEach(() => {
   useGraphStore.setState({
     nodes: { q1: node('q1', true), q2: node('q2', false) },
   });
+  // Unfiltered canvas is the normal case; the replay tests below opt in.
+  useVisibilityStore.setState({ visibleIds: null });
 });
 
 describe('useResolvedHighlights', () => {
@@ -68,5 +71,30 @@ describe('useResolvedHighlights', () => {
       });
     });
     expect(result.current).toBe(before);
+  });
+});
+
+describe('replay visibility', () => {
+  it('hides resolution for a question replay has not revealed yet', () => {
+    // Replay exists to show how understanding was built. Drawing a highlight
+    // teal before the question that resolved it has appeared gives away the
+    // ending in frame one.
+    useVisibilityStore.setState({ visibleIds: new Set(['parent']) });
+    const { result } = renderHook(() => useResolvedHighlights(highlights));
+    expect(result.current).toEqual([]);
+  });
+
+  it('shows it once that question is revealed', () => {
+    useVisibilityStore.setState({ visibleIds: new Set(['parent']) });
+    const { result } = renderHook(() => useResolvedHighlights(highlights));
+    act(() => {
+      useVisibilityStore.setState({ visibleIds: new Set(['parent', 'q1']) });
+    });
+    expect(result.current).toEqual(['h1']);
+  });
+
+  it('shows everything when nothing is filtering the canvas', () => {
+    const { result } = renderHook(() => useResolvedHighlights(highlights));
+    expect(result.current).toEqual(['h1']);
   });
 });

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useGraphStore } from '../store/graphStore';
 import { flushNow } from '../db/persistence';
 import { db } from '../db/db';
-import { startLesson, nextLessonChunk } from './lesson';
-import { LESSON_DONE_MARKER } from './claude/types';
+import { consumeChunkStream, startLesson, nextLessonChunk } from './lesson';
+import { findCheckRange } from './checkQuestion';
 
 // In the test environment fetch('/api/chat') fails immediately, so the
 // lesson flow exercises the real→mock fallback path end to end.
@@ -41,7 +41,7 @@ describe('chunked lesson flow', () => {
     expect(streamingNodeId).toBeNull(); // finished
   });
 
-  it('chains chunks with next edges and strips the done marker at the end', async () => {
+  it('chains chunks with next edges and flags the lesson complete at the end', async () => {
     await startLesson('トピックX');
     await nextLessonChunk();
     const last = await nextLessonChunk(); // mock lesson completes at chunk 3
@@ -55,7 +55,49 @@ describe('chunked lesson flow', () => {
     expect(nextEdges).toHaveLength(2);
 
     expect(lessonComplete).toBe(true);
-    expect(nodes[last]!.content.md).not.toContain(LESSON_DONE_MARKER);
+    // The body is markdown, never the JSON envelope it arrived in.
+    expect(nodes[last]!.content.md).not.toContain('chunkTitle');
+    expect(nodes[last]!.content.md.trimStart().startsWith('{')).toBe(false);
+  });
+
+  it('never shows JSON syntax in the node while the chunk streams', async () => {
+    // The final body is rewritten when the stream ends, so checking only the
+    // end state would pass even if the learner watched `{"chunkTitle":"…`
+    // scroll past first. Assert after every delta instead.
+    await startLesson('ストリーム');
+    const chunkId = useGraphStore.getState().addChunk('');
+    const payload = JSON.stringify({
+      chunkTitle: 'T',
+      md: '## T\n\n本文です。',
+      checkQuestion: 'なぜ？',
+      done: false,
+    });
+    const seen: string[] = [];
+    async function* deltas(): AsyncGenerator<string> {
+      for (let i = 0; i < payload.length; i += 5) {
+        yield payload.slice(i, i + 5);
+        // Resumes only after the consumer has appended this delta.
+        seen.push(useGraphStore.getState().nodes[chunkId]!.content.md);
+      }
+    }
+    await consumeChunkStream(chunkId, deltas(), undefined);
+
+    for (const md of seen) {
+      expect(md, `leaked JSON: ${md}`).not.toMatch(/chunkTitle|checkQuestion|\{"/);
+    }
+    expect(seen[seen.length - 1]).toContain('本文です。');
+  });
+
+  it('always leaves a findable comprehension check on the chunk', async () => {
+    // The app composes the "> ❓ …" line from the model's checkQuestion field
+    // rather than hoping the model formatted it, so the Socratic loop cannot
+    // silently vanish. findCheckRange is what the 答える button depends on.
+    const chunkId = await startLesson('確認テスト');
+    const md = useGraphStore.getState().nodes[chunkId]!.content.md;
+    const range = findCheckRange(md)!;
+    expect(range).not.toBeNull();
+    expect(md.slice(range.start, range.end)).toBe(range.text);
+    expect(range.text.length).toBeGreaterThan(0);
   });
 
   it('places chunks left to right on the spine', async () => {

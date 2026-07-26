@@ -40,6 +40,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Understanding as of the scrubber position — teal is the "resolved" colour,
+   same as a resolved highlight, so the two read as the same idea. */
+.understood {
+  font-size: 12px;
+  color: var(--alias);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .speeds {
   display: flex;
   gap: 2px;

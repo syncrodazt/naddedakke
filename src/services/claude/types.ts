@@ -20,15 +20,14 @@ export type GoalPlanRequest = {
   signal?: AbortSignal;
 };
 
-// A lesson-chunk stream may end with this marker on its own final line,
-// signaling the lesson is complete. Callers strip it from the node body.
-export const LESSON_DONE_MARKER = 'LESSON_DONE';
-
 // The one seam between the graph and the LLM. Swapping providers (mock,
 // Gemini, Anthropic) never touches the store or UI.
 export interface TeachService {
   streamAnswer(req: AnswerRequest): AsyncGenerator<string>; // yields markdown deltas
-  streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string>; // yields markdown deltas
+  // Yields deltas of a JSON lesson-chunk object; LessonStreamParser turns those
+  // into live markdown. A provider that replies with plain markdown instead is
+  // handled by the same parser.
+  streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string>;
   // Back-cast decomposition returns one JSON document, so it resolves whole
   // rather than streaming — a half-parsed plan is of no use to anyone.
   decomposeGoal(req: GoalPlanRequest): Promise<string>;

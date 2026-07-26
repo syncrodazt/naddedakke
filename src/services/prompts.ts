@@ -1,5 +1,4 @@
 import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest } from './claude/types';
-import { LESSON_DONE_MARKER } from './claude/types';
 
 // Prompt construction is provider-agnostic: every service receives a plain
 // {system, user} pair and maps it onto its own wire format.
@@ -85,13 +84,14 @@ export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
       `${TUTOR_PERSONA}\n` +
       'You teach the topic Socratically, split into roughly 10 small chunks. ' +
       'Write ONLY the next single chunk — never the whole lesson at once.\n' +
-      'Format: the first line is "## <title>", then a 150-250 word Markdown body, ' +
-      'then ALWAYS end with a comprehension-check question on its own final line, ' +
-      'formatted exactly as a blockquote starting with the ❓ emoji: ' +
-      '"> ❓ <one short question that checks whether the learner understood THIS chunk>". ' +
-      "Everything is in the learner's language.\n" +
-      `If this is the final chunk of the lesson, add one more line after the ❓ line ` +
-      `containing exactly "${LESSON_DONE_MARKER}".`,
+      'Reply with ONE JSON object and nothing else — no prose, no code fence:\n' +
+      '{"chunkTitle":string,"md":string,"checkQuestion":string,"done":boolean}\n' +
+      '- "md": the chunk body in Markdown, 150-250 words, first line "## <title>". ' +
+      'Do NOT put the comprehension question in here.\n' +
+      '- "checkQuestion": one short question that checks whether the learner ' +
+      'understood THIS chunk. Plain text, no "> " or emoji — the app formats it.\n' +
+      '- "done": true only if this is the final chunk of the lesson.\n' +
+      '- "chunkTitle", "md" and "checkQuestion" are in the learner\'s language.',
     user:
       `## Topic\n\n${req.topic}\n\n` +
       `## Chunks so far\n\n${previous}\n\n` +

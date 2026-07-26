@@ -14,6 +14,7 @@ import {
 import { extractClaudeText, streamSseText } from './sse';
 import { currentModel } from '../store/modelStore';
 import { GOAL_PLAN_SCHEMA } from '../gyakusan/planSchema';
+import { LESSON_CHUNK_SCHEMA } from './lessonSchema';
 
 // Streams from the /api/claude proxy (Vite middleware in dev, Vercel edge
 // function in production). The Anthropic API key never reaches the browser.
@@ -59,7 +60,12 @@ export class ClaudeService implements TeachService {
   }
 
   streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {
-    return this.streamChat(buildLessonChunkPrompt(req), req.signal, { effort: 'medium' });
+    // Structured, but still streamed: LessonStreamParser renders the md field
+    // live as it arrives, so the schema costs no interactivity.
+    return this.streamChat(buildLessonChunkPrompt(req), req.signal, {
+      schema: LESSON_CHUNK_SCHEMA,
+      effort: 'medium',
+    });
   }
 
   async decomposeGoal(req: GoalPlanRequest): Promise<string> {

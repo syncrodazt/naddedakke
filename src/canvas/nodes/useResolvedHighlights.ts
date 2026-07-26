@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Highlight } from '../../model/types';
 import { useGraphStore } from '../../store/graphStore';
+import { isRevealed, useVisibilityStore } from '../../replay/visibilityStore';
 
 /**
  * Ids of a node's highlights whose spawned question the learner has marked
@@ -17,9 +18,18 @@ import { useGraphStore } from '../../store/graphStore';
  * the component re-renders only when the resolved set actually changes.
  */
 export function useResolvedHighlights(highlights: Highlight[]): string[] {
+  // Only nodes the learner has actually been shown count. During replay the
+  // question that resolved a highlight may not have appeared yet, and drawing
+  // it teal ahead of time would give away the ending of the very thing replay
+  // is there to show.
+  const visibleIds = useVisibilityStore((s) => s.visibleIds);
   const key = useGraphStore((s) =>
     highlights
-      .filter((h) => h.childNodeId !== undefined && s.nodes[h.childNodeId]?.understood)
+      .filter((h) => {
+        if (h.childNodeId === undefined) return false;
+        const child = s.nodes[h.childNodeId];
+        return child?.understood === true && isRevealed(visibleIds, child.id);
+      })
       .map((h) => h.id)
       .join(','),
   );
