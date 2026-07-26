@@ -68,6 +68,8 @@ function App() {
     return null;
   }, [nodes, edges, replayActive, replayCursor, revealActive, revealBaseSeq, revealCount]);
 
+  // toFlowNode is memoized per RNode, so unchanged nodes keep their object
+  // identity here and React Flow leaves them alone (see store/selectors.ts).
   const flowNodes = useMemo(() => {
     const toFlow = (n: (typeof nodes)[string]) =>
       toFlowNode(n, rankMap.get(n.id) ?? 0, selectedIds.has(n.id));

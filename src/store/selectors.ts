@@ -8,7 +8,26 @@ export type RFlowNode = Node<{ node: RNode; displayNum: number }>;
 
 const DEFAULT_NODE_WIDTH = 360;
 
+// React Flow re-renders any node whose object identity changed. Dragging writes
+// to the store on every pointer move, so rebuilding this array there would hand
+// React Flow 200+ "new" nodes per frame when only one actually moved.
+//
+// Store updates are immutable, so an unchanged node is the very same RNode
+// object — which makes it a usable cache key. A WeakMap also means entries for
+// deleted nodes go away on their own.
+const flowNodeCache = new WeakMap<RNode, RFlowNode>();
+
 export function toFlowNode(rnode: RNode, displayNum: number, selected = false): RFlowNode {
+  const cached = flowNodeCache.get(rnode);
+  if (cached && cached.data.displayNum === displayNum && cached.selected === selected) {
+    return cached;
+  }
+  const flow = buildFlowNode(rnode, displayNum, selected);
+  flowNodeCache.set(rnode, flow);
+  return flow;
+}
+
+function buildFlowNode(rnode: RNode, displayNum: number, selected: boolean): RFlowNode {
   return {
     id: rnode.id,
     type: rnode.kind,

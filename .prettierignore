@@ -3,3 +3,5 @@ dist
 node_modules
 coverage
 package-lock.json
+bench/fixtures/
+bench/last-run.txt

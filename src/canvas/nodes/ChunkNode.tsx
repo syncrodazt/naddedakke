@@ -7,24 +7,18 @@ import { useGraphStore } from '../../store/graphStore';
 import { findCheckRange } from '../../services/checkQuestion';
 import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
+import { useResolvedHighlights } from './useResolvedHighlights';
 import styles from './ChunkNode.module.css';
 
 export function ChunkNode({ data, selected }: NodeProps<RFlowNode>) {
   const strings = useStrings();
   const { node, displayNum } = data;
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
-  const nodes = useGraphStore((s) => s.nodes);
   const { panToNode } = useCameraNav();
 
   // Highlights whose spawned question has been marked understood — render teal
   // (confusion resolved) instead of pink.
-  const resolvedIds = useMemo(
-    () =>
-      node.content.highlights
-        .filter((h) => h.childNodeId && nodes[h.childNodeId]?.understood)
-        .map((h) => h.id),
-    [node.content.highlights, nodes],
-  );
+  const resolvedIds = useResolvedHighlights(node.content.highlights);
 
   // The Socratic comprehension-check ("> ❓ …") at the end of the chunk.
   const check = useMemo(() => findCheckRange(node.content.md), [node.content.md]);
