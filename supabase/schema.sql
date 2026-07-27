@@ -32,3 +32,19 @@ create policy rgraph_sessions_select on public.rgraph_sessions
 drop policy if exists rgraph_sessions_modify on public.rgraph_sessions;
 create policy rgraph_sessions_modify on public.rgraph_sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Realtime: the app subscribes to this table so a change made elsewhere (another
+-- device, or the MCP server writing on Claude's behalf) reaches an open canvas
+-- without the learner pressing anything. Realtime honours the policies above, so
+-- a subscriber still only ever receives their own rows.
+--
+-- Wrapped because adding a table that is already in the publication is an error.
+do $$
+begin
+  alter publication supabase_realtime add table public.rgraph_sessions;
+exception
+  when duplicate_object then null;
+  when undefined_object then
+    raise notice 'supabase_realtime publication not found — skipping realtime setup';
+end;
+$$;

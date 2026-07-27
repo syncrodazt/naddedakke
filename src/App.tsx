@@ -5,6 +5,7 @@ import { Toolbar } from './canvas/Toolbar';
 import { DialogHost } from './canvas/DialogHost';
 import { FallbackBanner } from './canvas/FallbackBanner';
 import { GoalReview } from './canvas/GoalReview';
+import { SyncIndicator } from './canvas/SyncIndicator';
 import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
@@ -101,6 +102,7 @@ function App() {
       <Toolbar />
       <Canvas nodes={flowNodes} edges={flowEdges} readOnly={replayActive} />
       <FallbackBanner />
+      <SyncIndicator />
       {replayActive && <ReplayBar />}
       <DialogHost />
       <GoalReview />

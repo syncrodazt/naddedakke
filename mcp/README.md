@@ -110,8 +110,15 @@ Not provided, on purpose: editing existing node text, and deleting anything.
 A write lands in the source the session came from. **Only the cloud source
 reaches a running app** — a file write still has to be Imported by hand.
 
-The app does not poll. After Claude writes, press **☁ Pull** in the toolbar
-(visible when signed in) to pull the latest and reload the open session.
+A cloud write appears **on its own**, usually within a second: the app
+subscribes to the table over Supabase Realtime. Run `supabase/schema.sql` (it
+adds the table to the `supabase_realtime` publication) and stay signed in.
+
+It waits for a safe moment rather than interrupting — reloading replaces the
+canvas and clears undo history, so a change holds until nothing is streaming, no
+compose box or dialog is open, replay is not running, and local edits have
+reached storage. While it waits the app says so. **☁ Pull** is still there to
+force it, and is the fallback if Realtime is not enabled on your project.
 
 Concurrent edits are guarded: a cloud write only lands if the row has not
 changed since it was read. If the app has the session open and pushed an edit

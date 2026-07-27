@@ -4,6 +4,7 @@ import { db } from '../db/db';
 import { setFlushListener, type Snapshot } from '../db/persistence';
 import { validateImport } from '../db/exportImport';
 import type { Session, SessionExport } from '../model/types';
+import { noteOwnPush } from './cloudRealtime';
 
 // Cloud sync mirrors each session as one row: { id, user_id, title, updated_at,
 // data: SessionExport }. The store stays the truth; Dexie is local durability;
@@ -52,6 +53,9 @@ export function buildExport(snapshot: Snapshot): SessionExport | null {
 async function upsertRow(exp: SessionExport): Promise<void> {
   if (!supabase || !currentUser) return;
   const row = toRow(exp, currentUser.id, new Date().toISOString());
+  // Realtime will hand this same row straight back; remember the stamp so the
+  // subscription can tell our own write from someone else's.
+  noteOwnPush(row.updated_at);
   const { error } = await supabase.from(SESSIONS_TABLE).upsert(row);
   if (error) console.warn('[cloudSync] push failed:', error.message);
 }

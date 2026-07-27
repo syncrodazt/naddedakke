@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import { supabase, isCloudEnabled } from '../services/supabase';
 import { initCloudSync, setCurrentUser, syncOnLogin } from '../services/cloudSync';
+import { startRealtime, stopRealtime } from '../services/cloudRealtime';
 import { getStrings } from '../i18n';
 
 type AuthState = {
@@ -60,7 +61,12 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
       set({ user, status: 'ready' });
       if (user && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) {
         void runSync(bump);
+        // Listen for changes made elsewhere (another device, or the MCP server
+        // writing on Claude's behalf) only after the login reconcile, so the
+        // pushes that sync makes are not mistaken for someone else's edits.
+        startRealtime(user.id);
       }
+      if (!user) stopRealtime();
     });
   },
 

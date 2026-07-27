@@ -60,6 +60,22 @@ export function markDirty(change: {
   timer = setTimeout(() => void flushNow(), FLUSH_DELAY_MS);
 }
 
+/**
+ * Whether local edits are still waiting to reach Dexie (and therefore the
+ * cloud). Realtime uses this to avoid overwriting the open session with an
+ * older remote copy while a local edit is still in the debounce window.
+ */
+export function hasPendingWrites(): boolean {
+  return (
+    timer !== null ||
+    dirty.session ||
+    dirty.nodeIds.size > 0 ||
+    dirty.edgeIds.size > 0 ||
+    dirty.deletedNodeIds.size > 0 ||
+    dirty.deletedEdgeIds.size > 0
+  );
+}
+
 export async function flushNow(): Promise<void> {
   if (timer) {
     clearTimeout(timer);
