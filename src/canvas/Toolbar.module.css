@@ -5,8 +5,8 @@
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 5px 8px;
   background: var(--card);
   border: 1px solid var(--grid);
   border-radius: 10px;
@@ -29,7 +29,7 @@
   border: 1px solid var(--grid);
   border-radius: 6px;
   padding: 3px 6px;
-  max-width: 180px;
+  max-width: 150px;
 }
 
 .progress {
@@ -38,44 +38,6 @@
   color: var(--alias);
   padding: 0 4px;
   font-variant-numeric: tabular-nums;
-}
-
-/* Language switcher: three segmented buttons, each labelled in its own script. */
-.langSwitch {
-  display: inline-flex;
-  gap: 2px;
-  margin-left: 4px;
-  padding: 2px;
-  background: var(--bg);
-  border: 1px solid var(--grid);
-  border-radius: 8px;
-}
-
-.lang,
-.langOn {
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.6;
-  border: none;
-  border-radius: 6px;
-  padding: 1px 7px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.lang {
-  color: var(--muted);
-  background: none;
-}
-
-.lang:hover {
-  color: var(--ink);
-}
-
-.langOn {
-  color: #fff;
-  background: var(--alias);
 }
 
 .modelPicker {
@@ -100,7 +62,7 @@
   border: 1px solid var(--grid);
   border-radius: 6px;
   padding: 3px 6px;
-  max-width: 200px;
+  max-width: 140px;
   cursor: pointer;
 }
 
@@ -111,8 +73,11 @@
   background: var(--bg);
   border: 1px solid var(--grid);
   border-radius: 6px;
-  padding: 3px 10px;
+  padding: 3px 9px;
   cursor: pointer;
+  /* Never wrap: a two-line label makes the whole strip taller and unreadable,
+     which is exactly what a crowded toolbar did before. */
+  white-space: nowrap;
 }
 
 .button:hover:enabled {

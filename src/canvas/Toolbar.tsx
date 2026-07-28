@@ -13,6 +13,7 @@ import { useAuthStore } from '../store/authStore';
 import { pullFromCloud } from '../services/cloudSync';
 import { useCameraNav } from './useCameraNav';
 import { AuthPanel } from './AuthPanel';
+import { ToolbarMenu } from './ToolbarMenu';
 import { db } from '../db/db';
 import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
 import { redo, undo, useCanRedo, useCanUndo } from '../store/history';
@@ -259,8 +260,13 @@ export function Toolbar() {
           </optgroup>
         )}
       </select>
-      <button type="button" className={styles.button} onClick={() => void handleNewLesson()}>
-        ＋ {strings.newLesson}
+      <button
+        type="button"
+        className={styles.button}
+        title={strings.newLesson}
+        onClick={() => void handleNewLesson()}
+      >
+        ＋
       </button>
       <span className={styles.undoGroup}>
         <button
@@ -287,14 +293,14 @@ export function Toolbar() {
           {strings.stopStream}
         </button>
       )}
-      <button type="button" className={styles.button} onClick={() => void handleBackcast()}>
-        {strings.backcast}
+      <button
+        type="button"
+        className={styles.button}
+        title={strings.backcast}
+        onClick={() => void handleBackcast()}
+      >
+        🎯
       </button>
-      {session && !revealActive && (
-        <button type="button" className={styles.button} onClick={() => void handleRelearn()}>
-          {strings.relearn}
-        </button>
-      )}
       {revealActive && (
         <>
           <button
@@ -328,43 +334,27 @@ export function Toolbar() {
         </button>
       )}
       {session && (
-        <button type="button" className={styles.button} onClick={handleTidy}>
-          {strings.tidy}
+        <button type="button" className={styles.button} title={strings.tidy} onClick={handleTidy}>
+          ⤢
         </button>
-      )}
-      {learnNodes.length > 0 && (
-        <span className={styles.progress} title={strings.understoodTitle}>
-          ✓ {strings.understoodProgress} {understoodCount}/{learnNodes.length}
-        </span>
       )}
       <button
         type="button"
         className={styles.button}
+        title={strings.replay}
         onClick={() => {
           useRevealStore.getState().showAll();
           startReplay();
         }}
         disabled={!session}
       >
-        ▶ {strings.replay}
+        ▶
       </button>
-      {user && (
-        <button
-          type="button"
-          className={styles.button}
-          title={strings.cloudPullTitle}
-          onClick={() => void handleCloudPull()}
-          disabled={pulling}
-        >
-          {strings.cloudPull}
-        </button>
+      {learnNodes.length > 0 && (
+        <span className={styles.progress} title={strings.understoodTitle}>
+          ✓ {understoodCount}/{learnNodes.length}
+        </span>
       )}
-      <button type="button" className={styles.button} onClick={handleExport} disabled={!session}>
-        {strings.exportSession}
-      </button>
-      <button type="button" className={styles.button} onClick={() => fileInput.current?.click()}>
-        {strings.importSession}
-      </button>
       <input
         ref={fileInput}
         type="file"
@@ -376,18 +366,48 @@ export function Toolbar() {
           e.target.value = '';
         }}
       />
-      <span className={styles.langSwitch} title={strings.languageLabel}>
-        {LANGS.map((l) => (
-          <button
-            key={l.id}
-            type="button"
-            className={l.id === lang ? styles.langOn : styles.lang}
-            onClick={() => setLang(l.id as Lang)}
-          >
-            {l.label}
-          </button>
-        ))}
-      </span>
+      <ToolbarMenu
+        title={strings.languageLabel}
+        trigger={LANGS.find((l) => l.id === lang)?.short ?? lang}
+        align="right"
+        items={LANGS.map((l) => ({
+          key: l.id,
+          label: l.label,
+          active: l.id === lang,
+          onSelect: () => setLang(l.id as Lang),
+        }))}
+      />
+      <ToolbarMenu
+        title={strings.more}
+        trigger="⋯"
+        align="right"
+        items={[
+          ...(session && !revealActive
+            ? [{ key: 'relearn', label: strings.relearn, onSelect: () => void handleRelearn() }]
+            : []),
+          ...(user
+            ? [
+                {
+                  key: 'pull',
+                  label: strings.cloudPull,
+                  disabled: pulling,
+                  onSelect: () => void handleCloudPull(),
+                },
+              ]
+            : []),
+          {
+            key: 'export',
+            label: strings.exportSession,
+            disabled: !session,
+            onSelect: handleExport,
+          },
+          {
+            key: 'import',
+            label: strings.importSession,
+            onSelect: () => fileInput.current?.click(),
+          },
+        ]}
+      />
       <label className={styles.modelPicker} title={strings.modelLabel}>
         <span className={styles.modelIcon}>🤖</span>
         <select

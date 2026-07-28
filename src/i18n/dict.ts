@@ -75,6 +75,7 @@ const ja = {
   cloudLive: '自動同期',
   cloudLiveWaiting: '変更を受信 — 手が空き次第反映します',
   cloudLiveApplied: '外部の変更を反映しました',
+  more: 'その他',
   signIn: 'ログイン',
   signUp: '新規登録',
   signOut: 'ログアウト',
@@ -177,6 +178,7 @@ const th: Strings = {
   cloudLive: 'ซิงก์อัตโนมัติ',
   cloudLiveWaiting: 'มีการเปลี่ยนแปลง — จะอัปเดตเมื่อว่าง',
   cloudLiveApplied: 'อัปเดตจากภายนอกแล้ว',
+  more: 'เพิ่มเติม',
   signIn: 'เข้าสู่ระบบ',
   signUp: 'สมัครสมาชิก',
   signOut: 'ออกจากระบบ',
@@ -277,6 +279,7 @@ const en: Strings = {
   cloudLive: 'Auto-sync',
   cloudLiveWaiting: 'Change received — applying once you are idle',
   cloudLiveApplied: 'Applied a change from elsewhere',
+  more: 'More',
   signIn: 'Sign in',
   signUp: 'Sign up',
   signOut: 'Sign out',
@@ -312,8 +315,10 @@ export type Lang = 'ja' | 'th' | 'en';
 export const dict: Record<Lang, Strings> = { ja, th, en };
 
 /** Label + flag shown in the language switcher, in each language's own script. */
-export const LANGS: { id: Lang; label: string }[] = [
-  { id: 'ja', label: '🇯🇵 日本語' },
-  { id: 'th', label: '🇹🇭 ไทย' },
-  { id: 'en', label: '🇬🇧 English' },
+// `short` is what the collapsed toolbar trigger shows; `label` is the full name
+// inside the menu, written in its own script so it reads without translation.
+export const LANGS: { id: Lang; label: string; short: string }[] = [
+  { id: 'ja', label: '日本語', short: '🇯🇵 JA' },
+  { id: 'th', label: 'ไทย', short: '🇹🇭 TH' },
+  { id: 'en', label: 'English', short: '🇬🇧 EN' },
 ];
