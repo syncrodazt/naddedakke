@@ -3,6 +3,7 @@ import { useGoalStore } from '../store/goalStore';
 import { isAbort, useLlmStore } from '../store/llmStore';
 import { getStrings } from '../i18n';
 import { PlanError, parseGoalPlan, planToSession, type GoalPlan } from '../gyakusan/plan';
+import { namesInUse } from '../gyakusan/subplan';
 import { mockService, teachService } from './claude';
 import type { GoalPlanRequest } from './claude/types';
 
@@ -46,8 +47,72 @@ export async function decomposeGoal(goal: string): Promise<void> {
   }
 }
 
-/** Accept a reviewed plan: build a gyakusan session from it and open it. */
+/**
+ * Back-cast one node that is already on the canvas: "what does this depend on?"
+ *
+ * This is the mirror of なんで？. Where a why-branch hangs a question downstream
+ * off a highlighted phrase, this generates the quantities UPSTREAM of a node —
+ * the inputs it follows from — and gives the node the formula that ties them
+ * together. Like every decomposition it is proposed, not inserted.
+ */
+export async function decomposeNode(nodeId: string): Promise<void> {
+  const { nodes, session } = useGraphStore.getState();
+  const node = nodes[nodeId];
+  if (!node || !session) return;
+
+  const goalStore = useGoalStore.getState();
+  const llm = useLlmStore.getState();
+  goalStore.setBusy(true);
+
+  // Everything already on the canvas may be referenced but not redefined.
+  const existingNames = [...namesInUse(nodes).keys()];
+  const label = node.content.md
+    .replace(/[*_`>#]/g, '')
+    .trim()
+    .slice(0, 200);
+  const req: GoalPlanRequest = {
+    goal:
+      `Decompose this ONE quantity into what it depends on: "${label}".\n` +
+      `Notebook: "${session.title}".\n` +
+      'Set "goalOf" to the quantity that represents it.',
+    existingNames,
+    signal: llm.begin(),
+  };
+
+  let raw: string;
+  try {
+    raw = await teachService.decomposeGoal(req);
+  } catch (err) {
+    if (isAbort(err)) {
+      useLlmStore.getState().end();
+      useGoalStore.getState().dismiss();
+      return;
+    }
+    llm.noteFallback(err);
+    raw = await mockService.decomposeGoal(req);
+  } finally {
+    useLlmStore.getState().end();
+  }
+
+  try {
+    useGoalStore.getState().propose(parseGoalPlan(raw, new Set(existingNames)), nodeId);
+  } catch (err) {
+    const detail = err instanceof PlanError ? err.message : String(err);
+    useGoalStore.getState().setError(detail);
+  }
+}
+
+/**
+ * Accept a reviewed plan. A plan with a target node is inserted into the open
+ * notebook around that node; one without starts a fresh gyakusan session.
+ */
 export async function acceptPlan(plan: GoalPlan): Promise<void> {
+  const targetNodeId = useGoalStore.getState().targetNodeId;
+  if (targetNodeId !== null) {
+    useGraphStore.getState().insertSubPlan(targetNodeId, plan);
+    useGoalStore.getState().dismiss();
+    return;
+  }
   const payload = planToSession(plan, getStrings().gyakusanDisclaimer);
   await useGraphStore.getState().applyImport(payload);
   useGoalStore.getState().dismiss();

@@ -101,7 +101,14 @@ export function extractJson(raw: string): string {
   return body.slice(start, end + 1);
 }
 
-export function parseGoalPlan(raw: string): GoalPlan {
+/**
+ * @param externalNames quantities that already exist on the canvas. Formulas may
+ *   read them; the plan must not redefine them. Empty for a fresh goal.
+ */
+export function parseGoalPlan(
+  raw: string,
+  externalNames: ReadonlySet<string> = new Set(),
+): GoalPlan {
   let json: unknown;
   try {
     json = JSON.parse(extractJson(raw));
@@ -125,6 +132,9 @@ export function parseGoalPlan(raw: string): GoalPlan {
   const claim = (name: string, where: string): string => {
     if (!IDENT.test(name)) fail(`${where}: "${name}" is not a valid identifier`);
     if (seen.has(name)) fail(`${where}: duplicate name "${name}"`);
+    // Redefining something already on the canvas would silently detach the
+    // learner's existing node from the graph it belongs to.
+    if (externalNames.has(name)) fail(`${where}: "${name}" already exists on the canvas`);
     seen.add(name);
     return name;
   };
@@ -169,11 +179,19 @@ export function parseGoalPlan(raw: string): GoalPlan {
     fail(`goalOf "${goalOf}" is not one of the derived quantities`);
   }
 
-  // Every symbol a formula reads must be something this plan defines.
-  const known = new Set([...variables.map((v) => v.name), ...derived.map((d) => d.name)]);
+  // Every symbol a formula reads must be something this plan defines, or a
+  // quantity already on the canvas.
+  const known = new Set([
+    ...externalNames,
+    ...variables.map((v) => v.name),
+    ...derived.map((d) => d.name),
+  ]);
   const deps = new Map<string, string[]>();
   for (const d of derived) {
-    const symbols = formulaSymbols(d.formula, `derived "${d.name}"`);
+    // External names are leaves for the cycle check — they are already computed.
+    const symbols = formulaSymbols(d.formula, `derived "${d.name}"`).filter(
+      (sym) => !externalNames.has(sym),
+    );
     const unknown = symbols.filter((s) => !known.has(s));
     if (unknown.length > 0) {
       fail(`derived "${d.name}" references unknown ${unknown.map((u) => `"${u}"`).join(', ')}`);

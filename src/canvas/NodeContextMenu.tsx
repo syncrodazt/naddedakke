@@ -4,6 +4,7 @@ import { useGraphStore } from '../store/graphStore';
 import { collectSubtree } from '../store/subtree';
 import { confirmDialog } from '../store/uiStore';
 import { useStrings } from '../i18n';
+import { decomposeNode } from '../services/goal';
 import styles from './NodeContextMenu.module.css';
 
 export type MenuState = { x: number; y: number; nodeId: string };
@@ -53,6 +54,12 @@ export function NodeContextMenu({
   const isLearnContent = node.kind !== 'video';
   const canAdvance = session?.mode === 'learn' && !lessonComplete && !streaming;
   const canRegenerate = (node.kind === 'chunk' || node.kind === 'answer') && !streaming;
+  // Back-cast is the mirror of なんで？: instead of branching a question
+  // downstream off a phrase, it generates the quantities this node follows
+  // FROM. Only meaningful for the gyakusan node kinds, which carry values and
+  // formulas — a prose chunk has no inputs to compute it from.
+  const canBackcast =
+    (node.kind === 'goal' || node.kind === 'derived' || node.kind === 'variable') && !streaming;
 
   function handleDelete() {
     const count = collectSubtree(menu.nodeId, edges).size;
@@ -88,6 +95,18 @@ export function NodeContextMenu({
           }}
         >
           {strings.nextChunkMenu}
+        </button>
+      )}
+      {canBackcast && (
+        <button
+          type="button"
+          className={styles.item}
+          onClick={() => {
+            onClose();
+            void decomposeNode(menu.nodeId);
+          }}
+        >
+          {strings.decomposeNode}
         </button>
       )}
       {canRegenerate && (

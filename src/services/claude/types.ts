@@ -17,6 +17,9 @@ export type LessonChunkRequest = {
 
 export type GoalPlanRequest = {
   goal: string; // the learner's goal, in their own words
+  // Set when decomposing ONE node inside a graph that already exists: these
+  // quantities may be referenced by the new formulas but must not be redefined.
+  existingNames?: string[];
   signal?: AbortSignal;
 };
 

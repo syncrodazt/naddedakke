@@ -9,12 +9,18 @@ import type { GoalPlan } from '../gyakusan/plan';
 type GoalState = {
   busy: boolean;
   proposal: GoalPlan | null;
+  /**
+   * Set when the proposal decomposes an existing node rather than starting a
+   * new notebook — accepting then inserts into the open session instead of
+   * creating one.
+   */
+  targetNodeId: string | null;
   error: string | null;
 };
 
 type GoalActions = {
   setBusy: (busy: boolean) => void;
-  propose: (plan: GoalPlan) => void;
+  propose: (plan: GoalPlan, targetNodeId?: string) => void;
   setError: (message: string | null) => void;
   dismiss: () => void;
 };
@@ -22,10 +28,12 @@ type GoalActions = {
 export const useGoalStore = create<GoalState & GoalActions>()((set) => ({
   busy: false,
   proposal: null,
+  targetNodeId: null,
   error: null,
 
   setBusy: (busy) => set({ busy }),
-  propose: (proposal) => set({ proposal, error: null, busy: false }),
+  propose: (proposal, targetNodeId = undefined) =>
+    set({ proposal, targetNodeId: targetNodeId ?? null, error: null, busy: false }),
   setError: (error) => set({ error, busy: false }),
-  dismiss: () => set({ proposal: null, error: null, busy: false }),
+  dismiss: () => set({ proposal: null, targetNodeId: null, error: null, busy: false }),
 }));

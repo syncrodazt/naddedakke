@@ -12,13 +12,18 @@ export function GoalReview() {
   const strings = useStrings();
   const busy = useGoalStore((s) => s.busy);
   const plan = useGoalStore((s) => s.proposal);
+  // A sub-decomposition lands in the open notebook, not a new one — the copy
+  // has to say which, or accepting is a guess.
+  const targetNodeId = useGoalStore((s) => s.targetNodeId);
   const error = useGoalStore((s) => s.error);
   const dismiss = useGoalStore((s) => s.dismiss);
 
   if (!busy && !plan && error === null) return null;
 
   const body = busy ? (
-    <p className={styles.thinking}>{strings.goalThinking}</p>
+    <p className={styles.thinking}>
+      {targetNodeId ? strings.decomposeThinking : strings.goalThinking}
+    </p>
   ) : error !== null ? (
     <>
       <div className={styles.errorTitle}>{strings.planFailed}</div>
@@ -86,7 +91,7 @@ export function GoalReview() {
           </button>
           {plan && (
             <button type="button" className={styles.primary} onClick={() => void acceptPlan(plan)}>
-              {strings.planInsert}
+              {targetNodeId ? strings.planInsertHere : strings.planInsert}
             </button>
           )}
         </div>

@@ -7,6 +7,8 @@ import { reanchorHighlights } from '../markdown/reanchor';
 import { db } from '../db/db';
 import { flushNow, initPersistence, markDirty } from '../db/persistence';
 import { collectSubtree } from './subtree';
+import { applySubPlan } from '../gyakusan/subplan';
+import type { GoalPlan } from '../gyakusan/plan';
 import { clearHistory, pauseHistory, resumeHistory } from './history';
 import {
   answerPosition,
@@ -59,6 +61,7 @@ type GraphActions = {
   tidyLayout: (metrics?: NodeMetrics) => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
+  insertSubPlan: (targetNodeId: string, plan: GoalPlan) => string[];
   recompute: () => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
@@ -487,6 +490,21 @@ export const useGraphStore = create<GraphState & GraphActions>()(
           putNode({ ...node, value });
           runRecompute();
           holdHistoryDuringGesture();
+        },
+
+        // Back-cast one node: attach the quantities it depends on and give it
+        // the formula that ties them together. One commit, so it is one undo.
+        insertSubPlan(targetNodeId, plan) {
+          const { session, nodes } = get();
+          if (!session) throw new Error('no active session');
+          const {
+            nodes: changed,
+            edges,
+            createdIds,
+          } = applySubPlan(nodes, targetNodeId, plan, session.id, nextSeq);
+          commit({ nodes: changed, edges });
+          runRecompute();
+          return createdIds;
         },
 
         recompute() {

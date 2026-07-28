@@ -69,7 +69,12 @@ export function buildGoalPlanPrompt(req: GoalPlanRequest): ChatPrompt {
       'few enough to reason about.\n' +
       '- "label", "goalLabel", "goalNote" and "note" are shown to the learner, so write ' +
       "them in the learner's own language (detect it from the goal). Names and formulas " +
-      'stay ASCII identifiers.',
+      'stay ASCII identifiers.' +
+      (req.existingNames?.length
+        ? "\n- These quantities ALREADY EXIST on the learner's canvas: " +
+          `${req.existingNames.join(', ')}. Formulas may reference them, but do NOT ` +
+          'redefine them in "variables" or "derived".'
+        : ''),
     user: `Goal:\n\n${req.goal}`,
   };
 }
