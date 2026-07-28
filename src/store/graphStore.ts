@@ -15,6 +15,8 @@ import {
   branchDepth,
   branchPosition,
   computeLayout,
+  NODE_W,
+  SPINE_GAP_X,
   spinePosition,
   whySiblingCount,
   type NodeMetrics,
@@ -62,6 +64,7 @@ type GraphActions = {
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
   insertSubPlan: (targetNodeId: string, plan: GoalPlan) => string[];
+  insertGoalPlan: (plan: GoalPlan) => string;
   recompute: () => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
@@ -505,6 +508,40 @@ export const useGraphStore = create<GraphState & GraphActions>()(
           commit({ nodes: changed, edges });
           runRecompute();
           return createdIds;
+        },
+
+        // Start a back-cast inside the open notebook: create the goal node the
+        // plan answers, then attach its inputs with the same code path a
+        // node-level decomposition uses. One commit, so it is one undo.
+        insertGoalPlan(plan) {
+          const { session, nodes } = get();
+          if (!session) throw new Error('no active session');
+          // Clear of everything already on the canvas, leaving a column to its
+          // left for the inputs applySubPlan places there.
+          const maxX = Math.max(0, ...Object.values(nodes).map((n) => n.position.x));
+          const goal: RNode = {
+            id: newId(),
+            sessionId: session.id,
+            kind: 'goal',
+            seq: nextSeq(),
+            varName: plan.goalOf,
+            position: { x: maxX + 2 * (NODE_W + SPINE_GAP_X), y: 0 },
+            content: {
+              md: `**${plan.goalLabel}**${plan.goalNote ? `\n\n${plan.goalNote}` : ''}`,
+              highlights: [],
+            },
+          };
+          const withGoal = { ...nodes, [goal.id]: goal };
+          const { nodes: changed, edges } = applySubPlan(
+            withGoal,
+            goal.id,
+            plan,
+            session.id,
+            nextSeq,
+          );
+          commit({ nodes: changed, edges });
+          runRecompute();
+          return goal.id;
         },
 
         recompute() {

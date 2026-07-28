@@ -52,7 +52,9 @@ export function NodeContextMenu({
   // Every node kind can be branched from and marked understood — gyakusan
   // notebooks use the same system as learn notebooks.
   const isLearnContent = node.kind !== 'video';
-  const canAdvance = session?.mode === 'learn' && !lessonComplete && !streaming;
+  // Not gated on session.mode: a notebook is one canvas, and asking for the
+  // next lesson step beside a set of numbers is a reasonable thing to want.
+  const canAdvance = session !== null && !lessonComplete && !streaming;
   const canRegenerate = (node.kind === 'chunk' || node.kind === 'answer') && !streaming;
   // Back-cast is the mirror of なんで？: instead of branching a question
   // downstream off a phrase, it generates the quantities this node follows

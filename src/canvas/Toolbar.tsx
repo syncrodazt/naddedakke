@@ -323,7 +323,7 @@ export function Toolbar() {
           </button>
         </>
       )}
-      {session?.mode === 'learn' && !lessonComplete && (
+      {session && !lessonComplete && (
         <button
           type="button"
           className={styles.button}

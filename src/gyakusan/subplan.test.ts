@@ -153,3 +153,42 @@ describe('namesInUse', () => {
     expect([...names.keys()].sort()).toEqual(['income', 'out']);
   });
 });
+
+describe('a back-cast inserted beside existing content', () => {
+  it('leaves room for its inputs and does not sit on what is already there', () => {
+    // insertGoalPlan places the goal clear of the canvas, because applySubPlan
+    // then puts its inputs in the column to the goal's left.
+    const existing = node({ id: 'chunk', kind: 'chunk', position: { x: 480, y: 0 } });
+    const goal = node({
+      id: 'g',
+      kind: 'goal',
+      varName: 'monthly_saving',
+      position: { x: 1440, y: 0 },
+    });
+    const { nodes } = applySubPlan({ chunk: existing, g: goal }, 'g', PLAN, 's', nextSeq);
+
+    for (const added of nodes.filter((n) => n.id !== 'g')) {
+      expect(added.position.x, added.varName).toBeGreaterThan(existing.position.x);
+      expect(added.position.x, added.varName).toBeLessThan(goal.position.x);
+    }
+  });
+
+  it('leaves prose on the canvas untouched', () => {
+    // A notebook is one canvas now, so a back-cast has to coexist with lesson
+    // text rather than replace it.
+    const existing = node({
+      id: 'chunk',
+      kind: 'chunk',
+      position: { x: 0, y: 0 },
+      content: { md: '## 複利\n\n本文', highlights: [] },
+    });
+    const goal = node({
+      id: 'g',
+      kind: 'goal',
+      varName: 'monthly_saving',
+      position: { x: 900, y: 0 },
+    });
+    const { nodes } = applySubPlan({ chunk: existing, g: goal }, 'g', PLAN, 's', nextSeq);
+    expect(nodes.find((n) => n.id === 'chunk')).toBeUndefined(); // not rewritten
+  });
+});

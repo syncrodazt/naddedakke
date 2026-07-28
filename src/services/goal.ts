@@ -113,6 +113,14 @@ export async function acceptPlan(plan: GoalPlan): Promise<void> {
     useGoalStore.getState().dismiss();
     return;
   }
+  // With a notebook open, the plan joins it — a back-cast is a way of thinking
+  // about what you are already working on, not a separate kind of document.
+  // Only with nothing open does it become a notebook of its own.
+  if (useGraphStore.getState().session) {
+    useGraphStore.getState().insertGoalPlan(plan);
+    useGoalStore.getState().dismiss();
+    return;
+  }
   const payload = planToSession(plan, getStrings().gyakusanDisclaimer);
   await useGraphStore.getState().applyImport(payload);
   useGoalStore.getState().dismiss();
