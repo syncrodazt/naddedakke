@@ -6,6 +6,7 @@ import { DialogHost } from './canvas/DialogHost';
 import { FallbackBanner } from './canvas/FallbackBanner';
 import { GoalReview } from './canvas/GoalReview';
 import { SyncIndicator } from './canvas/SyncIndicator';
+import { MetricsBridge } from './canvas/MetricsBridge';
 import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
@@ -99,6 +100,7 @@ function App() {
 
   return (
     <ReactFlowProvider>
+      <MetricsBridge />
       <Toolbar />
       <Canvas nodes={flowNodes} edges={flowEdges} readOnly={replayActive} />
       <FallbackBanner />

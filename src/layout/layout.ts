@@ -34,6 +34,50 @@ export function whySiblingCount(parentId: string, edges: Record<string, REdge>):
   return Object.values(edges).filter((e) => e.source === parentId && e.kind === 'why').length;
 }
 
+export type Rect = { x: number; y: number; width: number; height: number };
+
+export function nodeRect(node: RNode, metrics?: NodeMetrics): Rect {
+  return {
+    x: node.position.x,
+    y: node.position.y,
+    width: nodeWidth(node, metrics),
+    height: nodeHeight(node, metrics),
+  };
+}
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
+/**
+ * Slide a new node down until it sits clear of everything already on screen.
+ *
+ * Creation-time placement guesses a card's height, because the card does not
+ * exist yet and prose height is whatever the model wrote. When the guess is
+ * 220px and the node above it rendered at 900, the new question lands on top of
+ * its own parent and is simply invisible.
+ *
+ * Only the new node moves. Re-running the whole layout would fix the overlap
+ * too, but it would also throw away every position the learner had arranged.
+ */
+export function avoidOverlap(
+  preferred: { x: number; y: number },
+  size: { width: number; height: number },
+  occupied: Rect[],
+  gap: number = BRANCH_GAP_Y,
+): { x: number; y: number } {
+  let y = preferred.y;
+  // Bounded: each step clears at least one rect, and a pathological canvas
+  // must not hang the app.
+  for (let guard = 0; guard < 500; guard += 1) {
+    const candidate = { x: preferred.x, y, width: size.width, height: size.height };
+    const hit = occupied.find((r) => overlaps(candidate, r));
+    if (!hit) break;
+    y = hit.y + hit.height + gap;
+  }
+  return { x: preferred.x, y };
+}
+
 export function branchPosition(
   parent: RNode,
   depth: number,
@@ -78,14 +122,14 @@ const COMPACT_H = 150;
  */
 export type NodeMetrics = Record<string, { width?: number; height?: number } | undefined>;
 
-function nodeHeight(node: RNode, metrics?: NodeMetrics): number {
+export function nodeHeight(node: RNode, metrics?: NodeMetrics): number {
   const measured = metrics?.[node.id]?.height;
   if (measured !== undefined && measured > 0) return measured;
   if (node.size?.height !== undefined) return node.size.height;
   return COMPACT_KINDS.has(node.kind) ? COMPACT_H : EST_H;
 }
 
-function nodeWidth(node: RNode, metrics?: NodeMetrics): number {
+export function nodeWidth(node: RNode, metrics?: NodeMetrics): number {
   const measured = metrics?.[node.id]?.width;
   if (measured !== undefined && measured > 0) return measured;
   return node.size?.width ?? NODE_W;

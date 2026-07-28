@@ -10,11 +10,16 @@ import { collectSubtree } from './subtree';
 import { applySubPlan } from '../gyakusan/subplan';
 import type { GoalPlan } from '../gyakusan/plan';
 import { clearHistory, pauseHistory, resumeHistory } from './history';
+import { currentMetrics } from '../layout/metrics';
 import {
   answerPosition,
   branchDepth,
   branchPosition,
+  avoidOverlap,
   computeLayout,
+  nodeHeight,
+  nodeRect,
+  nodeWidth,
   NODE_W,
   SPINE_GAP_X,
   spinePosition,
@@ -116,6 +121,26 @@ export const useGraphStore = create<GraphState & GraphActions>()(
         set({ session: { ...session, seqCounter: seq } });
         markDirty({ session: true });
         return seq;
+      }
+
+      /**
+       * Where a newly created node should actually go: its intended spot, slid
+       * down until it is clear of every card already on screen.
+       *
+       * The intended spot is computed from a height ESTIMATE, because the new
+       * card does not exist yet. When the node above it rendered far taller
+       * than the estimate — a long model answer — the new node lands on top of
+       * it and the learner cannot see what they just created.
+       */
+      function freePosition(
+        preferred: { x: number; y: number },
+        kind: RNode['kind'],
+      ): { x: number; y: number } {
+        const metrics = currentMetrics();
+        const probe = { id: '', kind, position: preferred } as RNode;
+        const size = { width: nodeWidth(probe, metrics), height: nodeHeight(probe, metrics) };
+        const occupied = Object.values(get().nodes).map((n) => nodeRect(n, metrics));
+        return avoidOverlap(preferred, size, occupied);
       }
 
       function putNode(node: RNode): void {
@@ -244,7 +269,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             sessionId: session.id,
             kind: 'chunk',
             seq: nextSeq(),
-            position: spinePosition(chunks.length),
+            position: freePosition(spinePosition(chunks.length), 'chunk'),
             content: { md, highlights: [] },
           };
           commit({
@@ -286,7 +311,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             sessionId: session.id,
             kind: 'question',
             seq: nextSeq(),
-            position: branchPosition(parent, depth, siblingIndex),
+            position: freePosition(branchPosition(parent, depth, siblingIndex), 'question'),
             branchIntent: intent,
             content: { md: `> ${sel.text}`, highlights: [] },
           };
@@ -390,7 +415,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             sessionId: session.id,
             kind: 'answer',
             seq: nextSeq(),
-            position: answerPosition(question),
+            position: freePosition(answerPosition(question), 'answer'),
             content: { md: '', highlights: [] },
           };
           commit({
@@ -571,7 +596,10 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             kind: 'chunk',
             seq: nextSeq(),
             // To the left, where it will end up once the layout runs.
-            position: { x: target.position.x - (NODE_W + SPINE_GAP_X), y: target.position.y },
+            position: freePosition(
+              { x: target.position.x - (NODE_W + SPINE_GAP_X), y: target.position.y },
+              'chunk',
+            ),
             content: { md: '', highlights: [] },
           };
 
