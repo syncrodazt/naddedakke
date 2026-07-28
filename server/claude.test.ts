@@ -3,10 +3,11 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   CLAUDE_MODELS,
-  buildMessageParams,
+  buildRequestBody,
   isClaudeModel,
   isClaudePayload,
   sanitizeClaudeModel,
+  transformSse,
 } from './claude.ts';
 
 const base = { system: 's', user: 'u' };
@@ -43,47 +44,107 @@ describe('claude proxy payload guards', () => {
   });
 });
 
-describe('buildMessageParams', () => {
+describe('buildRequestBody', () => {
   it('never sends parameters these models reject', () => {
     // temperature / top_p / top_k / thinking.budget_tokens are 400s on Opus 5.
-    const params = buildMessageParams(
-      { ...base, schema: { type: 'object' } },
-      'claude-opus-5',
-      true,
-    );
+    const body = buildRequestBody({ ...base, schema: { type: 'object' } }, 'claude-opus-5', true);
     for (const banned of ['temperature', 'top_p', 'top_k', 'thinking']) {
-      expect(params).not.toHaveProperty(banned);
+      expect(body).not.toHaveProperty(banned);
     }
   });
 
   it('leaves room for thinking in the token budget', () => {
     // Thinking is on by default and is billed against max_tokens; a budget
     // sized for the prose alone is how a deliberating model returns nothing.
-    expect(buildMessageParams(base, 'claude-opus-5', false).max_tokens).toBeGreaterThanOrEqual(
-      16000,
-    );
+    expect(buildRequestBody(base, 'claude-opus-5', false).max_tokens).toBeGreaterThanOrEqual(16000);
   });
 
   it('attaches the schema only when asked, and defaults effort to medium', () => {
     const schema = { type: 'object' };
-    expect(buildMessageParams({ ...base, schema }, 'claude-opus-5', true).output_config).toEqual({
+    expect(buildRequestBody({ ...base, schema }, 'claude-opus-5', true).output_config).toEqual({
       effort: 'medium',
       format: { type: 'json_schema', schema },
     });
     // The 400 retry drops the schema but must keep everything else.
-    expect(buildMessageParams({ ...base, schema }, 'claude-opus-5', false).output_config).toEqual({
+    expect(buildRequestBody({ ...base, schema }, 'claude-opus-5', false).output_config).toEqual({
       effort: 'medium',
     });
     expect(
-      buildMessageParams({ ...base, effort: 'high' }, 'claude-opus-5', true).output_config,
+      buildRequestBody({ ...base, effort: 'high' }, 'claude-opus-5', true).output_config,
     ).toEqual({ effort: 'high' });
   });
 
   it('puts the prompt in the system field, not the user turn', () => {
-    const params = buildMessageParams(base, 'claude-opus-5', false);
-    expect(params.system).toBe('s');
-    expect(params.messages).toEqual([{ role: 'user', content: 'u' }]);
-    expect(params.stream).toBe(true);
+    const body = buildRequestBody(base, 'claude-opus-5', false);
+    expect(body.system).toBe('s');
+    expect(body.messages).toEqual([{ role: 'user', content: 'u' }]);
+    expect(body.stream).toBe(true);
+  });
+});
+
+describe('transformSse', () => {
+  async function through(sse: string): Promise<string[]> {
+    const encoder = new TextEncoder();
+    const source = new ReadableStream<Uint8Array>({
+      start(c) {
+        // One byte at a time: events must survive arbitrary chunk boundaries.
+        for (const ch of sse) c.enqueue(encoder.encode(ch));
+        c.close();
+      },
+    });
+    const out: string[] = [];
+    const reader = source.pipeThrough(transformSse()).getReader();
+    const decoder = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      out.push(decoder.decode(value));
+    }
+    return out;
+  }
+
+  const delta = (text: string) =>
+    `event: content_block_delta\ndata: ${JSON.stringify({
+      type: 'content_block_delta',
+      index: 0,
+      delta: { type: 'text_delta', text },
+    })}\n\n`;
+
+  it('forwards text deltas in the shape the browser parses', async () => {
+    const out = await through(delta('こん') + delta('にちは'));
+    expect(out.join('')).toBe('data: {"text":"こん"}\n\ndata: {"text":"にちは"}\n\n');
+  });
+
+  it('drops the events that are not lesson text', async () => {
+    // Thinking is the model's scratchpad; message_start/stop are bookkeeping.
+    // Any of them reaching a node body would be visible nonsense.
+    const thinking = `data: ${JSON.stringify({
+      type: 'content_block_delta',
+      delta: { type: 'thinking_delta', thinking: 'hmm' },
+    })}\n\n`;
+    const out = await through(
+      'event: message_start\ndata: {"type":"message_start"}\n\n' +
+        thinking +
+        delta('real') +
+        'event: message_stop\ndata: {"type":"message_stop"}\n\n',
+    );
+    expect(out.join('')).toBe('data: {"text":"real"}\n\n');
+  });
+
+  it('surfaces an error that arrived after the stream opened', async () => {
+    const out = await through(
+      delta('partial') +
+        `event: error\ndata: ${JSON.stringify({
+          type: 'error',
+          error: { type: 'overloaded_error', message: 'Overloaded' },
+        })}\n\n`,
+    );
+    expect(out.join('')).toContain('{"error":"Overloaded"}');
+  });
+
+  it('ignores malformed data lines rather than failing the stream', async () => {
+    const out = await through('data: not-json\n\n' + delta('ok'));
+    expect(out.join('')).toBe('data: {"text":"ok"}\n\n');
   });
 });
 
@@ -120,9 +181,21 @@ describe('api/claude.ts stays in sync with the proxy core', () => {
 
   it('emits the same SSE wire shape the client parses', () => {
     for (const src of [edge, core]) {
-      expect(src).toContain('sse({ text:');
-      expect(src).toContain('sse({ error:');
+      expect(src).toContain('emit(controller, { text:');
+      expect(src).toContain('emit(controller, { error:');
       expect(src).toContain('text_delta');
+    }
+  });
+
+  it('neither imports the SDK, which cannot run on the Edge Runtime', () => {
+    // @anthropic-ai/sdk reaches for node:fs, node:child_process and
+    // node:readline. Importing it in the edge function failed the Vercel build
+    // outright; keeping dev on the SDK and production on fetch would mean the
+    // path exercised in dev is not the path that ships.
+    for (const src of [edge, core]) {
+      expect(src).not.toMatch(/^import .*@anthropic-ai\/sdk/m);
+      expect(src).toContain('https://api.anthropic.com/v1/messages');
+      expect(src).toContain("'anthropic-version'");
     }
   });
 

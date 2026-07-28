@@ -4,12 +4,20 @@
 // in sync (server/claude.test.ts asserts they agree). The API key stays
 // server-side: CLAUDE.md forbids shipping it to the browser.
 //
+// Raw HTTP rather than @anthropic-ai/sdk, deliberately. The SDK reaches for
+// node:fs, node:child_process and node:readline, none of which exist in the
+// Edge Runtime the production function runs on — importing it there failed the
+// Vercel build outright. Using it in dev and fetch in production would mean the
+// path that gets exercised is not the path that ships, which is how that broke
+// unnoticed in the first place, so both sides speak HTTP.
+//
 // Wire format out of this proxy is deliberately NOT Anthropic's: it emits
 //   data: {"text":"…"}      one text delta
 //   data: {"error":"…"}     a failure that surfaced after the stream opened
-// so the browser needs no Anthropic SDK and no knowledge of block indices.
+// so the browser needs no knowledge of block indices or event types.
 
-import Anthropic from '@anthropic-ai/sdk';
+const API_URL = 'https://api.anthropic.com/v1/messages';
+const API_VERSION = '2023-06-01';
 
 export type ClaudePayload = {
   system: string;
@@ -62,12 +70,12 @@ export function sanitizeClaudeModel(model: string | undefined): string | null {
   return CLAUDE_MODELS.some((m) => m.id === model) ? (model as string) : null;
 }
 
-export function buildMessageParams(
+export function buildRequestBody(
   payload: ClaudePayload,
   model: string,
   withSchema: boolean,
-): Anthropic.MessageCreateParamsStreaming {
-  const outputConfig: Anthropic.OutputConfig = { effort: payload.effort ?? 'medium' };
+): Record<string, unknown> {
+  const outputConfig: Record<string, unknown> = { effort: payload.effort ?? 'medium' };
   if (withSchema && payload.schema) {
     outputConfig.format = { type: 'json_schema', schema: payload.schema };
   }
@@ -83,8 +91,58 @@ export function buildMessageParams(
   // reject all four with a 400.
 }
 
-function sse(obj: unknown): Uint8Array {
-  return new TextEncoder().encode(`data: ${JSON.stringify(obj)}\n\n`);
+/**
+ * Rewrite Anthropic's SSE into this proxy's `{text}` / `{error}` shape.
+ *
+ * Only text deltas are forwarded — thinking deltas are the model's scratchpad,
+ * not the lesson, and must never land in a node's body.
+ */
+export function transformSse(): TransformStream<Uint8Array, Uint8Array> {
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let buffer = '';
+
+  const emit = (controller: TransformStreamDefaultController<Uint8Array>, obj: unknown): void => {
+    controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+  };
+
+  const handleLine = (
+    line: string,
+    controller: TransformStreamDefaultController<Uint8Array>,
+  ): void => {
+    if (!line.startsWith('data:')) return; // `event:` lines are redundant here
+    const raw = line.slice(5).trim();
+    if (raw === '' || raw === '[DONE]') return;
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    const evt = data as {
+      type?: string;
+      delta?: { type?: string; text?: string };
+      error?: { message?: string; type?: string };
+    };
+    if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+      emit(controller, { text: evt.delta.text ?? '' });
+    } else if (evt.type === 'error') {
+      // The status line is long gone; the stream is the only honest channel left.
+      emit(controller, { error: evt.error?.message ?? evt.error?.type ?? 'stream error' });
+    }
+  };
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+      for (const line of lines) handleLine(line.trim(), controller);
+    },
+    flush(controller) {
+      if (buffer.trim() !== '') handleLine(buffer.trim(), controller);
+    },
+  });
 }
 
 function errorBody(message: string, status: number): Response {
@@ -106,60 +164,32 @@ export async function proxyClaude(
   apiKey: string,
   fallbackModel: string = DEFAULT_CLAUDE_MODEL,
 ): Promise<Response> {
-  const client = new Anthropic({ apiKey });
   const model = sanitizeClaudeModel(payload.model) ?? fallbackModel;
 
-  const open = async (withSchema: boolean) =>
-    client.messages.create(buildMessageParams(payload, model, withSchema));
+  const send = (withSchema: boolean): Promise<Response> =>
+    fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': API_VERSION,
+      },
+      body: JSON.stringify(buildRequestBody(payload, model, withSchema)),
+    });
 
-  let events;
-  try {
-    events = await open(Boolean(payload.schema));
-  } catch (err) {
-    // A schema the API won't accept fails the whole request. Rather than losing
-    // the learner's turn over an optional hint, ask again without it — the
-    // reply is still validated (and rejected if malformed) on the client.
-    const status = err instanceof Anthropic.APIError ? err.status : undefined;
-    if (payload.schema && status === 400) {
-      try {
-        events = await open(false);
-      } catch (retryErr) {
-        return errorBody(describe(retryErr), statusOf(retryErr));
-      }
-    } else {
-      return errorBody(describe(err), statusOf(err));
-    }
+  let upstream = await send(Boolean(payload.schema));
+  // A schema the API won't accept fails the whole request. Rather than losing
+  // the learner's turn over an optional hint, ask again without it — the reply
+  // is still validated (and rejected if malformed) on the client.
+  if (payload.schema && upstream.status === 400) upstream = await send(false);
+
+  if (!upstream.ok || !upstream.body) {
+    const detail = await upstream.text().catch(() => '');
+    return errorBody(`Anthropic API ${upstream.status}: ${detail.slice(0, 300)}`, upstream.status);
   }
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      try {
-        for await (const event of events) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            controller.enqueue(sse({ text: event.delta.text }));
-          }
-        }
-      } catch (err) {
-        // The status line is long gone; the only honest channel left is the
-        // stream itself. The client turns this into a thrown error.
-        controller.enqueue(sse({ error: describe(err) }));
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
+  return new Response(upstream.body.pipeThrough(transformSse()), {
     status: 200,
     headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' },
   });
-}
-
-function statusOf(err: unknown): number {
-  return err instanceof Anthropic.APIError && typeof err.status === 'number' ? err.status : 502;
-}
-
-function describe(err: unknown): string {
-  if (err instanceof Anthropic.APIError) return `Anthropic API ${err.status}: ${err.message}`;
-  return err instanceof Error ? err.message : String(err);
 }

@@ -16,7 +16,6 @@
     "bench:gen": "vite-node bench/generate.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@supabase/supabase-js": "^2.110.8",
     "@xyflow/react": "^12.11.2",
