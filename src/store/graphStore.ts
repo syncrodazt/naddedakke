@@ -65,6 +65,7 @@ type GraphActions = {
   setVariableValue: (nodeId: string, value: number) => void;
   insertSubPlan: (targetNodeId: string, plan: GoalPlan) => string[];
   insertGoalPlan: (plan: GoalPlan) => string;
+  insertPrerequisite: (targetNodeId: string) => string;
   recompute: () => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
@@ -542,6 +543,55 @@ export const useGraphStore = create<GraphState & GraphActions>()(
           commit({ nodes: changed, edges });
           runRecompute();
           return goal.id;
+        },
+
+        /**
+         * Splice an empty chunk into the spine directly BEFORE `targetNodeId`,
+         * for "what do I need to understand first?". Returns its id; the caller
+         * streams the lesson text into it.
+         *
+         * seq is NOT rewound to make it look older. It is the record of when
+         * the learner met an idea, and they met this one just now — going back
+         * for a missing prerequisite is a real event in how understanding got
+         * built, and replay should show it happening. Where it sits in the
+         * argument is the `next` chain's job, which the layout follows.
+         */
+        insertPrerequisite(targetNodeId) {
+          const { session, nodes, edges } = get();
+          if (!session) throw new Error('no active session');
+          const target = nodes[targetNodeId];
+          if (!target) throw new Error(`unknown node ${targetNodeId}`);
+
+          const incoming = Object.values(edges).find(
+            (e) => e.kind === 'next' && e.target === targetNodeId,
+          );
+          const node: RNode = {
+            id: newId(),
+            sessionId: session.id,
+            kind: 'chunk',
+            seq: nextSeq(),
+            // To the left, where it will end up once the layout runs.
+            position: { x: target.position.x - (NODE_W + SPINE_GAP_X), y: target.position.y },
+            content: { md: '', highlights: [] },
+          };
+
+          const link = (source: string, targetId: string): REdge => ({
+            id: newId(),
+            sessionId: session.id,
+            kind: 'next',
+            source,
+            target: targetId,
+          });
+          commit({
+            nodes: [node],
+            // Rewire prev→target into prev→new→target, so the chain stays a
+            // chain; two edges into one chunk would fork the spine.
+            edges: incoming
+              ? [link(incoming.source, node.id), link(node.id, targetNodeId)]
+              : [link(node.id, targetNodeId)],
+            removeEdgeIds: incoming ? [incoming.id] : [],
+          });
+          return node.id;
         },
 
         recompute() {

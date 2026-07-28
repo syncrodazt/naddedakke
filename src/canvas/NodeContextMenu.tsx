@@ -16,6 +16,7 @@ type NodeContextMenuProps = {
   onNextChunk: () => void;
   onRegenerate: (nodeId: string) => void;
   onDelete: (nodeId: string) => void;
+  onPrerequisite: (nodeId: string) => void;
 };
 
 // Right-click menu on a node: branch a free-form idea, advance the lesson,
@@ -27,6 +28,7 @@ export function NodeContextMenu({
   onNextChunk,
   onRegenerate,
   onDelete,
+  onPrerequisite,
 }: NodeContextMenuProps) {
   const strings = useStrings();
   const session = useGraphStore((s) => s.session);
@@ -60,8 +62,12 @@ export function NodeContextMenu({
   // downstream off a phrase, it generates the quantities this node follows
   // FROM. Only meaningful for the gyakusan node kinds, which carry values and
   // formulas — a prose chunk has no inputs to compute it from.
-  const canBackcast =
-    (node.kind === 'goal' || node.kind === 'derived' || node.kind === 'variable') && !streaming;
+  // Backwards thinking on any node — only what "before" MEANS differs. For a
+  // quantity it is the inputs it is computed from; for prose it is the concept
+  // you must already hold to follow it.
+  const isQuantity = node.kind === 'goal' || node.kind === 'derived' || node.kind === 'variable';
+  const isProse = node.kind === 'chunk' || node.kind === 'answer' || node.kind === 'question';
+  const canBackcast = (isQuantity || isProse) && !streaming;
 
   function handleDelete() {
     const count = collectSubtree(menu.nodeId, edges).size;
@@ -104,11 +110,13 @@ export function NodeContextMenu({
           type="button"
           className={styles.item}
           onClick={() => {
+            const nodeId = menu.nodeId;
             onClose();
-            void decomposeNode(menu.nodeId);
+            if (isQuantity) void decomposeNode(nodeId);
+            else onPrerequisite(nodeId);
           }}
         >
-          {strings.decomposeNode}
+          {isQuantity ? strings.decomposeNode : strings.prerequisite}
         </button>
       )}
       {canRegenerate && (

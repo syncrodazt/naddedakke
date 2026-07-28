@@ -89,3 +89,52 @@ export async function consumeChunkStream(
   useGraphStore.getState().setNodeMd(chunkId, composeChunkMd(chunk));
   if (chunk.done) useGraphStore.getState().setLessonComplete(true);
 }
+
+/**
+ * Ask what must be understood before a node, and stream it into a fresh chunk
+ * spliced in ahead of that node. Returns the new chunk's id.
+ *
+ * Same machinery as a normal lesson step — one chunk, streamed, with its own
+ * comprehension check — because that is what it is. Only its place in the chain
+ * differs.
+ */
+export async function prerequisiteChunk(targetNodeId: string): Promise<string> {
+  const store = useGraphStore.getState();
+  const { session, nodes } = store;
+  if (!session) throw new Error('no active session');
+  const target = nodes[targetNodeId];
+  if (!target) throw new Error(`unknown node ${targetNodeId}`);
+
+  const llm = useLlmStore.getState();
+  const req: LessonChunkRequest = {
+    sessionId: session.id,
+    topic: session.title,
+    previousChunksMd: [],
+    chunkIndex: 0,
+    prerequisiteFor: target.content.md,
+    signal: llm.begin(),
+  };
+
+  // Created while history is live, so undo removes it; the streamed body that
+  // follows is a machine burst and is not recorded.
+  const chunkId = store.insertPrerequisite(targetNodeId);
+  store.setStreamingNode(chunkId);
+  pauseHistory();
+  try {
+    const stream = withFallback(
+      teachService.streamLessonChunk(req),
+      () => mockService.streamLessonChunk(req),
+      llm.noteFallback,
+    );
+    await consumeChunkStream(chunkId, stream, req.signal);
+  } catch (err) {
+    if (!isAbort(err)) throw err;
+  } finally {
+    useLlmStore.getState().end();
+    useGraphStore.getState().finishStreaming();
+  }
+  // A prerequisite never ends the lesson, whatever the model claims.
+  useGraphStore.getState().setLessonComplete(false);
+  resumeHistory();
+  return chunkId;
+}

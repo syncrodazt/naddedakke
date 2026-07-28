@@ -79,7 +79,41 @@ export function buildGoalPlanPrompt(req: GoalPlanRequest): ChatPrompt {
   };
 }
 
+const CHUNK_JSON_RULES =
+  'Reply with ONE JSON object and nothing else — no prose, no code fence:\n' +
+  '{"chunkTitle":string,"md":string,"checkQuestion":string,"done":boolean}\n' +
+  '- "md": the chunk body in Markdown, 150-250 words, first line "## <title>". ' +
+  'Do NOT put the comprehension question in here.\n' +
+  '- "checkQuestion": one short question that checks whether the learner ' +
+  'understood THIS chunk. Plain text, no "> " or emoji — the app formats it.\n' +
+  '- "chunkTitle", "md" and "checkQuestion" are in the learner\'s language.';
+
+/**
+ * "What do I need to understand before this?" — the backwards move in a lesson,
+ * the mirror of asking why forwards.
+ *
+ * ONE step back per request, not a syllabus: the learner can ask again on the
+ * answer to keep going, which is the same recursion なんで？ uses and is how the
+ * canvas reaches first principles a step at a time.
+ */
+export function buildPrerequisitePrompt(req: LessonChunkRequest): ChatPrompt {
+  return {
+    system:
+      `${TUTOR_PERSONA}\n` +
+      'The learner is stuck on a passage and wants what comes BEFORE it. Write ' +
+      'the single most important concept they must understand FIRST in order to ' +
+      'follow it — one step back, not a whole syllabus, and not a restatement ' +
+      'of the passage itself. Assume nothing about the passage is understood.\n' +
+      `${CHUNK_JSON_RULES}\n- "done": always false.`,
+    user:
+      `## Topic\n\n${req.topic}\n\n` +
+      `## The passage they are stuck on\n\n${req.prerequisiteFor ?? ''}\n\n` +
+      'What must they understand before this?',
+  };
+}
+
 export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
+  if (req.prerequisiteFor !== undefined) return buildPrerequisitePrompt(req);
   const previous =
     req.previousChunksMd.length > 0
       ? req.previousChunksMd.map((md, i) => `### Chunk ${i + 1}\n${md}`).join('\n\n')

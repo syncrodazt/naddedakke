@@ -12,6 +12,10 @@ export type LessonChunkRequest = {
   topic: string;
   previousChunksMd: string[]; // spine chunks so far, in seq order
   chunkIndex: number; // 0-based index of the chunk being requested
+  // Set when the learner asked what they need to understand BEFORE a chunk:
+  // the markdown of the chunk that lost them. The reply is still one lesson
+  // chunk, so the same stream parser and node handling apply.
+  prerequisiteFor?: string;
   signal?: AbortSignal;
 };
 

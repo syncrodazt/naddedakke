@@ -17,7 +17,7 @@ import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
 import { NodeContextMenu, type MenuState } from './NodeContextMenu';
 import { useSelectionStore } from './selectionStore';
-import { nextLessonChunk } from '../services/lesson';
+import { nextLessonChunk, prerequisiteChunk } from '../services/lesson';
 import { reprompt } from '../services/reprompt';
 
 type CanvasProps = {
@@ -57,6 +57,13 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   const onDelete = useCallback((nodeId: string) => {
     useGraphStore.getState().deleteNode(nodeId);
   }, []);
+
+  const onPrerequisite = useCallback(
+    (nodeId: string) => {
+      void prerequisiteChunk(nodeId).then((chunkId) => panToNode(chunkId));
+    },
+    [panToNode],
+  );
 
   // The store is the single source of truth: position (drags), size (resizes)
   // and selection are applied back; structural changes always originate from
@@ -120,6 +127,7 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
           onNextChunk={onNextChunk}
           onRegenerate={onRegenerate}
           onDelete={onDelete}
+          onPrerequisite={onPrerequisite}
         />
       )}
     </>

@@ -91,6 +91,49 @@ function nodeWidth(node: RNode, metrics?: NodeMetrics): number {
   return node.size?.width ?? NODE_W;
 }
 
+/**
+ * Spine order: follow the `next` chain, not `seq`.
+ *
+ * They agree while chunks are only ever appended, which is why seq alone worked
+ * for so long. They stop agreeing the moment a prerequisite is inserted BEFORE
+ * an existing chunk: it is created later, so its seq is higher, but it belongs
+ * to the left. seq is when the learner met an idea; the chain is where it sits
+ * in the argument, and the canvas draws the argument.
+ *
+ * Nodes touched by no `next` edge keep seq order, appended after the chains.
+ */
+export function spineOrder(roots: RNode[], edges: REdge[]): RNode[] {
+  const byId = new Map(roots.map((n) => [n.id, n]));
+  const nextOf = new Map<string, string>();
+  const hasPrev = new Set<string>();
+  for (const e of edges) {
+    if (e.kind !== 'next') continue;
+    nextOf.set(e.source, e.target);
+    hasPrev.add(e.target);
+  }
+
+  const out: RNode[] = [];
+  const placed = new Set<string>();
+  // Heads first, oldest chain first, so several spines stay in the order they
+  // were started.
+  const heads = roots.filter((n) => !hasPrev.has(n.id) && nextOf.has(n.id));
+  for (const head of heads) {
+    let cursor: string | undefined = head.id;
+    while (cursor !== undefined && !placed.has(cursor)) {
+      const node = byId.get(cursor);
+      if (node) {
+        out.push(node);
+        placed.add(cursor);
+      }
+      cursor = nextOf.get(cursor);
+    }
+  }
+  for (const node of roots) {
+    if (!placed.has(node.id)) out.push(node);
+  }
+  return out;
+}
+
 export function computeLayout(
   nodes: Record<string, RNode>,
   edges: Record<string, REdge>,
@@ -210,11 +253,11 @@ export function computeLayout(
       x = right + SPINE_GAP_X;
     }
   } else {
-    // Learn: chronological spine left→right, branch subtree packed below each.
-    // The next chunk starts past the widest point of the previous one's branch
-    // subtree, so a deep or wide branch never collides with the next chunk.
+    // Learn: the spine left→right, branch subtree packed below each. The next
+    // chunk starts past the widest point of the previous one's branch subtree,
+    // so a deep or wide branch never collides with the next chunk.
     let x = 0;
-    for (const spineNode of roots) {
+    for (const spineNode of spineOrder(roots, edgeList)) {
       pos[spineNode.id] = { x, y: SPINE_Y };
       const packed = packBranches(
         spineNode.id,
