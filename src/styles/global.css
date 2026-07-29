@@ -82,3 +82,9 @@ body {
 .react-flow__edge.edge-depends .react-flow__edge-path {
   stroke: var(--alias);
 }
+
+/* Arrow heads share the stroke colour of their line. `fill` is what colours a
+   marker; the stroke rules above only reach the path. */
+.react-flow__arrowhead polyline {
+  stroke: none;
+}

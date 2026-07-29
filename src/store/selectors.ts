@@ -1,4 +1,4 @@
-import type { Edge, Node } from '@xyflow/react';
+import { MarkerType, type Edge, type Node } from '@xyflow/react';
 import type { REdge, RNode } from '../model/types';
 
 // displayNum is the node's 1-based rank among currently-existing nodes (sorted
@@ -45,11 +45,28 @@ function buildFlowNode(rnode: RNode, displayNum: number, selected: boolean): RFl
   };
 }
 
+// Every edge in this graph means something directional — the next step, the
+// question a passage provoked, the value a formula reads — and without a head
+// there is no way to tell which end is which once the canvas is arranged any
+// way but left-to-right. Coloured to match its own line rather than left grey.
+const ARROW_COLOR: Record<REdge['kind'], string> = {
+  next: 'var(--muted)',
+  why: 'var(--branch)',
+  reply: 'var(--branch)',
+  depends: 'var(--alias)',
+};
+
 export function toFlowEdge(redge: REdge): Edge {
   return {
     id: redge.id,
     source: redge.source,
     target: redge.target,
     className: `edge-${redge.kind}`,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 16,
+      height: 16,
+      color: ARROW_COLOR[redge.kind],
+    },
   };
 }

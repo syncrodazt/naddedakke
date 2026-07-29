@@ -84,24 +84,36 @@ describe('horizontal', () => {
 describe('vertical', () => {
   const pos = computeLayout(NODES, EDGES, METRICS, 'vertical');
 
-  it('runs the spine top to bottom', () => {
-    expect(pos.c2!.y).toBeGreaterThan(pos.c1!.y);
-    expect(pos.c2!.x).toBe(pos.c1!.x);
+  it('actually reads as vertical — taller than it is wide', () => {
+    // The point of the mode, and what the first version got wrong: running the
+    // spine downward while branches sprawled sideways still came out wider
+    // than tall, so the label promised a document and delivered a wide chart.
+    const xs = Object.values(pos).map((p) => p.x);
+    const ys = Object.values(pos).map((p) => p.y);
+    const spanX = Math.max(...xs) - Math.min(...xs) + CARD.width;
+    const spanY = Math.max(...ys) - Math.min(...ys) + CARD.height;
+    expect(spanY).toBeGreaterThan(spanX);
   });
 
-  it('puts branches to the side instead of below', () => {
-    expect(pos.q1!.x).toBeGreaterThan(pos.c1!.x);
+  it('puts everything in one column, in reading order', () => {
+    const order = Object.entries(pos)
+      .sort((a, b) => a[1].y - b[1].y)
+      .map(([id]) => id);
+    expect(order).toEqual(['c1', 'q1', 'a1', 'c2']);
+  });
+
+  it('shows depth as an indent rather than a new column', () => {
+    expect(pos.q1!.x).toBeGreaterThan(pos.c1!.x); // a why-branch indents
+    expect(pos.a1!.x).toBe(pos.q1!.x); // its answer stays at the same depth
+    expect(pos.c2!.x).toBe(pos.c1!.x); // the spine returns to the margin
   });
 
   it('overlaps nothing either', () => {
-    // The real risk: reusing the horizontal packing without swapping which
-    // dimension is measured would stack 900px-tall cards 360px apart.
     expect(overlaps(pos)).toEqual([]);
   });
 
   it('is genuinely a different arrangement, not the same one relabelled', () => {
-    const h = computeLayout(NODES, EDGES, METRICS, 'horizontal');
-    expect(pos).not.toEqual(h);
+    expect(pos).not.toEqual(computeLayout(NODES, EDGES, METRICS, 'horizontal'));
   });
 });
 
@@ -123,15 +135,7 @@ describe('direction on a back-cast graph', () => {
     expect(h.g!.x).toBeGreaterThan(h.v1!.x); // inputs left of the goal
     const v = computeLayout(gy, ge, GY_METRICS, 'vertical');
     expect(v.g!.y).toBeGreaterThan(v.v1!.y); // inputs above the goal
-  });
-
-  it('packs a vertical column by card WIDTH, not height', () => {
-    // The subtle half of the swap. Stacking sideways but still measuring
-    // height leaves 900px gaps between 360px-wide cards: no overlap, so an
-    // overlap check misses it entirely, but the result is unreadably sparse.
-    const v = computeLayout(gy, ge, GY_METRICS, 'vertical');
-    expect(v.v2!.x).toBeGreaterThan(CARD.width - 1);
-    expect(v.v2!.x).toBeLessThan(CARD.height);
+    expect(v.g!.x).toBe(v.v1!.x); // one column, not two
   });
 
   it('keeps the layers clear of each other in both', () => {

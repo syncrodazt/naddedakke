@@ -7,6 +7,9 @@ export const SPINE_GAP_X = 120;
 export const SPINE_Y = 0;
 export const BRANCH_GAP_Y = 80;
 export const BRANCH_INDENT_X = 48;
+// Indent per why-depth in the document reading — wide enough to see the
+// nesting at a glance, narrow enough that a deep thread stays on screen.
+export const OUTLINE_INDENT_X = 72;
 export const EST_H = 220;
 
 export function spinePosition(chunkIndex: number): { x: number; y: number } {
@@ -194,19 +197,17 @@ export function computeLayout(
   const pos: Record<string, { x: number; y: number }> = {};
   const edgeList = Object.values(edges);
 
-  // The algorithm below is written in "along the spine" (main) and "across the
-  // branches" (cross) terms, so both directions run the same packing code.
-  // Only which screen axis each maps to — and therefore which of a card's two
-  // dimensions matters — changes. Transposing finished positions instead would
-  // overlap everything: a 360x900 card is not square.
+  // The two directions are genuinely different shapes, not one shape rotated.
+  //
+  //   horizontal — the spine runs across, each step's branches hang below it.
+  //                Reads as a timeline.
+  //   vertical   — everything in ONE column top to bottom, depth shown as an
+  //                indent. Reads as a threaded document.
+  //
+  // Simply running the spine downward and the branches sideways was tried and
+  // is not "vertical" in any useful sense: the branches sprawl, and a graph
+  // that measured 2016x1022 across came out 1760x1400 — still wider than tall.
   const vertical = direction === 'vertical';
-  const mainSize = (n: RNode): number =>
-    vertical ? nodeHeight(n, metrics) : nodeWidth(n, metrics);
-  const crossSize = (n: RNode): number =>
-    vertical ? nodeWidth(n, metrics) : nodeHeight(n, metrics);
-  const setPos = (id: string, main: number, cross: number): void => {
-    pos[id] = vertical ? { x: cross, y: main } : { x: main, y: cross };
-  };
 
   // Branch = target of a why/reply edge; everything else is a "root" that the
   // mode-specific pass positions (spine node in learn mode, dependency-layer
@@ -239,16 +240,16 @@ export function computeLayout(
     crossStart: number,
   ): { endCross: number; far: number } {
     let cross = crossStart;
-    let far = mainStart + mainSize(nodes[rootId] as RNode);
+    let far = mainStart + nodeWidth(nodes[rootId] as RNode, metrics);
     const visited = new Set<string>([rootId]);
     const place = (id: string, depth: number): void => {
       const node = nodes[id];
       if (!node || visited.has(id)) return;
       visited.add(id);
       const main = mainStart + depth * BRANCH_INDENT_X;
-      setPos(id, main, cross);
-      far = Math.max(far, main + mainSize(node));
-      cross += crossSize(node) + BRANCH_GAP_Y;
+      pos[id] = { x: main, y: cross };
+      far = Math.max(far, main + nodeWidth(node, metrics));
+      cross += nodeHeight(node, metrics) + BRANCH_GAP_Y;
       for (const { child, kind } of childrenOf(id)) {
         place(child.id, kind === 'why' ? depth + 1 : depth);
       }
@@ -257,6 +258,27 @@ export function computeLayout(
       place(child.id, kind === 'why' ? 1 : 0);
     }
     return { endCross: cross, far };
+  }
+
+  /**
+   * One column, top to bottom, `why` depth shown as an indent — the threaded
+   * document reading. Every node is placed exactly once, spine and branches
+   * alike, so the whole notebook scrolls in the order it is meant to be read.
+   */
+  function outline(order: RNode[]): void {
+    let y = 0;
+    const seen = new Set<string>();
+    const walk = (id: string, depth: number): void => {
+      const node = nodes[id];
+      if (!node || seen.has(id)) return;
+      seen.add(id);
+      pos[id] = { x: depth * OUTLINE_INDENT_X, y };
+      y += nodeHeight(node, metrics) + BRANCH_GAP_Y;
+      for (const { child, kind } of childrenOf(id)) {
+        walk(child.id, kind === 'why' ? depth + 1 : depth);
+      }
+    };
+    for (const root of order) walk(root.id, 0);
   }
 
   const dependsEdges = edgeList.filter((e) => e.kind === 'depends');
@@ -298,39 +320,50 @@ export function computeLayout(
 
     // Walk depths in order so each column starts clear of the widest thing in
     // the one before it.
-    let main = 0;
-    for (const depth of [...columns.keys()].sort((a, b) => a - b)) {
-      const columnNodes = (columns.get(depth) ?? []).sort((a, b) => a.seq - b.seq);
-      let cross = SPINE_Y;
-      let far = main;
-      for (const node of columnNodes) {
-        setPos(node.id, main, cross);
-        far = Math.max(far, main + mainSize(node));
-        if (childrenOf(node.id).length === 0) {
-          cross += crossSize(node) + COLUMN_GAP_Y;
-        } else {
-          // Questions branched off this node stack directly beneath it, so the
-          // column's next node starts past the whole subtree.
-          const packed = packBranches(node.id, main, cross + crossSize(node) + BRANCH_TOP_GAP);
-          cross = packed.endCross + COLUMN_GAP_Y;
-          far = Math.max(far, packed.far);
+    const byDepth = [...columns.keys()].sort((a, b) => a - b);
+    if (vertical) {
+      // Inputs first, then what they feed — the same order, read downward.
+      outline(byDepth.flatMap((d) => (columns.get(d) ?? []).sort((a, b) => a.seq - b.seq)));
+    } else {
+      let x = 0;
+      for (const depth of byDepth) {
+        const columnNodes = (columns.get(depth) ?? []).sort((a, b) => a.seq - b.seq);
+        let y = SPINE_Y;
+        let right = x;
+        for (const node of columnNodes) {
+          pos[node.id] = { x, y };
+          right = Math.max(right, x + nodeWidth(node, metrics));
+          if (childrenOf(node.id).length === 0) {
+            y += nodeHeight(node, metrics) + COLUMN_GAP_Y;
+          } else {
+            // Questions branched off this node stack directly beneath it, so
+            // the column's next node starts past the whole subtree.
+            const packed = packBranches(node.id, x, y + nodeHeight(node, metrics) + BRANCH_TOP_GAP);
+            y = packed.endCross + COLUMN_GAP_Y;
+            right = Math.max(right, packed.far);
+          }
         }
+        x = right + SPINE_GAP_X;
       }
-      main = far + SPINE_GAP_X;
     }
   } else {
     // Learn: the spine left→right, branch subtree packed below each. The next
     // chunk starts past the widest point of the previous one's branch subtree,
     // so a deep or wide branch never collides with the next chunk.
-    let main = 0;
-    for (const spineNode of spineOrder(roots, edgeList)) {
-      setPos(spineNode.id, main, SPINE_Y);
-      const packed = packBranches(
-        spineNode.id,
-        main,
-        SPINE_Y + crossSize(spineNode) + BRANCH_TOP_GAP,
-      );
-      main = packed.far + SPINE_GAP_X;
+    const ordered = spineOrder(roots, edgeList);
+    if (vertical) {
+      outline(ordered);
+    } else {
+      let x = 0;
+      for (const spineNode of ordered) {
+        pos[spineNode.id] = { x, y: SPINE_Y };
+        const packed = packBranches(
+          spineNode.id,
+          x,
+          SPINE_Y + nodeHeight(spineNode, metrics) + BRANCH_TOP_GAP,
+        );
+        x = packed.far + SPINE_GAP_X;
+      }
     }
   }
 
