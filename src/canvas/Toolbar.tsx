@@ -1,25 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import type { Session } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { useReplayStore } from '../replay/replayStore';
 import { useRevealStore } from '../replay/revealStore';
 import { sortedBySeq } from '../replay/visibility';
 import { exportSession, validateImport } from '../db/exportImport';
-import { examples } from '../fixture/examples';
 import { nextLessonChunk, startLesson } from '../services/lesson';
-import { providerOf, useModelStore } from '../store/modelStore';
 import { useAuthStore } from '../store/authStore';
 import { pullFromCloud } from '../services/cloudSync';
 import { useCameraNav } from './useCameraNav';
-import { AuthPanel } from './AuthPanel';
 import { ToolbarMenu } from './ToolbarMenu';
 import { db } from '../db/db';
 import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
 import { redo, undo, useCanRedo, useCanUndo } from '../store/history';
 import { useLlmStore } from '../store/llmStore';
 import { decomposeGoal } from '../services/goal';
-import { LANGS, useLangStore, useStrings, type Lang } from '../i18n';
+import { useStrings } from '../i18n';
+import { usePanelStore } from '../store/panelStore';
 import type { LayoutDirection } from '../layout/layout';
 import styles from './Toolbar.module.css';
 
@@ -30,31 +27,19 @@ export function Toolbar() {
   const lessonComplete = useGraphStore((s) => s.lessonComplete);
   const startReplay = useReplayStore((s) => s.start);
   const nodes = useGraphStore((s) => s.nodes);
-  const models = useModelStore((s) => s.available);
-  const selectedModel = useModelStore((s) => s.selected);
-  const setModel = useModelStore((s) => s.setSelected);
-  const lang = useLangStore((s) => s.lang);
-  const setLang = useLangStore((s) => s.setLang);
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
   const cancelStream = useLlmStore((s) => s.cancel);
-  // A cloud login pulls other devices' sessions into Dexie; refresh the list.
-  const syncNonce = useAuthStore((s) => s.syncNonce);
   const user = useAuthStore((s) => s.user);
   const [pulling, setPulling] = useState(false);
-  const sessionsRevision = useGraphStore((s) => s.sessionsRevision);
   // Re-learn progressive-reveal state.
   const revealActive = useRevealStore((s) => s.active);
   const revealCount = useRevealStore((s) => s.count);
   const revealBaseSeq = useRevealStore((s) => s.baseSeq);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
   const { fitView, getNodes, getInternalNode } = useReactFlow();
   const { panToNode } = useCameraNav();
 
-  // Built-in examples not yet loaded as sessions (once loaded they live in the
-  // Sessions group instead — so the single dropdown never shows a duplicate).
-  const unloadedExamples = examples.filter((ex) => !sessions.some((s) => s.id === ex.id));
   // Original nodes for the reveal counter (nodes present when reveal began).
   const revealTotal = revealActive
     ? Object.values(nodes).filter((n) => n.seq <= revealBaseSeq).length
@@ -64,7 +49,6 @@ export function Toolbar() {
     const topic = (await promptDialog(strings.topicPrompt, '', strings.topicPlaceholder))?.trim();
     if (!topic) return;
     const chunkId = await startLesson(topic);
-    await refreshSessions();
     panToNode(chunkId);
   }
 
@@ -81,7 +65,6 @@ export function Toolbar() {
       }
       const openId = useGraphStore.getState().session?.id;
       if (openId) await useGraphStore.getState().loadSession(openId);
-      await refreshSessions();
       await alertDialog(`${strings.cloudPulled} (${pulled})`);
     } finally {
       setPulling(false);
@@ -124,14 +107,6 @@ export function Toolbar() {
   );
   const understoodCount = learnNodes.filter((n) => n.understood).length;
 
-  async function refreshSessions() {
-    setSessions(await db.sessions.orderBy('createdAt').toArray());
-  }
-
-  useEffect(() => {
-    void refreshSessions();
-  }, [session?.id, session?.title, syncNonce, sessionsRevision]);
-
   // Ctrl/⌘+Z to undo, +Shift (or Ctrl+Y) to redo — ignored while typing, so a
   // compose box keeps its own native undo.
   useEffect(() => {
@@ -151,35 +126,6 @@ export function Toolbar() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  // The single project dropdown routes to a saved session or a fresh example.
-  async function handleSelect(value: string) {
-    if (!value) return;
-    if (sessions.some((s) => s.id === value)) await switchSession(value);
-    else await loadExample(value);
-  }
-
-  async function switchSession(id: string) {
-    useRevealStore.getState().showAll();
-    await useGraphStore.getState().loadSession(id);
-    void fitView({ duration: 500 });
-  }
-
-  async function loadExample(exampleId: string) {
-    const example = examples.find((ex) => ex.id === exampleId);
-    if (!example) return;
-    useRevealStore.getState().showAll();
-    const existing = await db.sessions.get(example.id);
-    if (existing) {
-      await useGraphStore.getState().loadSession(existing.id);
-    } else {
-      // applyImport resolves after the Dexie flush, so the refresh below is
-      // guaranteed to see the new session.
-      await useGraphStore.getState().applyImport(example.data);
-      await refreshSessions();
-    }
-    void fitView({ duration: 500 });
-  }
 
   // Re-learn: ask whether to show the whole graph or reveal from the first node.
   async function handleRelearn() {
@@ -229,7 +175,6 @@ export function Toolbar() {
       await useGraphStore.getState().applyImport(payload);
       // applyImport resolves after the Dexie flush, so the imported session is
       // now on disk — refresh so it appears (and is selected) in the dropdown.
-      await refreshSessions();
     } catch (err) {
       await alertDialog(
         `${strings.importFailed}: ${err instanceof Error ? err.message : String(err)}`,
@@ -239,28 +184,15 @@ export function Toolbar() {
 
   return (
     <div className={styles.toolbar}>
-      <select
-        className={styles.sessionSelect}
-        value={session?.id ?? ''}
-        onChange={(e) => void handleSelect(e.target.value)}
+      <button
+        type="button"
+        className={styles.project}
+        title={strings.switchProject}
+        onClick={() => usePanelStore.getState().open('palette')}
       >
-        <optgroup label={strings.sessionsGroup}>
-          {sessions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.title || s.id}
-            </option>
-          ))}
-        </optgroup>
-        {unloadedExamples.length > 0 && (
-          <optgroup label={strings.examplesGroup}>
-            {unloadedExamples.map((ex) => (
-              <option key={ex.id} value={ex.id}>
-                {ex.label}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
+        <span className={styles.projectName}>{session?.title ?? '—'}</span>
+        <span className={styles.projectHint}>⌘K</span>
+      </button>
       <button
         type="button"
         className={styles.button}
@@ -381,17 +313,6 @@ export function Toolbar() {
         }}
       />
       <ToolbarMenu
-        title={strings.languageLabel}
-        trigger={LANGS.find((l) => l.id === lang)?.short ?? lang}
-        align="right"
-        items={LANGS.map((l) => ({
-          key: l.id,
-          label: l.label,
-          active: l.id === lang,
-          onSelect: () => setLang(l.id as Lang),
-        }))}
-      />
-      <ToolbarMenu
         title={strings.more}
         trigger="⋯"
         align="right"
@@ -422,29 +343,14 @@ export function Toolbar() {
           },
         ]}
       />
-      <label className={styles.modelPicker} title={strings.modelLabel}>
-        <span className={styles.modelIcon}>🤖</span>
-        <select
-          className={styles.modelSelect}
-          value={selectedModel}
-          onChange={(e) => setModel(e.target.value)}
-        >
-          {(['claude', 'gemini'] as const).map((provider) => {
-            const group = models.filter((m) => providerOf(m) === provider);
-            if (group.length === 0) return null;
-            return (
-              <optgroup key={provider} label={provider === 'claude' ? 'Claude' : 'Gemini'}>
-                {group.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </optgroup>
-            );
-          })}
-        </select>
-      </label>
-      <AuthPanel />
+      <button
+        type="button"
+        className={styles.button}
+        title={strings.settingsTitle}
+        onClick={() => usePanelStore.getState().open('settings')}
+      >
+        ⚙
+      </button>
     </div>
   );
 }

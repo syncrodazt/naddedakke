@@ -1,0 +1,90 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  /* Near the top, where a launcher belongs — not centred like a question. */
+  padding-top: 14vh;
+  background: rgb(18 32 46 / 0.28);
+}
+
+.card {
+  width: min(560px, calc(100vw - 40px));
+  max-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(18 32 46 / 0.3);
+  overflow: hidden;
+}
+
+.search {
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--grid);
+  outline: none;
+  background: none;
+}
+
+.list {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.row,
+.rowOn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--ink);
+  border: none;
+  border-radius: 7px;
+  padding: 9px 10px;
+  cursor: pointer;
+  background: none;
+}
+
+.rowOn {
+  background: var(--bg);
+}
+
+/* The whole point: titles get a full line instead of being clipped to fit a
+   toolbar, so two notebooks on the same topic are still tellable apart. */
+.rowTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--grid);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.current {
+  color: var(--alias);
+  font-size: 11px;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}

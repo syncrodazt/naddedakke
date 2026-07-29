@@ -20,16 +20,41 @@
   margin-right: 4px;
 }
 
-.sessionSelect {
+/* The notebook you are in — the one label worth reading at a glance, so it
+   gets real width instead of being clipped into a dropdown. */
+.project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
   font: inherit;
   font-size: 13px;
   font-weight: 600;
   color: var(--ink);
-  background: var(--card);
+  background: var(--bg);
   border: 1px solid var(--grid);
-  border-radius: 6px;
-  padding: 3px 6px;
-  max-width: 150px;
+  border-radius: 7px;
+  padding: 4px 9px;
+  cursor: pointer;
+}
+
+.project:hover {
+  border-color: var(--muted);
+}
+
+.projectName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectHint {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--grid);
+  border-radius: 4px;
+  padding: 0 4px;
 }
 
 .progress {
@@ -38,32 +63,6 @@
   color: var(--alias);
   padding: 0 4px;
   font-variant-numeric: tabular-nums;
-}
-
-.modelPicker {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 4px;
-  padding-left: 8px;
-  border-left: 1px solid var(--grid);
-}
-
-.modelIcon {
-  font-size: 13px;
-  line-height: 1;
-}
-
-.modelSelect {
-  font: inherit;
-  font-size: 12px;
-  color: var(--alias);
-  background: var(--bg);
-  border: 1px solid var(--grid);
-  border-radius: 6px;
-  padding: 3px 6px;
-  max-width: 140px;
-  cursor: pointer;
 }
 
 .button {

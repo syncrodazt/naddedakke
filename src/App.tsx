@@ -7,6 +7,9 @@ import { FallbackBanner } from './canvas/FallbackBanner';
 import { GoalReview } from './canvas/GoalReview';
 import { SyncIndicator } from './canvas/SyncIndicator';
 import { MetricsBridge } from './canvas/MetricsBridge';
+import { CommandPalette } from './canvas/CommandPalette';
+import { SettingsDialog } from './canvas/SettingsDialog';
+import { usePanelStore } from './store/panelStore';
 import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayBar } from './replay/ReplayBar';
 import { useReplayStore } from './replay/replayStore';
@@ -49,6 +52,23 @@ function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Ctrl/⌘+K switches notebook, Ctrl/⌘+, opens settings. Both work while
+  // typing — they are how you leave what you are doing, not part of it.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        usePanelStore.getState().toggle('palette');
+      } else if (e.key === ',') {
+        e.preventDefault();
+        usePanelStore.getState().toggle('settings');
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // Rank each node 1..N by seq so the visible #N badge stays contiguous even
@@ -106,6 +126,8 @@ function App() {
       <FallbackBanner />
       <SyncIndicator />
       {replayActive && <ReplayBar />}
+      <CommandPalette />
+      <SettingsDialog />
       <DialogHost />
       <GoalReview />
     </ReactFlowProvider>
