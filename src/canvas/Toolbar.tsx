@@ -20,6 +20,7 @@ import { redo, undo, useCanRedo, useCanUndo } from '../store/history';
 import { useLlmStore } from '../store/llmStore';
 import { decomposeGoal } from '../services/goal';
 import { LANGS, useLangStore, useStrings, type Lang } from '../i18n';
+import type { LayoutDirection } from '../layout/layout';
 import styles from './Toolbar.module.css';
 
 export function Toolbar() {
@@ -99,7 +100,7 @@ export function Toolbar() {
     panToNode(chunkId);
   }
 
-  function handleTidy() {
+  function handleTidy(direction: LayoutDirection) {
     // Feed Tidy the sizes React Flow measured on screen. Card heights are
     // driven by however much prose the model wrote, so laying out from an
     // estimate is what made tall cards overlap their branches.
@@ -111,7 +112,7 @@ export function Toolbar() {
         return [n.id, { width: measured?.width, height: measured?.height }];
       }),
     );
-    useGraphStore.getState().tidyLayout(metrics);
+    useGraphStore.getState().tidyLayout(metrics, direction);
     // Let the position updates flush to React Flow before fitting.
     window.setTimeout(() => void fitView({ duration: 500 }), 60);
   }
@@ -334,9 +335,22 @@ export function Toolbar() {
         </button>
       )}
       {session && (
-        <button type="button" className={styles.button} title={strings.tidy} onClick={handleTidy}>
-          ⤢
-        </button>
+        <ToolbarMenu
+          title={strings.tidy}
+          trigger={`⤢ ${strings.tidy}`}
+          items={[
+            {
+              key: 'horizontal',
+              label: strings.tidyHorizontal,
+              onSelect: () => handleTidy('horizontal'),
+            },
+            {
+              key: 'vertical',
+              label: strings.tidyVertical,
+              onSelect: () => handleTidy('vertical'),
+            },
+          ]}
+        />
       )}
       <button
         type="button"

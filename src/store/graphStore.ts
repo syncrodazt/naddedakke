@@ -24,6 +24,7 @@ import {
   SPINE_GAP_X,
   spinePosition,
   whySiblingCount,
+  type LayoutDirection,
   type NodeMetrics,
 } from '../layout/layout';
 
@@ -65,7 +66,7 @@ type GraphActions = {
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   setNodeSize: (nodeId: string, size: { width: number; height: number }) => void;
   toggleUnderstood: (nodeId: string) => void;
-  tidyLayout: (metrics?: NodeMetrics) => void;
+  tidyLayout: (metrics?: NodeMetrics, direction?: LayoutDirection) => void;
   setPlaygroundParams: (nodeId: string, params: Record<string, number>) => void;
   setVariableValue: (nodeId: string, value: number) => void;
   insertSubPlan: (targetNodeId: string, plan: GoalPlan) => string[];
@@ -494,9 +495,9 @@ export const useGraphStore = create<GraphState & GraphActions>()(
         // `metrics` carries the sizes React Flow actually measured on screen —
         // without them a long lesson card gets laid out as if it were EST_H tall
         // and everything packed below it ends up underneath it.
-        tidyLayout(metrics) {
+        tidyLayout(metrics, direction) {
           const { nodes, edges } = get();
-          const positions = computeLayout(nodes, edges, metrics);
+          const positions = computeLayout(nodes, edges, metrics, direction);
           const moved: RNode[] = [];
           for (const [id, position] of Object.entries(positions)) {
             const node = nodes[id];
