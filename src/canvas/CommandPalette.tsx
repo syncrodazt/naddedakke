@@ -9,9 +9,16 @@ import { useRevealStore } from '../replay/revealStore';
 import { usePanelStore } from '../store/panelStore';
 import { useAuthStore } from '../store/authStore';
 import { useStrings } from '../i18n';
+import { startLesson } from '../services/lesson';
+import { useCameraNav } from './useCameraNav';
 import styles from './CommandPalette.module.css';
 
-type Entry = { id: string; title: string; kind: 'session' | 'example' };
+type Entry =
+  | { kind: 'session' | 'example'; id: string; title: string }
+  // Typing something no notebook matches is usually not a failed search — it
+  // is the thing you want to learn. Offer it as the action rather than an
+  // empty list.
+  | { kind: 'ask'; topic: string };
 
 /**
  * Ctrl/⌘+K — switch notebook.
@@ -28,6 +35,7 @@ export function CommandPalette() {
   const sessionsRevision = useGraphStore((s) => s.sessionsRevision);
   const currentId = useGraphStore((s) => s.session?.id);
   const { fitView } = useReactFlow();
+  const { panToNode } = useCameraNav();
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [query, setQuery] = useState('');
@@ -51,9 +59,17 @@ export function CommandPalette() {
     const unloaded: Entry[] = examples
       .filter((ex) => !sessions.some((s) => s.id === ex.id))
       .map((ex) => ({ id: ex.id, title: ex.label, kind: 'example' }));
-    const needle = query.trim().toLowerCase();
-    const all = [...saved, ...unloaded];
-    return needle === '' ? all : all.filter((e) => e.title.toLowerCase().includes(needle));
+    const topic = query.trim();
+    const needle = topic.toLowerCase();
+    const matches =
+      needle === ''
+        ? [...saved, ...unloaded]
+        : [...saved, ...unloaded].filter((e) =>
+            'title' in e ? e.title.toLowerCase().includes(needle) : false,
+          );
+    // The ask row goes last, so Enter on a typed word still opens the notebook
+    // that matches it; you have to arrow down to start something new.
+    return topic === '' ? matches : [...matches, { kind: 'ask' as const, topic }];
   }, [sessions, query]);
 
   if (!open) return null;
@@ -61,6 +77,11 @@ export function CommandPalette() {
   async function choose(entry: Entry) {
     close();
     useRevealStore.getState().showAll();
+    if (entry.kind === 'ask') {
+      const chunkId = await startLesson(entry.topic);
+      panToNode(chunkId);
+      return;
+    }
     if (entry.kind === 'session') {
       await useGraphStore.getState().loadSession(entry.id);
     } else {
@@ -103,7 +124,7 @@ export function CommandPalette() {
           {entries.length === 0 && <p className={styles.empty}>{strings.paletteEmpty}</p>}
           {entries.map((entry, i) => (
             <button
-              key={`${entry.kind}:${entry.id}`}
+              key={entry.kind === 'ask' ? 'ask' : `${entry.kind}:${entry.id}`}
               type="button"
               role="option"
               aria-selected={i === cursor}
@@ -111,11 +132,22 @@ export function CommandPalette() {
               onMouseEnter={() => setCursor(i)}
               onClick={() => void choose(entry)}
             >
-              <span className={styles.rowTitle}>{entry.title}</span>
-              {entry.kind === 'example' && (
-                <span className={styles.tag}>{strings.examplesGroup}</span>
+              {entry.kind === 'ask' ? (
+                <>
+                  <span className={styles.ask}>＋</span>
+                  <span className={styles.rowTitle}>
+                    {strings.paletteAsk} 「{entry.topic}」
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={styles.rowTitle}>{entry.title}</span>
+                  {entry.kind === 'example' && (
+                    <span className={styles.tag}>{strings.examplesGroup}</span>
+                  )}
+                  {entry.id === currentId && <span className={styles.current}>●</span>}
+                </>
               )}
-              {entry.id === currentId && <span className={styles.current}>●</span>}
             </button>
           ))}
         </div>

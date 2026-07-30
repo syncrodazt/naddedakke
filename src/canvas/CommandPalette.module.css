@@ -68,6 +68,11 @@
   white-space: nowrap;
 }
 
+.ask {
+  color: var(--branch);
+  font-weight: 700;
+}
+
 .tag {
   font-size: 11px;
   color: var(--muted);
