@@ -3,12 +3,14 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   TeachService,
+  TranslateRequest,
 } from './claude/types';
 import {
   buildAnswerPrompt,
   buildGoalPlanPrompt,
   buildLessonChunkPrompt,
   buildResponsePrompt,
+  buildTranslatePrompt,
   type ChatPrompt,
 } from './prompts';
 import { streamSseText } from './sse';
@@ -73,6 +75,18 @@ export class GeminiService implements TeachService {
     // Structured output, and no thinking: we want a parseable object, not
     // deliberation that eats the token budget and returns empty text.
     const stream = this.streamChat(buildGoalPlanPrompt(req), req.signal, {
+      json: true,
+      noThinking: true,
+    });
+    for await (const delta of stream) out += delta;
+    return out;
+  }
+
+  async translate(req: TranslateRequest): Promise<string> {
+    let out = '';
+    // No thinking: translation is a transformation, and every batch of the
+    // notebook is in flight at once — deliberation here is pure latency.
+    const stream = this.streamChat(buildTranslatePrompt(req), req.signal, {
       json: true,
       noThinking: true,
     });

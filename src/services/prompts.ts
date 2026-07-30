@@ -1,4 +1,9 @@
-import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest } from './claude/types';
+import type {
+  AnswerRequest,
+  GoalPlanRequest,
+  LessonChunkRequest,
+  TranslateRequest,
+} from './claude/types';
 
 // Prompt construction is provider-agnostic: every service receives a plain
 // {system, user} pair and maps it onto its own wire format.
@@ -135,5 +140,48 @@ export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
       `## Topic\n\n${req.topic}\n\n` +
       `## Chunks so far\n\n${previous}\n\n` +
       `Write chunk ${req.chunkIndex + 1}.`,
+  };
+}
+
+/**
+ * Translate whole nodes at once — body plus the quotes anchored inside it.
+ *
+ * The quotes are the reason this is one call rather than two: a highlight is
+ * found again in the translated body by searching for its translated quote, so
+ * the quote has to be translated the same way, in the same pass, by something
+ * that can see the sentence it came from. Asking separately would produce a
+ * phrasing that never appears in the body and orphan the branch.
+ */
+export function buildTranslatePrompt(req: TranslateRequest): ChatPrompt {
+  return {
+    system:
+      'You translate Markdown study notes. Reply with ONE JSON object and nothing ' +
+      'else — no prose, no code fence:\n' +
+      '{"items":[{"id":string,"sourceLang":string,"md":string,' +
+      '"quotes":[{"id":string,"text":string}]}]}\n' +
+      `Translate every "md" into ${req.targetLabel}.\n` +
+      'Rules:\n' +
+      '- Return one entry per input item, with the SAME "id". Never merge, drop ' +
+      'or reorder items.\n' +
+      '- "sourceLang" is the BCP-47 base code of the language the input was ' +
+      'written in (e.g. "ja", "th", "en").\n' +
+      '- Preserve the Markdown structure exactly: same headings, list shape, ' +
+      'blockquotes, bold/italic, line breaks. If a line starts with "> ❓ ", keep ' +
+      'that prefix character-for-character and translate only what follows it.\n' +
+      '- Do NOT translate: math between $...$ or $$...$$, anything inside ' +
+      'backticks, code blocks, URLs, and identifiers/formulas (snake_case names ' +
+      'like `monthly_saving` and expressions that reference them). Copy them ' +
+      'through unchanged.\n' +
+      '- Translate meaning, not words: this is a tutor explaining an idea, so it ' +
+      'must read naturally to a native speaker.\n' +
+      '- "quotes" are passages the learner highlighted inside that item. Translate ' +
+      'each one so that it appears VERBATIM as a substring of your translated ' +
+      '"md" — same characters, same spacing. This is a hard requirement: a quote ' +
+      'that does not occur in "md" breaks the link to the follow-up question. ' +
+      'Return every quote you were given, with the same "id". A quote may be ' +
+      'written in a different language than "md"; find the passage it refers to ' +
+      'and give that passage in ' +
+      `${req.targetLabel}.`,
+    user: JSON.stringify({ items: req.items }),
   };
 }

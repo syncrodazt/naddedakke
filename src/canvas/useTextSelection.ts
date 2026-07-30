@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { mapRangeToSource, type MappedSelection } from '../markdown/selectionMapping';
 import { useGraphStore } from '../store/graphStore';
+import { currentDisplay } from '../store/displayContent';
 
 export type ActiveSelection = {
   nodeId: string;
-  sel: MappedSelection;
+  // `lang` records which body the offsets index: the learner may be reading a
+  // translation, in which case the highlight belongs to that translation.
+  sel: MappedSelection & { lang?: string };
   rect: DOMRect;
 };
 
@@ -37,12 +40,17 @@ export function useTextSelection(): [ActiveSelection | null, () => void] {
         setActive(null);
         return;
       }
-      const mapped = mapRangeToSource(container, node.content.md, range);
+      const display = currentDisplay(node);
+      const mapped = mapRangeToSource(container, display.md, range);
       if (!mapped || mapped.text.trim() === '') {
         setActive(null);
         return;
       }
-      setActive({ nodeId, sel: mapped, rect: range.getBoundingClientRect() });
+      setActive({
+        nodeId,
+        sel: { ...mapped, ...(display.bodyLang !== undefined ? { lang: display.bodyLang } : {}) },
+        rect: range.getBoundingClientRect(),
+      });
     }
 
     document.addEventListener('selectionchange', update);

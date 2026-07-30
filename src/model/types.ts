@@ -4,6 +4,12 @@ export type Session = {
   mode: 'learn' | 'gyakusan';
   createdAt: number;
   seqCounter: number;
+  /**
+   * Which language the learner wants to READ this notebook in. Undefined means
+   * "as written". Switching it never rewrites anything — every node keeps its
+   * original body and gains translations alongside it (see RNode.content).
+   */
+  contentLang?: string;
 };
 
 export type NodeKind =
@@ -26,8 +32,16 @@ export type RNode = {
   branchIntent?: 'why' | 'respond' | 'idea'; // question node: なんで？ / learner's answer / free-form idea
   understood?: boolean; // learner marked this node understood (closes the loop)
   content: {
-    md: string; // markdown body
+    md: string; // markdown body, as originally written
     highlights: Highlight[];
+    /** Language `md` is written in, once known. Undefined = never determined. */
+    lang?: string;
+    /**
+     * The same body in other languages, keyed by language code. Additive only:
+     * `md` is the record of what was actually said and is never overwritten, so
+     * switching back to the original is free and nothing is ever lost.
+     */
+    translations?: Record<string, string>;
   };
   // gyakusan only:
   formula?: string; // mathjs expr referencing other nodes by their varName
@@ -55,6 +69,19 @@ export type Highlight = {
   start: number; // char offsets into md source
   end: number;
   text: string; // denormalized quote (offset drift guard)
+  /**
+   * Which body `start`/`end`/`text` index: a key of `content.translations`, or
+   * undefined for the original `content.md`. A highlight made while reading a
+   * translation is anchored in that translation, not back-projected onto the
+   * original — there is no honest way to map offsets across a translation.
+   */
+  lang?: string;
+  /**
+   * The same passage quoted in other languages, keyed by language code. This is
+   * what re-anchors the highlight when a translated body is displayed: the
+   * quote is searched for, exactly as `text` guards against offset drift.
+   */
+  quotes?: Record<string, string>;
   childNodeId?: string; // the question node it spawned
 };
 

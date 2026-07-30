@@ -7,6 +7,7 @@ import { useGraphStore } from '../../store/graphStore';
 import { CYCLE_ISSUE } from '../../gyakusan/engine';
 import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
+import { useDisplayContent } from '../../store/displayContent';
 import styles from './GyakusanNodes.module.css';
 
 function formatValue(value: number): string {
@@ -17,6 +18,7 @@ function formatValue(value: number): string {
 export function DerivedNode({ data, selected }: NodeProps<RFlowNode>) {
   const strings = useStrings();
   const { node, displayNum } = data;
+  const display = useDisplayContent(node);
   const issue = useGraphStore((s) => s.computeIssues[node.id]);
   const { panToNode } = useCameraNav();
   const addIdea = useCallback(() => {
@@ -33,7 +35,7 @@ export function DerivedNode({ data, selected }: NodeProps<RFlowNode>) {
       showUnderstood
       onAddIdea={addIdea}
     >
-      <MarkdownContent nodeId={node.id} md={node.content.md} highlights={node.content.highlights} />
+      <MarkdownContent nodeId={node.id} md={display.md} highlights={display.highlights} />
       {issue !== undefined ? (
         <span className={styles.errorBadge}>
           {issue === CYCLE_ISSUE ? strings.cycleError : strings.computeError}

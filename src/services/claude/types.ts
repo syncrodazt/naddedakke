@@ -27,6 +27,22 @@ export type GoalPlanRequest = {
   signal?: AbortSignal;
 };
 
+/** One node to translate: its body plus every quote that must survive in it. */
+export type TranslateItem = {
+  id: string;
+  md: string;
+  // The highlighted passages anchored in this node. They come back translated
+  // too, so a branch stays attached to the sentence that provoked it.
+  quotes: { id: string; text: string }[];
+};
+
+export type TranslateRequest = {
+  targetLang: string; // language code, e.g. 'ja' | 'th' | 'en'
+  targetLabel: string; // the language's own name, so the model can't misread the code
+  items: TranslateItem[];
+  signal?: AbortSignal;
+};
+
 // The one seam between the graph and the LLM. Swapping providers (mock,
 // Gemini, Anthropic) never touches the store or UI.
 export interface TeachService {
@@ -38,4 +54,7 @@ export interface TeachService {
   // Back-cast decomposition returns one JSON document, so it resolves whole
   // rather than streaming — a half-parsed plan is of no use to anyone.
   decomposeGoal(req: GoalPlanRequest): Promise<string>;
+  // Many nodes per call, resolving whole: translations are applied a batch at a
+  // time and a half-translated body has nowhere to go.
+  translate(req: TranslateRequest): Promise<string>;
 }

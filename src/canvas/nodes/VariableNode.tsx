@@ -6,11 +6,13 @@ import { MarkdownContent } from '../../markdown/MarkdownContent';
 import { useGraphStore } from '../../store/graphStore';
 import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
+import { useDisplayContent } from '../../store/displayContent';
 import styles from './GyakusanNodes.module.css';
 
 export function VariableNode({ data, selected }: NodeProps<RFlowNode>) {
   const strings = useStrings();
   const { node, displayNum } = data;
+  const display = useDisplayContent(node);
   const setVariableValue = useGraphStore((s) => s.setVariableValue);
   const value = node.value ?? 0;
   const input = node.varInput ?? { min: 0, max: 100, step: 1 };
@@ -28,7 +30,7 @@ export function VariableNode({ data, selected }: NodeProps<RFlowNode>) {
       showUnderstood
       onAddIdea={addIdea}
     >
-      <MarkdownContent nodeId={node.id} md={node.content.md} highlights={node.content.highlights} />
+      <MarkdownContent nodeId={node.id} md={display.md} highlights={display.highlights} />
       <div className={styles.valueRow}>
         <input
           type="number"

@@ -28,7 +28,21 @@ import {
   type NodeMetrics,
 } from '../layout/layout';
 
-export type SelectionRange = { start: number; end: number; text: string };
+export type SelectionRange = {
+  start: number;
+  end: number;
+  text: string;
+  /** Which body the offsets index — a translation key, or undefined for the original. */
+  lang?: string;
+};
+
+/** One node's translated body plus its translated quotes, keyed by highlight id. */
+export type NodeTranslation = {
+  id: string;
+  md: string;
+  sourceLang?: string;
+  quotes: { id: string; text: string }[];
+};
 
 type GraphState = {
   session: Session | null;
@@ -73,6 +87,8 @@ type GraphActions = {
   insertGoalPlan: (plan: GoalPlan) => string;
   insertPrerequisite: (targetNodeId: string) => string;
   recompute: () => void;
+  setContentLang: (lang: string | undefined) => void;
+  applyTranslations: (lang: string, items: NodeTranslation[]) => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
 };
@@ -146,6 +162,18 @@ export const useGraphStore = create<GraphState & GraphActions>()(
 
       function putNode(node: RNode): void {
         commit({ nodes: [node] });
+      }
+
+      /**
+       * Content for a node being created now. It is tagged with the language
+       * the learner is currently reading in, because that is the language its
+       * body will be written in: the model is fed the displayed text, so it
+       * answers in the displayed language. Without the tag a later translation
+       * run would translate a Thai node into Thai.
+       */
+      function freshContent(md: string): RNode['content'] {
+        const lang = get().session?.contentLang;
+        return { md, highlights: [], ...(lang !== undefined ? { lang } : {}) };
       }
 
       /**
@@ -271,7 +299,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             kind: 'chunk',
             seq: nextSeq(),
             position: freePosition(spinePosition(chunks.length), 'chunk'),
-            content: { md, highlights: [] },
+            content: freshContent(md),
           };
           commit({
             nodes: [node],
@@ -302,6 +330,11 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             start: sel.start,
             end: sel.end,
             text: sel.text,
+            // Offsets index whichever body the learner was reading. Tagging it
+            // is what keeps the underline in the right place when they switch
+            // languages — there is no way to project offsets across a
+            // translation, so the highlight stays anchored where it was made.
+            ...(sel.lang !== undefined ? { lang: sel.lang } : {}),
             childNodeId: questionId,
           };
 
@@ -314,7 +347,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             seq: nextSeq(),
             position: freePosition(branchPosition(parent, depth, siblingIndex), 'question'),
             branchIntent: intent,
-            content: { md: `> ${sel.text}`, highlights: [] },
+            content: freshContent(`> ${sel.text}`),
           };
 
           const updatedParent: RNode = {
@@ -417,7 +450,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             kind: 'answer',
             seq: nextSeq(),
             position: freePosition(answerPosition(question), 'answer'),
-            content: { md: '', highlights: [] },
+            content: freshContent(''),
           };
           commit({
             nodes: [finalized, answer],
@@ -444,7 +477,12 @@ export const useGraphStore = create<GraphState & GraphActions>()(
         setNodeMd(nodeId, md) {
           const node = get().nodes[nodeId];
           if (!node) return;
-          putNode({ ...node, content: { ...node.content, md } });
+          // Translations describe the body they were made from. Replacing the
+          // body (Regenerate) makes them a translation of text that no longer
+          // exists, so they go — a later translate run picks the node up again.
+          const content = { ...node.content, md };
+          delete content.translations;
+          putNode({ ...node, content });
         },
 
         // Re-point this node's highlights at their quoted text. Call after the
@@ -601,7 +639,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
               { x: target.position.x - (NODE_W + SPINE_GAP_X), y: target.position.y },
               'chunk',
             ),
-            content: { md: '', highlights: [] },
+            content: freshContent(''),
           };
 
           const link = (source: string, targetId: string): REdge => ({
@@ -625,6 +663,62 @@ export const useGraphStore = create<GraphState & GraphActions>()(
 
         recompute() {
           runRecompute();
+        },
+
+        // Which language to READ this notebook in. A view setting, not an edit:
+        // nothing about the graph changes, so it is deliberately outside undo.
+        setContentLang(lang) {
+          const session = get().session;
+          if (!session || session.contentLang === lang) return;
+          const next = { ...session };
+          if (lang === undefined) delete next.contentLang;
+          else next.contentLang = lang;
+          set({ session: next });
+          markDirty({ session: true });
+        },
+
+        // Store translated bodies alongside the originals. Additive by design:
+        // `content.md` is the record of what was actually said and is never
+        // touched, so switching back to the original always works and a bad
+        // translation costs nothing.
+        applyTranslations(lang, items) {
+          const { nodes } = get();
+          const updated: RNode[] = [];
+          for (const item of items) {
+            const node = nodes[item.id];
+            if (!node) continue;
+
+            // The model reporting that the body was already in the target
+            // language: record that, and don't store a "translation" of it to
+            // itself — that would leave two copies to keep in step.
+            if (item.sourceLang === lang) {
+              if (node.content.lang !== lang) {
+                updated.push({ ...node, content: { ...node.content, lang } });
+              }
+              continue;
+            }
+
+            const byId = new Map(item.quotes.map((q) => [q.id, q.text]));
+            const highlights = node.content.highlights.map((h) => {
+              const quote = byId.get(h.id);
+              // A highlight already anchored in this language indexes the body
+              // directly; a translated quote for it would be a second answer to
+              // a question that isn't being asked.
+              if (quote === undefined || (h.lang ?? node.content.lang) === lang) return h;
+              return { ...h, quotes: { ...h.quotes, [lang]: quote } };
+            });
+
+            updated.push({
+              ...node,
+              content: {
+                ...node.content,
+                lang: node.content.lang ?? item.sourceLang,
+                highlights,
+                translations: { ...node.content.translations, [lang]: item.md },
+              },
+            });
+          }
+          commit({ nodes: updated });
         },
 
         setPendingQuestion(questionId) {

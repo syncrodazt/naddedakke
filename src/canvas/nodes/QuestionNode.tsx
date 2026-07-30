@@ -7,6 +7,7 @@ import { useGraphStore } from '../../store/graphStore';
 import { useCameraNav } from '../useCameraNav';
 import { askQuestion } from '../../services/ask';
 import { NodeShell } from './NodeShell';
+import { useDisplayContent } from '../../store/displayContent';
 import styles from './QuestionNode.module.css';
 
 export function QuestionNode({ data, selected }: NodeProps<RFlowNode>) {
@@ -15,6 +16,7 @@ export function QuestionNode({ data, selected }: NodeProps<RFlowNode>) {
   const intent = node.branchIntent ?? 'why';
   const pending = useGraphStore((s) => s.pendingQuestionId === node.id);
   const { panToNode, panToHighlight } = useCameraNav();
+  const display = useDisplayContent(node);
   // 'why' pre-fills the default question; 'respond' starts empty for the
   // learner to write their own answer.
   const [text, setText] = useState<string>(intent === 'why' ? strings.defaultQuestion : '');
@@ -32,10 +34,10 @@ export function QuestionNode({ data, selected }: NodeProps<RFlowNode>) {
 
   const onHighlightClick = useCallback(
     (highlightId: string) => {
-      const child = node.content.highlights.find((h) => h.id === highlightId)?.childNodeId;
+      const child = display.highlights.find((h) => h.id === highlightId)?.childNodeId;
       if (child) panToNode(child);
     },
-    [node, panToNode],
+    [display, panToNode],
   );
 
   const addIdea = useCallback(() => {
@@ -79,8 +81,8 @@ export function QuestionNode({ data, selected }: NodeProps<RFlowNode>) {
     >
       <MarkdownContent
         nodeId={node.id}
-        md={node.content.md}
-        highlights={node.content.highlights}
+        md={display.md}
+        highlights={display.highlights}
         onHighlightClick={onHighlightClick}
       />
       {pending && (

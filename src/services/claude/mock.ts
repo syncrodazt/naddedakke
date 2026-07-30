@@ -1,4 +1,10 @@
-import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest, TeachService } from './types';
+import type {
+  AnswerRequest,
+  GoalPlanRequest,
+  LessonChunkRequest,
+  TeachService,
+  TranslateRequest,
+} from './types';
 
 const CANNED: { keywords: string[]; md: string }[] = [
   {
@@ -140,6 +146,22 @@ export class MockClaudeService implements TeachService {
         },
       ],
       goalOf: 'monthly_saving',
+    });
+  }
+
+  // Not a translation — nothing offline can translate. It marks the body and
+  // returns every quote unchanged, which is exactly what the re-anchoring path
+  // needs to be exercised: the quotes still occur verbatim in the returned md,
+  // so highlights must survive the round trip with no API key configured.
+  async translate(req: TranslateRequest): Promise<string> {
+    await delay(300);
+    return JSON.stringify({
+      items: req.items.map((item) => ({
+        id: item.id,
+        sourceLang: 'ja',
+        md: `*（モック翻訳 → ${req.targetLabel}）*\n\n${item.md}`,
+        quotes: item.quotes.map((q) => ({ id: q.id, text: q.text })),
+      })),
     });
   }
 }

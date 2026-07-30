@@ -1,4 +1,5 @@
 import { useGraphStore } from '../store/graphStore';
+import { currentDisplay } from '../store/displayContent';
 import { mockService, teachService } from './claude';
 import type { AnswerRequest, LessonChunkRequest } from './claude/types';
 import { consumeChunkStream } from './lesson';
@@ -33,14 +34,15 @@ async function regenerateAnswer(answerId: string): Promise<void> {
   const whyEdge = Object.values(edges).find((e) => e.target === question.id && e.kind === 'why');
   const parent = whyEdge ? nodes[whyEdge.source] : undefined;
   const quotedText =
-    parent?.content.highlights.find((h) => h.childNodeId === question.id)?.text ?? '';
+    (parent ? currentDisplay(parent).highlights : []).find((h) => h.childNodeId === question.id)
+      ?.text ?? '';
   const contextMd = parent ? ancestorChainMd(parent.id) : '';
   // 'respond' gives feedback on the learner's answer; 'why' and 'idea' explain.
   const intent: 'why' | 'respond' = question.branchIntent === 'respond' ? 'respond' : 'why';
 
   const req: AnswerRequest = {
     sessionId: session.id,
-    question: extractQuestionText(question.content.md),
+    question: extractQuestionText(currentDisplay(question).md),
     quotedText,
     contextMd,
     intent,
@@ -89,7 +91,7 @@ async function regenerateChunk(chunkId: string): Promise<void> {
   const previousChunksMd = Object.values(nodes)
     .filter((n) => n.kind === 'chunk' && n.seq < chunk.seq)
     .sort((a, b) => a.seq - b.seq)
-    .map((n) => n.content.md);
+    .map((n) => currentDisplay(n).md);
 
   const req: LessonChunkRequest = {
     sessionId: session.id,

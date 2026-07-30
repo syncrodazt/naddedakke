@@ -7,6 +7,7 @@ import { useGraphStore } from '../../store/graphStore';
 import { useCameraNav } from '../useCameraNav';
 import { NodeShell } from './NodeShell';
 import { useResolvedHighlights } from './useResolvedHighlights';
+import { useDisplayContent } from '../../store/displayContent';
 
 export function AnswerNode({ data, selected }: NodeProps<RFlowNode>) {
   const strings = useStrings();
@@ -14,14 +15,15 @@ export function AnswerNode({ data, selected }: NodeProps<RFlowNode>) {
   const streaming = useGraphStore((s) => s.streamingNodeId === node.id);
   const { panToNode } = useCameraNav();
 
-  const resolvedIds = useResolvedHighlights(node.content.highlights);
+  const display = useDisplayContent(node);
+  const resolvedIds = useResolvedHighlights(display.highlights);
 
   const onHighlightClick = useCallback(
     (highlightId: string) => {
-      const child = node.content.highlights.find((h) => h.id === highlightId)?.childNodeId;
+      const child = display.highlights.find((h) => h.id === highlightId)?.childNodeId;
       if (child) panToNode(child);
     },
-    [node, panToNode],
+    [display, panToNode],
   );
 
   const addIdea = useCallback(() => {
@@ -40,8 +42,8 @@ export function AnswerNode({ data, selected }: NodeProps<RFlowNode>) {
     >
       <MarkdownContent
         nodeId={node.id}
-        md={node.content.md}
-        highlights={node.content.highlights}
+        md={display.md}
+        highlights={display.highlights}
         resolvedHighlightIds={resolvedIds}
         onHighlightClick={onHighlightClick}
       />

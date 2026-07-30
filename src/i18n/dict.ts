@@ -116,6 +116,11 @@ const ja = {
   gyakusanDisclaimer:
     '⚠️ これは教育用の簡易モデルです。前提を単純化しているため、税・インフレ・変動リスクなどは考慮していません。専門的な助言ではありません。',
   confirmEmailInfo: 'メールを確認してアカウントを有効化してください。',
+  contentLangMenu: '🌐 内容の言語',
+  contentLangOriginal: '原文のまま',
+  contentLangTitle: 'ノート本文の言語を切り替えます（原文は保持されます）',
+  translating: '翻訳中',
+  translateFailed: (n: number) => `${n}件のノードを翻訳できませんでした（原文のまま表示します）`,
 };
 
 export type Strings = typeof ja;
@@ -231,6 +236,11 @@ const th: Strings = {
   gyakusanDisclaimer:
     '⚠️ นี่เป็นโมเดลอย่างง่ายเพื่อการเรียนรู้ ตั้งสมมติฐานแบบง่าย ไม่ได้คิดภาษี เงินเฟ้อ หรือความผันผวน และไม่ใช่คำแนะนำจากผู้เชี่ยวชาญ',
   confirmEmailInfo: 'กรุณาเช็กอีเมลเพื่อยืนยันบัญชี',
+  contentLangMenu: '🌐 ภาษาของเนื้อหา',
+  contentLangOriginal: 'ต้นฉบับ',
+  contentLangTitle: 'สลับภาษาของเนื้อหาโน้ต (ต้นฉบับยังถูกเก็บไว้)',
+  translating: 'กำลังแปล',
+  translateFailed: (n: number) => `แปลไม่สำเร็จ ${n} โหนด (แสดงต้นฉบับแทน)`,
 };
 
 const en: Strings = {
@@ -344,6 +354,11 @@ const en: Strings = {
   gyakusanDisclaimer:
     '⚠️ This is a simplified educational model. It ignores tax, inflation and volatility, and is not professional advice.',
   confirmEmailInfo: 'Check your email to confirm your account.',
+  contentLangMenu: '🌐 Content language',
+  contentLangOriginal: 'As written',
+  contentLangTitle: 'Read this notebook in another language (the original is kept)',
+  translating: 'Translating',
+  translateFailed: (n: number) => `${n} node(s) could not be translated (showing the original)`,
 };
 
 export type Lang = 'ja' | 'th' | 'en';

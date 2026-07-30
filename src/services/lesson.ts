@@ -1,4 +1,5 @@
 import { useGraphStore } from '../store/graphStore';
+import { currentDisplay } from '../store/displayContent';
 import { mockService, teachService } from './claude';
 import type { LessonChunkRequest } from './claude/types';
 import { LessonStreamParser, composeChunkMd } from './lessonStream';
@@ -24,7 +25,7 @@ export async function nextLessonChunk(): Promise<string> {
   const previousChunksMd = Object.values(nodes)
     .filter((n) => n.kind === 'chunk')
     .sort((a, b) => a.seq - b.seq)
-    .map((n) => n.content.md);
+    .map((n) => currentDisplay(n).md);
 
   const llm = useLlmStore.getState();
   const req: LessonChunkRequest = {
@@ -111,7 +112,7 @@ export async function prerequisiteChunk(targetNodeId: string): Promise<string> {
     topic: session.title,
     previousChunksMd: [],
     chunkIndex: 0,
-    prerequisiteFor: target.content.md,
+    prerequisiteFor: currentDisplay(target).md,
     signal: llm.begin(),
   };
 

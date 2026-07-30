@@ -6,10 +6,12 @@ import { MarkdownContent } from '../../markdown/MarkdownContent';
 import { useGraphStore } from '../../store/graphStore';
 import { playgroundRegistry } from '../../playgrounds/registry';
 import { NodeShell } from './NodeShell';
+import { useDisplayContent } from '../../store/displayContent';
 
 export function PlaygroundNode({ data, selected }: NodeProps<RFlowNode>) {
   const strings = useStrings();
   const { node, displayNum } = data;
+  const display = useDisplayContent(node);
   const setPlaygroundParams = useGraphStore((s) => s.setPlaygroundParams);
 
   const onParamsChange = useCallback(
@@ -28,12 +30,8 @@ export function PlaygroundNode({ data, selected }: NodeProps<RFlowNode>) {
       label={strings.playgroundLabel}
       accent="guard"
     >
-      {node.content.md !== '' && (
-        <MarkdownContent
-          nodeId={node.id}
-          md={node.content.md}
-          highlights={node.content.highlights}
-        />
+      {display.md !== '' && (
+        <MarkdownContent nodeId={node.id} md={display.md} highlights={node.content.highlights} />
       )}
       {Component && node.playground ? (
         <Component

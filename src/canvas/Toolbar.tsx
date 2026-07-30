@@ -15,7 +15,9 @@ import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
 import { redo, undo, useCanRedo, useCanUndo } from '../store/history';
 import { useLlmStore } from '../store/llmStore';
 import { decomposeGoal } from '../services/goal';
-import { useStrings } from '../i18n';
+import { LANGS, useStrings } from '../i18n';
+import { translateNotebook } from '../services/translate';
+import { useTranslateStore } from '../store/translateStore';
 import { usePanelStore } from '../store/panelStore';
 import type { LayoutDirection } from '../layout/layout';
 import styles from './Toolbar.module.css';
@@ -36,6 +38,10 @@ export function Toolbar() {
   const revealActive = useRevealStore((s) => s.active);
   const revealCount = useRevealStore((s) => s.count);
   const revealBaseSeq = useRevealStore((s) => s.baseSeq);
+  const contentLang = useGraphStore((s) => s.session?.contentLang);
+  const translating = useTranslateStore((s) => s.active);
+  const translateDone = useTranslateStore((s) => s.done);
+  const translateTotal = useTranslateStore((s) => s.total);
   const fileInput = useRef<HTMLInputElement>(null);
   const { fitView, getNodes, getInternalNode } = useReactFlow();
   const { panToNode } = useCameraNav();
@@ -76,6 +82,17 @@ export function Toolbar() {
     const goal = (await promptDialog(strings.goalPrompt, '', strings.goalPlaceholder))?.trim();
     if (!goal) return;
     await decomposeGoal(goal);
+  }
+
+  // Reading language. The view switches immediately and bodies fill in behind
+  // it, so picking a language never blocks on the slowest node.
+  async function handleContentLang(lang: string | undefined) {
+    if (lang === undefined) {
+      useGraphStore.getState().setContentLang(undefined);
+      return;
+    }
+    const summary = await translateNotebook(lang, LANGS.find((l) => l.id === lang)?.label ?? lang);
+    if (summary && summary.failed > 0) await alertDialog(strings.translateFailed(summary.failed));
   }
 
   async function handleNextChunk() {
@@ -301,6 +318,11 @@ export function Toolbar() {
           ✓ {understoodCount}/{learnNodes.length}
         </span>
       )}
+      {translating && (
+        <span className={styles.progress} title={strings.contentLangTitle}>
+          🌐 {translateDone}/{translateTotal}
+        </span>
+      )}
       <input
         ref={fileInput}
         type="file"
@@ -328,6 +350,24 @@ export function Toolbar() {
                   disabled: pulling,
                   onSelect: () => void handleCloudPull(),
                 },
+              ]
+            : []),
+          ...(session
+            ? [
+                {
+                  key: 'lang-original',
+                  label: `${strings.contentLangMenu} — ${strings.contentLangOriginal}`,
+                  active: contentLang === undefined,
+                  disabled: translating,
+                  onSelect: () => void handleContentLang(undefined),
+                },
+                ...LANGS.map((l) => ({
+                  key: `lang-${l.id}`,
+                  label: `${strings.contentLangMenu} — ${l.label}`,
+                  active: contentLang === l.id,
+                  disabled: translating,
+                  onSelect: () => void handleContentLang(l.id),
+                })),
               ]
             : []),
           {

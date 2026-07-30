@@ -92,6 +92,10 @@ claude mcp add nandedakke -e NANDEDAKKE_DIR=/path/to/sessions \
 `seq` is the app's chronological timeline and is never renumbered, so every
 ordering here is the order you actually learned things in — not layout order.
 
+Reads return each node **as it was written**. A session you are reading in
+another language keeps its translations alongside the original, and the original
+is the record of what was actually said — so that is what Claude sees.
+
 ### Write tools
 
 | Tool              | What it does                                                                                        |

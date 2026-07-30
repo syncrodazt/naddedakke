@@ -1,4 +1,10 @@
-import type { AnswerRequest, GoalPlanRequest, LessonChunkRequest, TeachService } from './types';
+import type {
+  AnswerRequest,
+  GoalPlanRequest,
+  LessonChunkRequest,
+  TeachService,
+  TranslateRequest,
+} from './types';
 import { MockClaudeService } from './mock';
 import { GeminiService } from '../gemini';
 import { ClaudeService } from '../anthropic';
@@ -33,6 +39,10 @@ class RoutingService implements TeachService {
 
   decomposeGoal(req: GoalPlanRequest): Promise<string> {
     return this.pick().decomposeGoal(req);
+  }
+
+  translate(req: TranslateRequest): Promise<string> {
+    return this.pick().translate(req);
   }
 }
 

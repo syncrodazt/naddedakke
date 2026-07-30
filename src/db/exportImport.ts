@@ -36,21 +36,53 @@ function validateSession(v: unknown): Session {
   if (mode !== 'learn' && mode !== 'gyakusan') fail('session.mode');
   if (typeof createdAt !== 'number') fail('session.createdAt');
   if (typeof seqCounter !== 'number' || seqCounter < 0) fail('session.seqCounter');
-  return { id, title, mode, createdAt, seqCounter };
+  const session: Session = { id, title, mode, createdAt, seqCounter };
+  if (v.contentLang !== undefined) {
+    if (typeof v.contentLang !== 'string') fail('session.contentLang');
+    session.contentLang = v.contentLang;
+  }
+  return session;
+}
+
+/** A `Record<string, string>` from untrusted JSON, or a failure. */
+function validateStringMap(v: unknown, where: string): Record<string, string> {
+  if (!isRecord(v)) fail(where);
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v)) {
+    if (typeof val !== 'string') fail(`${where}.${k}`);
+    out[k] = val;
+  }
+  return out;
 }
 
 function validateHighlight(v: unknown, where: string): RNode['content']['highlights'][number] {
   if (!isRecord(v)) fail(`${where} highlight is not an object`);
-  const { id, start, end, text, childNodeId } = v;
+  const { id, start, end, text, lang, quotes, childNodeId } = v;
   if (typeof id !== 'string') fail(`${where} highlight.id`);
   if (typeof start !== 'number' || typeof end !== 'number' || start < 0 || end < start) {
     fail(`${where} highlight offsets`);
   }
   if (typeof text !== 'string') fail(`${where} highlight.text`);
+  if (lang !== undefined && typeof lang !== 'string') fail(`${where} highlight.lang`);
   if (childNodeId !== undefined && typeof childNodeId !== 'string') {
     fail(`${where} highlight.childNodeId`);
   }
-  return { id, start, end, text, ...(childNodeId !== undefined ? { childNodeId } : {}) };
+  return {
+    id,
+    start,
+    end,
+    text,
+    ...(lang !== undefined ? { lang } : {}),
+    ...(quotes !== undefined
+      ? { quotes: validateStringMap(quotes, `${where} highlight.quotes`) }
+      : {}),
+    ...(childNodeId !== undefined ? { childNodeId } : {}),
+  };
+}
+
+function asLang(v: unknown, nodeId: string): string {
+  if (typeof v !== 'string') fail(`node ${nodeId} content.lang`);
+  return v;
 }
 
 function validateNode(v: unknown, sessionId: string): RNode {
@@ -77,6 +109,10 @@ function validateNode(v: unknown, sessionId: string): RNode {
     content: {
       md: content.md,
       highlights: content.highlights.map((h) => validateHighlight(h, `node ${id}`)),
+      ...(content.lang !== undefined ? { lang: asLang(content.lang, id) } : {}),
+      ...(content.translations !== undefined
+        ? { translations: validateStringMap(content.translations, `node ${id} translations`) }
+        : {}),
     },
   };
   if (v.size !== undefined) {

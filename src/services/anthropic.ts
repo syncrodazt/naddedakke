@@ -3,18 +3,21 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   TeachService,
+  TranslateRequest,
 } from './claude/types';
 import {
   buildAnswerPrompt,
   buildGoalPlanPrompt,
   buildLessonChunkPrompt,
   buildResponsePrompt,
+  buildTranslatePrompt,
   type ChatPrompt,
 } from './prompts';
 import { extractClaudeText, streamSseText } from './sse';
 import { currentModel } from '../store/modelStore';
 import { GOAL_PLAN_SCHEMA } from '../gyakusan/planSchema';
 import { LESSON_CHUNK_SCHEMA } from './lessonSchema';
+import { TRANSLATE_SCHEMA } from './translateSchema';
 
 // Streams from the /api/claude proxy (Vite middleware in dev, Vercel edge
 // function in production). The Anthropic API key never reaches the browser.
@@ -75,6 +78,19 @@ export class ClaudeService implements TeachService {
     const stream = this.streamChat(buildGoalPlanPrompt(req), req.signal, {
       schema: GOAL_PLAN_SCHEMA,
       effort: 'high',
+    });
+    for await (const delta of stream) out += delta;
+    return out;
+  }
+
+  async translate(req: TranslateRequest): Promise<string> {
+    let out = '';
+    // Low effort: translation is a transformation, not a problem to think
+    // about, and every batch of the notebook is in flight at once — this is the
+    // one call where latency is the whole experience.
+    const stream = this.streamChat(buildTranslatePrompt(req), req.signal, {
+      schema: TRANSLATE_SCHEMA,
+      effort: 'low',
     });
     for await (const delta of stream) out += delta;
     return out;

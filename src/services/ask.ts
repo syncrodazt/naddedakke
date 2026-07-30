@@ -1,4 +1,5 @@
 import { useGraphStore } from '../store/graphStore';
+import { currentDisplay } from '../store/displayContent';
 import { mockService, teachService } from './claude';
 import type { AnswerRequest } from './claude/types';
 import { withFallback } from './stream';
@@ -14,7 +15,10 @@ export function ancestorChainMd(nodeId: string): string {
   while (current && !guard.has(current)) {
     guard.add(current);
     const node = nodes[current];
-    if (node) chain.unshift(node.content.md);
+    // The displayed body, not the original: the ancestor chain is what tells
+    // the model which language to answer in, so a learner reading in Thai gets
+    // a Thai answer without a separate instruction.
+    if (node) chain.unshift(currentDisplay(node).md);
     const incoming = Object.values(edges).find(
       (e) => e.target === current && (e.kind === 'why' || e.kind === 'reply' || e.kind === 'next'),
     );
@@ -40,7 +44,8 @@ export async function askQuestion(
   const whyEdge = Object.values(edges).find((e) => e.target === questionId && e.kind === 'why');
   const parent = whyEdge ? nodes[whyEdge.source] : undefined;
   const quotedText =
-    parent?.content.highlights.find((h) => h.childNodeId === questionId)?.text ?? '';
+    (parent ? currentDisplay(parent).highlights : []).find((h) => h.childNodeId === questionId)
+      ?.text ?? '';
   const contextMd = parent ? ancestorChainMd(parent.id) : '';
 
   // Recorded while history is still live, so undo removes the answer node.
