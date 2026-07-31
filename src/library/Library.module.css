@@ -1,0 +1,185 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 32px max(24px, calc(50vw - 460px)) 120px;
+  /* The rubber band draws on this surface, and a text selection dragged across
+     the page would fight it. */
+  user-select: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.brand {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.primary {
+  border: 1px solid var(--grid);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 9px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:hover {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.group {
+  margin-bottom: 26px;
+}
+
+.groupHeading {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: default;
+}
+
+.card:hover {
+  border-color: var(--muted);
+}
+
+.cardSelected {
+  composes: card;
+  border-color: var(--branch);
+  box-shadow: inset 0 0 0 1px var(--branch);
+}
+
+.cardTitle {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  /* Titles are the one thing you need to tell notebooks apart, so they wrap
+     rather than truncate. */
+  overflow-wrap: anywhere;
+}
+
+.cardMeta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.openButton {
+  border: 1px solid var(--grid);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.openButton:hover {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.exampleCard {
+  composes: card;
+  /* Not yours yet: these open on a single click and cannot be selected, so
+     they must not look like the notebooks that behave the other way. */
+  border-style: dashed;
+  cursor: pointer;
+}
+
+.exampleCard:hover {
+  border-color: var(--branch);
+}
+
+.band {
+  position: fixed;
+  border: 1px solid var(--branch);
+  background: color-mix(in srgb, var(--branch) 12%, transparent);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.actionBar {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ink);
+  color: var(--card);
+  border-radius: 999px;
+  padding: 9px 14px;
+  box-shadow: 0 8px 24px rgb(18 32 46 / 28%);
+  z-index: 30;
+}
+
+.actionBar button {
+  border: 1px solid rgb(255 255 255 / 28%);
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.actionBar button:hover:enabled {
+  border-color: var(--card);
+}
+
+.actionBar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.count {
+  font-size: 13px;
+  font-weight: 600;
+  padding-right: 4px;
+}

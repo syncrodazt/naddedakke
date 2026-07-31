@@ -105,6 +105,9 @@ function trackedSlice(state: GraphStore) {
   return { nodes: state.nodes, edges: state.edges };
 }
 
+/** How often an ongoing burst of edits re-stamps the notebook's "last edited". */
+const TOUCH_THROTTLE_MS = 1000;
+
 const GESTURE_QUIET_MS = 300;
 let gestureTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -165,6 +168,21 @@ export const useGraphStore = create<GraphState & GraphActions>()(
       }
 
       /**
+       * Stamp "last edited" on the open notebook. Throttled, because streaming
+       * writes a node per token and dragging writes one per pointer move — the
+       * library shows this to the minute, so a second's resolution is already
+       * more than it can display.
+       */
+      function touchSession(): void {
+        const session = get().session;
+        if (!session) return;
+        const now = Date.now();
+        if (now - (session.updatedAt ?? 0) < TOUCH_THROTTLE_MS) return;
+        set({ session: { ...session, updatedAt: now } });
+        markDirty({ session: true });
+      }
+
+      /**
        * Content for a node being created now. It is tagged with the language
        * the learner is currently reading in, because that is the language its
        * body will be written in: the model is fed the displayed text, so it
@@ -197,6 +215,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
         ) {
           return;
         }
+        touchSession();
         set((s) => {
           const nextNodes =
             nodes.length || removeNodeIds.length ? { ...s.nodes } : (s.nodes as typeof s.nodes);
@@ -248,6 +267,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             title,
             mode: 'learn',
             createdAt: Date.now(),
+            updatedAt: Date.now(),
             seqCounter: 0,
           };
           set({

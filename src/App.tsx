@@ -8,6 +8,8 @@ import { GoalReview } from './canvas/GoalReview';
 import { SyncIndicator } from './canvas/SyncIndicator';
 import { MetricsBridge } from './canvas/MetricsBridge';
 import { CommandPalette } from './canvas/CommandPalette';
+import { Library } from './library/Library';
+import { useLibraryStore } from './library/libraryStore';
 import { SettingsDialog } from './canvas/SettingsDialog';
 import { usePanelStore } from './store/panelStore';
 import { useSelectionStore } from './canvas/selectionStore';
@@ -16,7 +18,7 @@ import { useReplayStore } from './replay/replayStore';
 import { useRevealStore } from './replay/revealStore';
 import { useVisibilityStore } from './replay/visibilityStore';
 import { revealVisible, visibleGraph } from './replay/visibility';
-import { fixture } from './fixture/fixture';
+import { lastTouched } from './library/grouping';
 import { db } from './db/db';
 import { useGraphStore } from './store/graphStore';
 import { useModelStore } from './store/modelStore';
@@ -33,17 +35,22 @@ function App() {
   const revealBaseSeq = useRevealStore((s) => s.baseSeq);
   const revealCount = useRevealStore((s) => s.count);
   const selectedIds = useSelectionStore((s) => s.selected);
+  const view = useLibraryStore((s) => s.view);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const latest = await db.sessions.orderBy('createdAt').last();
+      // Load the most recently touched notebook so the canvas has something to
+      // show the moment one is opened — but stay on the library, which is the
+      // screen that can answer "what was I working on?".
+      //
+      // Nothing is seeded for a first-time visitor: the library already lists
+      // the example notebooks, so an empty one is an invitation rather than a
+      // dead end, and no notebook appears that the learner did not choose.
+      const rows = await db.sessions.toArray();
       if (cancelled) return;
-      if (latest) {
-        await useGraphStore.getState().loadSession(latest.id);
-      } else {
-        await useGraphStore.getState().applyImport(fixture);
-      }
+      const latest = rows.sort((a, b) => lastTouched(b) - lastTouched(a))[0];
+      if (latest) await useGraphStore.getState().loadSession(latest.id);
       if (!cancelled) setReady(true);
     })();
     void useModelStore.getState().loadModels();
@@ -117,6 +124,18 @@ function App() {
   }, [edges, visible]);
 
   if (!ready) return null;
+
+  // The library is a full screen, not an overlay: it replaces the canvas rather
+  // than floating over it, so nothing behind it keeps running.
+  if (view === 'library') {
+    return (
+      <>
+        <Library />
+        <SettingsDialog />
+        <DialogHost />
+      </>
+    );
+  }
 
   return (
     <ReactFlowProvider>

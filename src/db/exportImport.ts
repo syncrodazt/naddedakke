@@ -37,6 +37,10 @@ function validateSession(v: unknown): Session {
   if (typeof createdAt !== 'number') fail('session.createdAt');
   if (typeof seqCounter !== 'number' || seqCounter < 0) fail('session.seqCounter');
   const session: Session = { id, title, mode, createdAt, seqCounter };
+  if (v.updatedAt !== undefined) {
+    if (typeof v.updatedAt !== 'number') fail('session.updatedAt');
+    session.updatedAt = v.updatedAt;
+  }
   if (v.contentLang !== undefined) {
     if (typeof v.contentLang !== 'string') fail('session.contentLang');
     session.contentLang = v.contentLang;

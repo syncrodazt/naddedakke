@@ -13,6 +13,14 @@ export class NandeDB extends Dexie {
       nodes: 'id, sessionId, [sessionId+seq]',
       edges: 'id, sessionId',
     });
+    // v2 indexes updatedAt so the library can list notebooks most-recently-
+    // touched first without reading every row. Existing rows keep their data;
+    // their updatedAt is simply absent until the next edit.
+    this.version(2).stores({
+      sessions: 'id, createdAt, updatedAt',
+      nodes: 'id, sessionId, [sessionId+seq]',
+      edges: 'id, sessionId',
+    });
   }
 }
 

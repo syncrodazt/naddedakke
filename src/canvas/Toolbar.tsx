@@ -19,6 +19,7 @@ import { LANGS, useStrings } from '../i18n';
 import { translateNotebook } from '../services/translate';
 import { useTranslateStore } from '../store/translateStore';
 import { usePanelStore } from '../store/panelStore';
+import { useLibraryStore } from '../library/libraryStore';
 import type { LayoutDirection } from '../layout/layout';
 import styles from './Toolbar.module.css';
 
@@ -201,6 +202,14 @@ export function Toolbar() {
 
   return (
     <div className={styles.toolbar}>
+      <button
+        type="button"
+        className={styles.button}
+        title={strings.libraryBack}
+        onClick={() => useLibraryStore.getState().show('library')}
+      >
+        ←
+      </button>
       <button
         type="button"
         className={styles.project}

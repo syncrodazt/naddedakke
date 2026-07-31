@@ -2,7 +2,13 @@ export type Session = {
   id: string;
   title: string;
   mode: 'learn' | 'gyakusan';
-  createdAt: number;
+  createdAt: number; // when the first question was asked
+  /**
+   * When the graph last changed. Undefined on notebooks written before this
+   * existed — the library falls back to `createdAt` for those rather than
+   * inventing a time it cannot know.
+   */
+  updatedAt?: number;
   seqCounter: number;
   /**
    * Which language the learner wants to READ this notebook in. Undefined means
