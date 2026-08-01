@@ -31,8 +31,22 @@ export type Concept = {
    * the interesting ones.
    */
   area: string;
-  /** Concept ids this builds on. The only edge type in stage 1. */
+  /** Concept ids this builds on. */
   prereqs: string[];
+  /**
+   * Other concepts that are the SAME underlying idea wearing different clothes
+   * — a component tree in a UI framework and an assembly tree in CAD.
+   *
+   * Not a prerequisite and never treated as one: it changes nothing about what
+   * you can start or what you unlock. It exists because noticing that two
+   * fields are doing the same thing is worth more than either fact alone, and
+   * it is the one claim here a model can make that a graph could not.
+   *
+   * `how` is the justification, in one sentence. It is required — an assertion
+   * that two things are "the same" with no account of how is exactly the kind
+   * of plausible nonsense this needs to be checkable against.
+   */
+  sameAs?: { id: string; how: string }[];
   /**
    * Notebooks that cover it. The model proposes these from the inventory it is
    * given; they are checked against real ids before anything is stored.

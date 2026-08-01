@@ -13,7 +13,7 @@ import { useStrings } from '../i18n';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
 import { AreaNode, type AreaFlowNode } from './AreaNode';
 import { CARD_H, layoutConcepts } from './layout';
-import { directDependents, directPrereqs, lineage } from './graph';
+import { analoguesOf, directDependents, directPrereqs, lineage, sameAsPairs } from './graph';
 import type { ConceptMap, RankedConcept } from './types';
 import styles from './ConceptTree.module.css';
 
@@ -134,6 +134,33 @@ export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
     [map, positions, lit, areaOf],
   );
 
+  /**
+   * "The same idea over there" links, drawn unlike anything else on the canvas:
+   * no arrow, because the relation is symmetric, and labelled, because the
+   * claim is only worth anything with its justification attached.
+   */
+  const sameAsEdges = useMemo<Edge[]>(
+    () =>
+      sameAsPairs(map)
+        .filter((pair) => positions[pair.a] && positions[pair.b])
+        .map((pair) => ({
+          id: `same:${pair.a}:${pair.b}`,
+          source: pair.a,
+          target: pair.b,
+          type: 'straight',
+          className:
+            lit !== null && !(lit.has(pair.a) && lit.has(pair.b))
+              ? styles.edgeDim
+              : styles.edgeSame,
+          label: '≡',
+          labelShowBg: true,
+          labelBgPadding: [5, 2] as [number, number],
+          labelBgBorderRadius: 8,
+          zIndex: 2,
+        })),
+    [map, positions, lit],
+  );
+
   const detail = selected === null ? null : byId.get(selected);
   const detailConcept = map.concepts.find((c) => c.id === selected);
 
@@ -143,7 +170,7 @@ export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
         <ReactFlowProvider>
           <ReactFlow
             nodes={[...areaNodes, ...nodes]}
-            edges={edges}
+            edges={[...edges, ...sameAsEdges]}
             nodeTypes={nodeTypes}
             nodesDraggable={false}
             nodesConnectable={false}
@@ -188,6 +215,34 @@ export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
             onSelect={setSelected}
             empty={strings.conceptOpensNothing}
           />
+
+          {analoguesOf(map, detailConcept.id).length > 0 && (
+            <div className={styles.related}>
+              <h4 className={styles.relatedTitle}>{strings.conceptSameAs}</h4>
+              <ul className={styles.relatedList}>
+                {analoguesOf(map, detailConcept.id).map((link) => {
+                  const twin = map.concepts.find((c) => c.id === link.id);
+                  if (!twin) return null;
+                  return (
+                    <li key={link.id}>
+                      <button
+                        type="button"
+                        className={styles.relatedItem}
+                        onClick={() => setSelected(link.id)}
+                      >
+                        <span className={styles.dotSame}>≡</span>
+                        {twin.name}
+                        <span className={styles.relatedStatus}>{twin.area}</span>
+                      </button>
+                      {/* The justification, always shown: the link is only as
+                          good as its account of itself. */}
+                      <p className={styles.sameHow}>{link.how}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {detail && (
             <button

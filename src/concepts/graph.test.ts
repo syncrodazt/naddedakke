@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ancestors, dependents, directDependents, directPrereqs, lineage } from './graph';
+import {
+  analoguesOf,
+  ancestors,
+  dependents,
+  directDependents,
+  directPrereqs,
+  lineage,
+  sameAsPairs,
+} from './graph';
 import type { Concept, ConceptMap } from './types';
 
 function concept(id: string, prereqs: string[] = []): Concept {
@@ -81,5 +89,60 @@ describe('lineage', () => {
 
   it('includes the concept itself even with nothing attached', () => {
     expect(lineage(m, 'loner')).toEqual(new Set(['loner']));
+  });
+});
+
+describe('cross-domain links', () => {
+  function linked(): ConceptMap {
+    return {
+      id: 'current',
+      generatedAt: 0,
+      builtFrom: [],
+      concepts: [
+        {
+          id: 'ui',
+          name: 'UI tree',
+          area: 'UI',
+          blurb: '',
+          prereqs: [],
+          sessionIds: [],
+          sameAs: [{ id: 'cad', how: 'Both are hierarchies of parts.' }],
+        },
+        { id: 'cad', name: 'CAD tree', area: 'CAD', blurb: '', prereqs: [], sessionIds: [] },
+        { id: 'other', name: 'Other', area: 'CAD', blurb: '', prereqs: [], sessionIds: [] },
+      ],
+    };
+  }
+
+  it('shows the link on BOTH cards, though it is stored once', () => {
+    const m = linked();
+    expect(analoguesOf(m, 'ui').map((l) => l.id)).toEqual(['cad']);
+    expect(analoguesOf(m, 'cad').map((l) => l.id)).toEqual(['ui']);
+  });
+
+  it('carries the justification either way round', () => {
+    expect(analoguesOf(linked(), 'cad')[0]!.how).toBe('Both are hierarchies of parts.');
+  });
+
+  it('lists every pair once', () => {
+    expect(sameAsPairs(linked())).toEqual([
+      { a: 'ui', b: 'cad', how: 'Both are hierarchies of parts.' },
+    ]);
+  });
+
+  it('lights up the analogue when a concept is selected', () => {
+    // Otherwise the link would be drawn to a card that had just been faded out.
+    expect(lineage(linked(), 'ui').has('cad')).toBe(true);
+    expect(lineage(linked(), 'ui').has('other')).toBe(false);
+  });
+
+  it('is not a prerequisite, so it changes nothing about what unlocks what', () => {
+    // Asserted from the side that HOLDS the link: walking prerequisites from
+    // `ui` must not wander across to `cad`, or an analogy would silently become
+    // something you have to learn first.
+    const m = linked();
+    expect(ancestors(m, 'ui')).toEqual(new Set());
+    expect(dependents(m, 'ui')).toEqual(new Set());
+    expect(ancestors(m, 'cad')).toEqual(new Set());
   });
 });

@@ -132,3 +132,83 @@ describe('breakCycles', () => {
     expect(breakCycles(input)).toEqual(breakCycles(input));
   });
 });
+
+describe('cross-domain links', () => {
+  const base = (over: Record<string, unknown> = {}) => ({
+    id: 'ui-tree',
+    name: 'Component tree',
+    area: 'UI',
+    ...over,
+  });
+
+  it('keeps a link that crosses subjects and explains itself', () => {
+    const map = parseConceptMap(
+      raw([
+        base({ sameAs: [{ id: 'cad-tree', how: 'Both are a parent-child hierarchy of parts.' }] }),
+        { id: 'cad-tree', name: 'Assembly tree', area: 'CAD' },
+      ]),
+      OPTIONS,
+    );
+    expect(map.concepts[0]!.sameAs).toEqual([
+      { id: 'cad-tree', how: 'Both are a parent-child hierarchy of parts.' },
+    ]);
+  });
+
+  it('drops a link with no account of HOW they are the same', () => {
+    // The most valuable claim here is also the easiest to fabricate, so an
+    // unexplained one is discarded rather than shown.
+    const map = parseConceptMap(
+      raw([
+        base({ sameAs: [{ id: 'cad-tree' }, { id: 'cad-tree', how: '   ' }] }),
+        { id: 'cad-tree', name: 'Assembly tree', area: 'CAD' },
+      ]),
+      OPTIONS,
+    );
+    expect(map.concepts[0]!.sameAs).toBeUndefined();
+  });
+
+  it('drops a link inside one subject', () => {
+    // The band already puts them side by side; the claim only earns a line when
+    // it crosses fields.
+    const map = parseConceptMap(
+      raw([
+        base({ sameAs: [{ id: 'other-ui', how: 'Similar.' }] }),
+        { id: 'other-ui', name: 'Other', area: 'UI' },
+      ]),
+      OPTIONS,
+    );
+    expect(map.concepts[0]!.sameAs).toBeUndefined();
+  });
+
+  it('drops a link to a concept that is not in the map, or to itself', () => {
+    const map = parseConceptMap(
+      raw([
+        base({
+          sameAs: [
+            { id: 'ghost', how: 'Nope.' },
+            { id: 'ui-tree', how: 'Itself.' },
+          ],
+        }),
+      ]),
+      OPTIONS,
+    );
+    expect(map.concepts[0]!.sameAs).toBeUndefined();
+  });
+
+  it('keeps a symmetric pair only once', () => {
+    const map = parseConceptMap(
+      raw([
+        base({ sameAs: [{ id: 'cad-tree', how: 'Same hierarchy.' }] }),
+        {
+          id: 'cad-tree',
+          name: 'Assembly tree',
+          area: 'CAD',
+          sameAs: [{ id: 'ui-tree', how: 'Same hierarchy.' }],
+        },
+      ]),
+      OPTIONS,
+    );
+    const total = map.concepts.reduce((n, c) => n + (c.sameAs?.length ?? 0), 0);
+    expect(total).toBe(1);
+  });
+});

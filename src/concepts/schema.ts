@@ -12,7 +12,7 @@ export const CONCEPT_MAP_SCHEMA: Record<string, unknown> = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['id', 'name', 'area', 'blurb', 'prereqs', 'sessionIds', 'why'],
+        required: ['id', 'name', 'area', 'blurb', 'prereqs', 'sessionIds', 'why', 'sameAs'],
         properties: {
           id: { type: 'string' },
           name: { type: 'string' },
@@ -21,6 +21,18 @@ export const CONCEPT_MAP_SCHEMA: Record<string, unknown> = {
           prereqs: { type: 'array', items: { type: 'string' } },
           sessionIds: { type: 'array', items: { type: 'string' } },
           why: { type: 'string' },
+          sameAs: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['id', 'how'],
+              properties: {
+                id: { type: 'string' },
+                how: { type: 'string' },
+              },
+            },
+          },
         },
       },
     },

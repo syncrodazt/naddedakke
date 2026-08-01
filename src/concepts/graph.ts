@@ -60,5 +60,36 @@ export function directDependents(map: ConceptMap, id: string): string[] {
  * this one sit between", and fades.
  */
 export function lineage(map: ConceptMap, id: string): Set<string> {
-  return new Set([id, ...ancestors(map, id), ...dependents(map, id)]);
+  // Analogues are included: "this same idea also lives over there" is precisely
+  // what selecting a concept should reveal, and hiding the twin would leave the
+  // link drawn to a card that had just been faded out.
+  const twins = analoguesOf(map, id).map((l) => l.id);
+  return new Set([id, ...ancestors(map, id), ...dependents(map, id), ...twins]);
+}
+
+/**
+ * Cross-domain links touching a concept, in both directions.
+ *
+ * The relation is symmetric but stored once, so an analogue may name this
+ * concept rather than the other way round — looking only at `concept.sameAs`
+ * would show the link on one card and not on its twin.
+ */
+export function analoguesOf(map: ConceptMap, id: string): { id: string; how: string }[] {
+  const out: { id: string; how: string }[] = [];
+  for (const link of map.concepts.find((c) => c.id === id)?.sameAs ?? []) {
+    out.push(link);
+  }
+  for (const concept of map.concepts) {
+    for (const link of concept.sameAs ?? []) {
+      if (link.id === id) out.push({ id: concept.id, how: link.how });
+    }
+  }
+  return out;
+}
+
+/** Every cross-domain link in the map, once each. */
+export function sameAsPairs(map: ConceptMap): { a: string; b: string; how: string }[] {
+  return map.concepts.flatMap((c) =>
+    (c.sameAs ?? []).map((l) => ({ a: c.id, b: l.id, how: l.how })),
+  );
 }

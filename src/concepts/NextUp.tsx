@@ -5,7 +5,8 @@ import { useLibraryStore } from '../library/libraryStore';
 import { useGraphStore } from '../store/graphStore';
 import { startLesson } from '../services/lesson';
 import { useConceptStore, rankedFrom, staleTitles } from './conceptStore';
-import type { RankedConcept } from './types';
+import type { ConceptMap, RankedConcept } from './types';
+import { analoguesOf } from './graph';
 import { ConceptTree } from './ConceptTree';
 import styles from './NextUp.module.css';
 
@@ -133,7 +134,7 @@ export function NextUp() {
           <h2 className={styles.groupHeading}>{strings.nextUpReady}</h2>
           <ol className={styles.list}>
             {ready.map((item, i) => (
-              <Row key={item.concept.id} item={item} rank={i + 1} onOpen={open} />
+              <Row key={item.concept.id} item={item} rank={i + 1} map={map} onOpen={open} />
             ))}
           </ol>
         </section>
@@ -144,7 +145,7 @@ export function NextUp() {
           <h2 className={styles.groupHeading}>{strings.nextUpLater}</h2>
           <ol className={styles.list}>
             {later.map((item) => (
-              <Row key={item.concept.id} item={item} onOpen={open} />
+              <Row key={item.concept.id} item={item} map={map} onOpen={open} />
             ))}
           </ol>
         </section>
@@ -156,20 +157,26 @@ export function NextUp() {
 function Row({
   item,
   rank,
+  map,
   onOpen,
 }: {
   item: RankedConcept;
   rank?: number;
+  map: ConceptMap | null;
   onOpen: (item: RankedConcept) => Promise<void>;
 }) {
   const strings = useStrings();
   const { concept } = item;
+  const twins = map ? analoguesOf(map, concept.id) : [];
   return (
     <li className={item.ready ? styles.card : styles.cardBlocked}>
       <div className={styles.rowHead}>
         {rank !== undefined && <span className={styles.rank}>{rank}</span>}
         <span className={styles.name}>{concept.name}</span>
         {item.status === 'met' && <span className={styles.tagMet}>{strings.nextUpStarted}</span>}
+        {twins.length > 0 && (
+          <span className={styles.tagSame}>{strings.conceptSameAsBadge(twins.length)}</span>
+        )}
         {item.unlocks > 0 && (
           <span className={styles.tagUnlocks} title={strings.nextUpUnlocksTitle}>
             {strings.nextUpUnlocks(item.unlocks)}
@@ -186,6 +193,14 @@ function Row({
       </div>
       {concept.blurb !== '' && <p className={styles.blurb}>{concept.blurb}</p>}
       {concept.why !== undefined && <p className={styles.why}>↳ {concept.why}</p>}
+      {twins.length > 0 && (
+        // The cross-domain insight is the most valuable thing the map can say,
+        // so it is not left hiding in the tree view.
+        <p className={styles.same}>
+          ≡ {twins.map((t) => map?.concepts.find((c) => c.id === t.id)?.name).join(', ')} —{' '}
+          {twins[0]!.how}
+        </p>
+      )}
       {!item.ready && (
         <p className={styles.missing}>
           {strings.nextUpNeedsFirst}: {item.missing.join(', ')}

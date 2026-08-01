@@ -206,7 +206,8 @@ export function buildConceptMapPrompt(req: ConceptMapRequest): ChatPrompt {
       'You map out what someone should learn next, as a prerequisite graph.\n' +
       'Reply with ONE JSON object and nothing else — no prose, no code fence:\n' +
       '{"concepts":[{"id":string,"name":string,"area":string,"blurb":string,' +
-      '"prereqs":[string],"sessionIds":[string],"why":string}]}\n' +
+      '"prereqs":[string],"sessionIds":[string],"why":string,' +
+      '"sameAs":[{"id":string,"how":string}]}]}\n' +
       'Rules:\n' +
       '- "id" is a lowercase kebab-case slug, unique, stable and descriptive ' +
       '(e.g. "nyquist-limit"). Use it, not the name, inside "prereqs".\n' +
@@ -224,6 +225,14 @@ export function buildConceptMapPrompt(req: ConceptMapRequest): ChatPrompt {
       'in several of their notebooks under different names, say so in "why".\n' +
       '- "why" is one sentence naming what in THEIR notebooks this connects to, ' +
       'and what understanding it would open up.\n' +
+      '- "sameAs" links this concept to others that are the SAME underlying ' +
+      'idea in a different field — a component tree in a UI framework and an ' +
+      'assembly tree in CAD are one idea, not two. "how" says in ONE sentence ' +
+      'what the shared structure is; a link with no real account of it is worse ' +
+      'than no link. Only across DIFFERENT areas, and only when the ' +
+      'correspondence is exact enough that understanding one genuinely gives ' +
+      'you the other. Use [] whenever there is nothing that strong — most ' +
+      'concepts should have none.\n' +
       '- "area" is the subject it belongs to, 1-3 words (e.g. "Web security", ' +
       '"Wave physics", "Probability"). REUSE the same wording across concepts ' +
       'that belong together — the map is grouped by it, so near-duplicate labels ' +

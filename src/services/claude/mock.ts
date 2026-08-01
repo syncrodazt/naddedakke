@@ -185,6 +185,8 @@ export class MockClaudeService implements TeachService {
           prereqs: ['mock-next'],
           sessionIds: [],
           why: '次の一歩を理解すると開きます。',
+          // Crosses areas, so the cross-domain link is exercised offline too.
+          sameAs: [{ id: 'mock-foundation', how: 'どちらも同じ構造のモック例です。' }],
         },
       ],
     });

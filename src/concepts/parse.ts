@@ -49,7 +49,7 @@ export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap 
   const seen = new Set<string>();
   for (const entry of parsed.concepts) {
     if (!isRecord(entry)) continue;
-    const { id, name, area, blurb, prereqs, sessionIds, why } = entry;
+    const { id, name, area, blurb, prereqs, sessionIds, why, sameAs } = entry;
     if (typeof id !== 'string' || !ID.test(id) || seen.has(id)) continue;
     if (typeof name !== 'string' || name.trim() === '') continue;
     seen.add(id);
@@ -65,6 +65,7 @@ export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap 
       // known, which is the one error that hides work instead of adding it.
       sessionIds: strings(sessionIds).filter((s) => options.knownSessionIds.has(s)),
       ...(typeof why === 'string' && why.trim() !== '' ? { why: why.trim() } : {}),
+      ...(analogies(sameAs).length > 0 ? { sameAs: analogies(sameAs) } : {}),
     });
   }
 
@@ -73,8 +74,26 @@ export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap 
   // Prerequisites pointing at concepts that were dropped are dropped too, so
   // the map that reaches the ranking is internally consistent.
   const ids = new Set(concepts.map((c) => c.id));
+  const areaOf = new Map(concepts.map((c) => [c.id, c.area]));
+  const seenPair = new Set<string>();
   for (const concept of concepts) {
     concept.prereqs = concept.prereqs.filter((p) => ids.has(p));
+    if (!concept.sameAs) continue;
+    const kept = concept.sameAs.filter((link) => {
+      if (!ids.has(link.id) || link.id === concept.id) return false;
+      // Same subject means the band already puts them side by side and the
+      // prerequisite edges already relate them — the claim only earns a line of
+      // its own when it crosses fields. The cost is losing a true within-subject
+      // equivalence; the gain is that the links that show up are all news.
+      if (areaOf.get(link.id) === concept.area) return false;
+      // The relation is symmetric, so keep one of A→B and B→A.
+      const pair = [concept.id, link.id].sort().join('|');
+      if (seenPair.has(pair)) return false;
+      seenPair.add(pair);
+      return true;
+    });
+    if (kept.length > 0) concept.sameAs = kept;
+    else delete concept.sameAs;
   }
 
   return {
@@ -87,6 +106,23 @@ export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap 
 
 function strings(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+/** `sameAs` entries that are shaped right. Links are resolved later. */
+function analogies(v: unknown): { id: string; how: string }[] {
+  if (!Array.isArray(v)) return [];
+  const out: { id: string; how: string }[] = [];
+  for (const entry of v) {
+    if (!isRecord(entry)) continue;
+    const { id, how } = entry;
+    if (typeof id !== 'string' || !ID.test(id)) continue;
+    // No justification, no link. "These are the same" with no account of how is
+    // the one claim here that is both the most valuable and the easiest to
+    // fabricate, so an unexplained one is discarded rather than shown.
+    if (typeof how !== 'string' || how.trim() === '') continue;
+    out.push({ id, how: how.trim() });
+  }
+  return out;
 }
 
 /**

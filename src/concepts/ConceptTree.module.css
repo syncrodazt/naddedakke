@@ -274,3 +274,27 @@
   text-transform: uppercase;
   color: hsl(var(--band-hue) 40% 35%);
 }
+
+/* "The same idea, over there." Unlike any other line here: no arrow, because
+   the relation runs both ways. */
+.edgeSame {
+  stroke: var(--alias);
+  stroke-width: 2;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+
+.dotSame {
+  flex: 0 0 auto;
+  width: 7px;
+  text-align: center;
+  color: var(--alias);
+  font-weight: 700;
+}
+
+.sameHow {
+  margin: 0 0 8px 21px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
