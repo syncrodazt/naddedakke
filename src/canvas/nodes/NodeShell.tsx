@@ -89,7 +89,9 @@ export function NodeShell({
             </button>
           )}
         </div>
-        <div className={`${styles.body} nodrag nowheel`}>{children}</div>
+        <div data-node-body className={`${styles.body} nodrag nowheel`}>
+          {children}
+        </div>
       </div>
       {onAddIdea && (
         <button

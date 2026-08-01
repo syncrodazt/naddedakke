@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearestTo, nextInDirection } from './spatialNav';
+import { nearestTo, nextInDirection, nodeAt } from './spatialNav';
 import type { RNode } from '../model/types';
 import { EST_H, NODE_W } from '../layout/layout';
 
@@ -137,5 +137,36 @@ describe('nearestTo', () => {
 
   it('returns null for an empty graph', () => {
     expect(nearestTo({}, { x: 0, y: 0 })).toBeNull();
+  });
+});
+
+describe('nodeAt', () => {
+  const g = graph(node('a', 0, 0, 1), node('b', COL, 0, 2));
+
+  it('finds the card covering a point', () => {
+    expect(nodeAt(g, { x: 10, y: 10 })).toBe('a');
+    expect(nodeAt(g, { x: COL + 10, y: 10 })).toBe('b');
+  });
+
+  it('counts the card\u2019s own edges as covered', () => {
+    expect(nodeAt(g, { x: 0, y: 0 })).toBe('a');
+    expect(nodeAt(g, { x: NODE_W, y: EST_H })).toBe('a');
+  });
+
+  it('finds nothing in empty space', () => {
+    expect(nodeAt(g, { x: -50, y: -50 })).toBeNull();
+    expect(nodeAt(g, { x: NODE_W + 20, y: 0 })).toBeNull();
+  });
+
+  it('takes the topmost when cards overlap', () => {
+    // The canvas stacks later cards over earlier ones, so a double-click on the
+    // overlap must reach the one you can actually see.
+    const stacked = graph(node('under', 0, 0, 1), node('over', 20, 20, 9));
+    expect(nodeAt(stacked, { x: 40, y: 40 })).toBe('over');
+  });
+
+  it('respects a resized card', () => {
+    const wide = { ...node('wide', 0, 0, 1), size: { width: NODE_W * 3, height: EST_H } };
+    expect(nodeAt(graph(wide), { x: NODE_W * 2.5, y: 10 })).toBe('wide');
   });
 });

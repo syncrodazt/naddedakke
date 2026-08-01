@@ -1,6 +1,7 @@
-import { useCallback, useState, type MouseEvent } from 'react';
+import { useCallback, useRef, useState, type MouseEvent } from 'react';
 import {
   ReactFlow,
+  useReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -17,8 +18,17 @@ import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
 import { NodeContextMenu, type MenuState } from './NodeContextMenu';
 import { useSelectionStore } from './selectionStore';
+import { nodeAt } from './spatialNav';
+import { currentMetrics } from '../layout/metrics';
 import { nextLessonChunk, prerequisiteChunk } from '../services/lesson';
 import { reprompt } from '../services/reprompt';
+import styles from './Canvas.module.css';
+
+/**
+ * How long after a press on prose a double-click still counts as that press.
+ * Comfortably longer than a double-click, shorter than a deliberate pause.
+ */
+const BODY_PRESS_MS = 700;
 
 type CanvasProps = {
   nodes: Node[];
@@ -31,12 +41,47 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   const setNodePosition = useGraphStore((s) => s.setNodePosition);
   const setNodeSize = useGraphStore((s) => s.setNodeSize);
   const [selection, clearSelection] = useTextSelection();
-  const { panToNode } = useCameraNav();
+  const { panToNode, zoomToNode } = useCameraNav();
+  const { screenToFlowPosition } = useReactFlow();
   const [menu, setMenu] = useState<MenuState | null>(null);
+  /** When the pointer last went down on a node's prose. See onDoubleClick. */
+  const lastBodyPress = useRef(0);
 
   const onNodeContextMenu = useCallback((e: MouseEvent, node: Node) => {
     e.preventDefault();
     setMenu({ x: e.clientX, y: e.clientY, nodeId: node.id });
+  }, []);
+
+  /**
+   * Double-click a card to focus it and bring the camera in.
+   *
+   * Which node was hit is worked out from the POINTER, not from the event
+   * target. Measured: the first click of a pair selects the card and re-renders
+   * it, and the browser then reports the canvas underneath as the target of the
+   * second click — so neither a DOM handler on the node nor React Flow's own
+   * onNodeDoubleClick ever fires. The graph knows where its cards are, so it is
+   * asked directly.
+   *
+   * The prose body is excluded: double-clicking text selects a word, and that
+   * is the gesture this whole app is built around.
+   */
+  const onDoubleClick = useCallback(
+    (e: MouseEvent) => {
+      // Whether this was a press on prose is judged from the mousedown, for the
+      // same reason: by the time the dblclick is dispatched its own target is
+      // the canvas. The mousedown that opened the pair still points at what was
+      // really under the cursor.
+      if (e.timeStamp - lastBodyPress.current < BODY_PRESS_MS) return;
+      if ((e.target as HTMLElement).closest('[data-node-body]')) return;
+      const point = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      const hit = nodeAt(useGraphStore.getState().nodes, point, currentMetrics());
+      if (hit) zoomToNode(hit);
+    },
+    [screenToFlowPosition, zoomToNode],
+  );
+
+  const onMouseDownCapture = useCallback((e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest('[data-node-body]')) lastBodyPress.current = e.timeStamp;
   }, []);
 
   const onNewIdea = useCallback(
@@ -102,7 +147,11 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   );
 
   return (
-    <>
+    <div
+      className={styles.host}
+      onMouseDownCapture={onMouseDownCapture}
+      onDoubleClick={onDoubleClick}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -114,6 +163,10 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
         // node. Arrows here navigate between nodes instead, so its handler has
         // to go or every press would drag the card a few pixels.
         disableKeyboardA11y
+        // React Flow's pane doubles the zoom on a double-click, from a native
+        // listener that runs before React's — so it would fire alongside the
+        // focus below. Double-click now means exactly one thing.
+        zoomOnDoubleClick={false}
         fitView
         minZoom={0.1}
         proOptions={{ hideAttribution: false }}
@@ -134,6 +187,6 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
           onPrerequisite={onPrerequisite}
         />
       )}
-    </>
+    </div>
   );
 }

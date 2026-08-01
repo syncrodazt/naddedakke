@@ -74,7 +74,20 @@ export function QuestionNode({ data, selected }: NodeProps<RFlowNode>) {
       showUnderstood
       onAddIdea={addIdea}
       headerExtra={
-        <button type="button" className={`${styles.back} nodrag`} onClick={backToSource}>
+        <button
+          type="button"
+          className={`${styles.back} nodrag`}
+          // React Flow selects a node on the press inside it. Left alone, that
+          // press would add THIS node to the selection a moment after we focus
+          // the parent — leaving two nodes focused, which the arrow keys read
+          // as "no single focus" and answer by jumping to the middle of the
+          // screen instead of stepping on from where you just arrived.
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            backToSource();
+          }}
+        >
           {strings.backToSource}
         </button>
       }

@@ -53,8 +53,29 @@ export function useTextSelection(): [ActiveSelection | null, () => void] {
       });
     }
 
+    /**
+     * Dismiss on a press anywhere outside the node the selection is in.
+     *
+     * `selectionchange` alone is not enough: React Flow swallows the default
+     * action on the canvas so it can pan, which means clicking empty space
+     * never collapses the browser selection — and the pill sat there over an
+     * empty canvas until something else happened to clear it.
+     */
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-why-button]')) return; // it is being clicked
+      if (target?.closest('[data-node-id]')) return; // still inside a node
+      setActive(null);
+      window.getSelection()?.removeAllRanges();
+    }
+
     document.addEventListener('selectionchange', update);
-    return () => document.removeEventListener('selectionchange', update);
+    // Capture: React Flow stops the event on its own pane before it bubbles.
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      document.removeEventListener('selectionchange', update);
+      window.removeEventListener('pointerdown', onPointerDown, true);
+    };
   }, []);
 
   return [active, () => setActive(null)];

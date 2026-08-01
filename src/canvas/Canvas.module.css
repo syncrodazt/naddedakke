@@ -1,0 +1,6 @@
+/* Wraps React Flow so a double-click anywhere on the canvas has somewhere to
+   be handled — the node itself cannot handle it (see Canvas.tsx). */
+.host {
+  width: 100%;
+  height: 100%;
+}

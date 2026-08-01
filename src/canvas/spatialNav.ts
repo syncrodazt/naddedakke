@@ -115,3 +115,33 @@ export function nearestTo(
   }
   return best?.id ?? null;
 }
+
+/**
+ * The node whose card covers a point in flow coordinates, or null.
+ *
+ * Used to work out what a double-click landed on. Hit-testing the DOM is not
+ * reliable here: the first click of a pair selects the card, and by the time
+ * the second one is dispatched the browser can report the canvas underneath
+ * instead of the node. The graph knows where its own cards are, so ask it.
+ *
+ * The topmost match wins when cards overlap, and "topmost" is the most recently
+ * created — the same order the canvas stacks them in.
+ */
+export function nodeAt(
+  nodes: Record<string, RNode>,
+  point: Point,
+  metrics?: NodeMetrics,
+): string | null {
+  let best: { id: string; seq: number } | null = null;
+  for (const node of Object.values(nodes)) {
+    const rect = nodeRect(node, metrics);
+    const inside =
+      point.x >= rect.x &&
+      point.x <= rect.x + rect.width &&
+      point.y >= rect.y &&
+      point.y <= rect.y + rect.height;
+    if (!inside) continue;
+    if (best === null || node.seq > best.seq) best = { id: node.id, seq: node.seq };
+  }
+  return best?.id ?? null;
+}

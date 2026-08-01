@@ -14,7 +14,13 @@ export function WhyButton({ selection, onAct }: WhyButtonProps) {
   const strings = useStrings();
   const { rect } = selection;
   return createPortal(
-    <div className={styles.pill} style={{ top: rect.top - 44, left: rect.left + rect.width / 2 }}>
+    <div
+      // Marks the pill as part of the selection, so the outside-press handler
+      // that dismisses it does not dismiss it on the way to being clicked.
+      data-why-button
+      className={styles.pill}
+      style={{ top: rect.top - 44, left: rect.left + rect.width / 2 }}
+    >
       <button
         type="button"
         className={styles.why}
