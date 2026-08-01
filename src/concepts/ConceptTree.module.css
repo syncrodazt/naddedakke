@@ -1,0 +1,223 @@
+.wrap {
+  position: relative;
+  display: flex;
+  height: min(70vh, 720px);
+  border: 1px solid var(--grid);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.canvas {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- nodes ---- */
+
+.card {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--grid);
+  background: var(--card);
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+/* Palette meanings, unchanged from the canvas: teal is the settled case, pink
+   is the thing worth going after, muted is not yet relevant. */
+.known {
+  border-color: var(--alias);
+  box-shadow: inset 3px 0 0 var(--alias);
+}
+
+.ready {
+  border-color: var(--branch);
+  box-shadow: inset 3px 0 0 var(--branch);
+}
+
+.blocked {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.dim {
+  opacity: 0.22;
+}
+
+.cardName {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cardMeta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- edges ---- */
+
+.edge {
+  stroke: var(--muted);
+}
+
+.edgeDim {
+  stroke: var(--grid);
+  opacity: 0.35;
+}
+
+/* ---- detail panel ---- */
+
+.panel {
+  flex: 0 0 288px;
+  border-left: 1px solid var(--grid);
+  background: var(--card);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.panelName {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.panelBlurb {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.panelWhy {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--alias);
+}
+
+.related {
+  margin-top: 16px;
+}
+
+.relatedTitle {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.relatedEmpty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.relatedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.relatedItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.relatedItem:hover {
+  background: var(--bg);
+}
+
+.dotKnown,
+.dotUnknown {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dotKnown {
+  background: var(--alias);
+}
+
+.dotUnknown {
+  background: var(--branch);
+}
+
+.relatedStatus {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.panelOpen {
+  margin-top: 18px;
+  width: 100%;
+  border: 1px solid var(--grid);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panelOpen:hover:enabled {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.panelOpen:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (width <= 760px) {
+  .wrap {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .canvas {
+    height: 52vh;
+  }
+
+  .panel {
+    flex: none;
+    border-left: 0;
+    border-top: 1px solid var(--grid);
+  }
+}

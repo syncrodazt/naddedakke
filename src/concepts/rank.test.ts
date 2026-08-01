@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dependents, rankConcepts, statusOf, type Coverage } from './rank';
+import { rankConcepts, statusOf, type Coverage } from './rank';
+import { dependents } from './graph';
 import type { Concept, ConceptMap } from './types';
 
 function concept(id: string, over: Partial<Concept> = {}): Concept {

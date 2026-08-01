@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { db } from '../db/db';
 import { useStrings } from '../i18n';
 import { useLibraryStore } from '../library/libraryStore';
@@ -6,6 +6,7 @@ import { useGraphStore } from '../store/graphStore';
 import { startLesson } from '../services/lesson';
 import { useConceptStore, rankedFrom, staleTitles } from './conceptStore';
 import type { RankedConcept } from './types';
+import { ConceptTree } from './ConceptTree';
 import styles from './NextUp.module.css';
 
 /** How many ready suggestions to put above the fold. */
@@ -29,6 +30,9 @@ export function NextUp() {
   const busy = useConceptStore((s) => s.busy);
   const error = useConceptStore((s) => s.error);
   const state = useConceptStore();
+  // Two ways to read the same ranking. The list answers "what next"; the tree
+  // answers "and what does that lead to".
+  const [mode, setMode] = useState<'list' | 'tree'>('list');
 
   useEffect(() => {
     void useConceptStore.getState().load();
@@ -60,6 +64,24 @@ export function NextUp() {
           <p className={styles.sub}>{strings.nextUpIntro}</p>
         </div>
         <div className={styles.headActions}>
+          {map && (
+            <span className={styles.segmented}>
+              <button
+                type="button"
+                className={mode === 'list' ? styles.segOn : styles.seg}
+                onClick={() => setMode('list')}
+              >
+                {strings.conceptViewList}
+              </button>
+              <button
+                type="button"
+                className={mode === 'tree' ? styles.segOn : styles.seg}
+                onClick={() => setMode('tree')}
+              >
+                {strings.conceptViewTree}
+              </button>
+            </span>
+          )}
           <button
             type="button"
             className={styles.back}
@@ -92,7 +114,14 @@ export function NextUp() {
         </p>
       )}
 
-      {ready.length > 0 && (
+      {map && mode === 'tree' && (
+        <>
+          <p className={styles.note}>{strings.conceptTreeHint}</p>
+          <ConceptTree map={map} ranked={ranked} onOpen={(item) => void open(item)} />
+        </>
+      )}
+
+      {mode === 'list' && ready.length > 0 && (
         <section>
           <h2 className={styles.groupHeading}>{strings.nextUpReady}</h2>
           <ol className={styles.list}>
@@ -103,7 +132,7 @@ export function NextUp() {
         </section>
       )}
 
-      {later.length > 0 && (
+      {mode === 'list' && later.length > 0 && (
         <section>
           <h2 className={styles.groupHeading}>{strings.nextUpLater}</h2>
           <ol className={styles.list}>

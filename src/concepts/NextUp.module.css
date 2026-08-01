@@ -201,3 +201,28 @@
   font-size: 12.5px;
   color: var(--branch);
 }
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--grid);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.seg,
+.segOn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 15px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.segOn {
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}

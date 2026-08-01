@@ -1,4 +1,5 @@
 import type { Concept, ConceptMap, ConceptStatus, RankedConcept } from './types';
+import { dependents } from './graph';
 
 // Turning a concept map into "learn this next".
 //
@@ -29,29 +30,6 @@ export function statusOf(concept: Concept, coverage: Coverage): ConceptStatus {
 
 export function statusMap(map: ConceptMap, coverage: Coverage): Record<string, ConceptStatus> {
   return Object.fromEntries(map.concepts.map((c) => [c.id, statusOf(c, coverage)]));
-}
-
-/**
- * Concepts that transitively require `id`. Cycle-safe on purpose: prerequisites
- * come from a language model and a loop between two of them is a mistake we
- * should survive, not crash on.
- */
-export function dependents(map: ConceptMap, id: string): Set<string> {
-  const children = new Map<string, string[]>();
-  for (const concept of map.concepts) {
-    for (const prereq of concept.prereqs) {
-      children.set(prereq, [...(children.get(prereq) ?? []), concept.id]);
-    }
-  }
-  const seen = new Set<string>();
-  const queue = [...(children.get(id) ?? [])];
-  while (queue.length > 0) {
-    const next = queue.pop()!;
-    if (seen.has(next) || next === id) continue;
-    seen.add(next);
-    queue.push(...(children.get(next) ?? []));
-  }
-  return seen;
 }
 
 /**
