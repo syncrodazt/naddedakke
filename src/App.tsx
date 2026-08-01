@@ -151,12 +151,16 @@ function App() {
   // than floating over it, so nothing behind it keeps running.
   if (view === 'library') {
     return (
-      <>
+      // The provider is here only so the palette can share one implementation
+      // across both screens: it calls fitView, which needs a React Flow
+      // context even when there is no canvas to fit yet.
+      <ReactFlowProvider>
         <Library />
+        <CommandPalette />
         <SettingsDialog />
         <ShareDialog />
         <DialogHost />
-      </>
+      </ReactFlowProvider>
     );
   }
 

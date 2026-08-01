@@ -32,3 +32,24 @@ export function matchesNewCommand(query: string): boolean {
   if (needle === '') return false;
   return NEW_KEYWORDS.some((k) => k.startsWith(needle));
 }
+
+/**
+ * Which row a digit key jumps to, or null if the key means nothing here.
+ *
+ * Digits only jump while the search box is EMPTY. Once you have typed
+ * something, a digit is part of what you are typing — a notebook called "1999"
+ * has to be findable, and a shortcut that eats the keystroke would make it
+ * unreachable. Empty box is also exactly the moment the shortcut is for: Ctrl+K
+ * then 1 to reach the notebook you were just in.
+ *
+ * 1-based, because that is what the badge on the row says. There is no 0.
+ */
+export function digitTarget(key: string, query: string, rowCount: number): number | null {
+  if (query.trim() !== '') return null;
+  if (!/^[1-9]$/.test(key)) return null;
+  const index = Number(key) - 1;
+  return index < rowCount ? index : null;
+}
+
+/** How many rows can carry a digit badge. Keys 1-9; there is no 0. */
+export const MAX_DIGIT_ROWS = 9;

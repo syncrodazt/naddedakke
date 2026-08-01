@@ -93,3 +93,38 @@
   color: var(--muted);
   text-align: center;
 }
+
+/* The key that jumps straight to this row. Shown only while the search box is
+   empty, which is exactly when pressing it does something. */
+.digit {
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--grid);
+  border-radius: 5px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.rowOn .digit {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+/* Keeps titles on one vertical line once the badges go away. */
+.digitGap {
+  flex: 0 0 auto;
+  width: 18px;
+}
+
+.hint {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--grid);
+  font-size: 11px;
+  color: var(--muted);
+}

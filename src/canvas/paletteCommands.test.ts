@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesNewCommand } from './paletteCommands';
+import { digitTarget, matchesNewCommand } from './paletteCommands';
 
 describe('matchesNewCommand', () => {
   it('matches the word itself, and its prefixes', () => {
@@ -42,5 +42,39 @@ describe('matchesNewCommand', () => {
     // would steal the Enter key from the notebook you came to open.
     expect(matchesNewCommand('')).toBe(false);
     expect(matchesNewCommand('   ')).toBe(false);
+  });
+});
+
+describe('digitTarget', () => {
+  it('jumps to the nth row while the box is empty', () => {
+    expect(digitTarget('1', '', 5)).toBe(0);
+    expect(digitTarget('3', '', 5)).toBe(2);
+    expect(digitTarget('5', '', 5)).toBe(4);
+  });
+
+  it('ignores digits once something has been typed', () => {
+    // A notebook called "1999" has to stay findable.
+    expect(digitTarget('1', '19', 5)).toBeNull();
+    expect(digitTarget('9', 'a', 5)).toBeNull();
+  });
+
+  it('treats a whitespace-only box as empty', () => {
+    expect(digitTarget('2', '  ', 5)).toBe(1);
+  });
+
+  it('ignores a digit past the end of the list', () => {
+    expect(digitTarget('4', '', 3)).toBeNull();
+    expect(digitTarget('1', '', 0)).toBeNull();
+  });
+
+  it('has no zero — the badges start at 1', () => {
+    expect(digitTarget('0', '', 5)).toBeNull();
+  });
+
+  it('ignores keys that are not single digits', () => {
+    expect(digitTarget('a', '', 5)).toBeNull();
+    expect(digitTarget('Enter', '', 5)).toBeNull();
+    expect(digitTarget('F1', '', 5)).toBeNull();
+    expect(digitTarget('', '', 5)).toBeNull();
   });
 });
