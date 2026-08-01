@@ -11,12 +11,21 @@ import {
 } from '@xyflow/react';
 import { useStrings } from '../i18n';
 import { ConceptNode, type ConceptFlowNode } from './ConceptNode';
+import { AreaNode, type AreaFlowNode } from './AreaNode';
 import { CARD_H, layoutConcepts } from './layout';
 import { directDependents, directPrereqs, lineage } from './graph';
 import type { ConceptMap, RankedConcept } from './types';
 import styles from './ConceptTree.module.css';
 
-const nodeTypes = { concept: ConceptNode };
+const nodeTypes = { concept: ConceptNode, area: AreaNode };
+
+/**
+ * Hues for the subject bands, spread around the wheel and used at very low
+ * saturation. They deliberately do NOT come from the project palette: pink and
+ * teal already mean "gap" and "understood" on the cards, and reusing them for
+ * subjects would make two different things the same colour.
+ */
+const BAND_HUES = [210, 28, 140, 280, 340, 55, 190, 320];
 
 type Props = {
   map: ConceptMap;
@@ -43,8 +52,25 @@ export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
     () => Object.fromEntries(ranked.map((r) => [r.concept.id, r.unlocks])),
     [ranked],
   );
-  const positions = useMemo(() => layoutConcepts(map, unlocks), [map, unlocks]);
+  const { positions, bands } = useMemo(() => layoutConcepts(map, unlocks), [map, unlocks]);
   const lit = useMemo(() => (selected === null ? null : lineage(map, selected)), [map, selected]);
+
+  const areaNodes = useMemo<AreaFlowNode[]>(
+    () =>
+      bands.map((band, i) => ({
+        id: `area:${band.area}`,
+        type: 'area',
+        position: { x: band.x, y: band.y },
+        width: band.width,
+        height: band.height,
+        data: { area: band.area, hue: BAND_HUES[i % BAND_HUES.length]! },
+        selectable: false,
+        draggable: false,
+        // Behind the cards, and never in the way of a click on the pane.
+        zIndex: -1,
+      })),
+    [bands],
+  );
 
   const nodes = useMemo<ConceptFlowNode[]>(
     () =>
@@ -78,20 +104,34 @@ export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
     [map, positions, byId, lit, selected],
   );
 
+  const areaOf = useMemo(() => new Map(map.concepts.map((c) => [c.id, c.area])), [map]);
+
   const edges = useMemo<Edge[]>(
     () =>
       map.concepts.flatMap((concept) =>
         concept.prereqs
           .filter((p) => positions[p] !== undefined)
-          .map((p) => ({
-            id: `${p}->${concept.id}`,
-            source: p,
-            target: concept.id,
-            className:
-              lit !== null && !(lit.has(p) && lit.has(concept.id)) ? styles.edgeDim : styles.edge,
-          })),
+          .map((p) => {
+            const faded = lit !== null && !(lit.has(p) && lit.has(concept.id));
+            // An edge leaving its band is the interesting one — the same idea
+            // turning up in another subject — so it is drawn as a claim rather
+            // than as one more grey line.
+            const crosses = areaOf.get(p) !== areaOf.get(concept.id);
+            return {
+              id: `${p}->${concept.id}`,
+              source: p,
+              target: concept.id,
+              // Orthogonal, not bezier: inside a band these become short right
+              // angles you can follow with your eye, where a bundle of curves
+              // between two big columns was untraceable.
+              type: 'smoothstep',
+              pathOptions: { borderRadius: 14 },
+              className: faded ? styles.edgeDim : crosses ? styles.edgeCross : styles.edge,
+              zIndex: crosses ? 1 : 0,
+            };
+          }),
       ),
-    [map, positions, lit],
+    [map, positions, lit, areaOf],
   );
 
   const detail = selected === null ? null : byId.get(selected);
@@ -102,7 +142,7 @@ export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
       <div className={styles.canvas}>
         <ReactFlowProvider>
           <ReactFlow
-            nodes={nodes}
+            nodes={[...areaNodes, ...nodes]}
             edges={edges}
             nodeTypes={nodeTypes}
             nodesDraggable={false}

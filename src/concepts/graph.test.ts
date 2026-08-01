@@ -3,7 +3,7 @@ import { ancestors, dependents, directDependents, directPrereqs, lineage } from 
 import type { Concept, ConceptMap } from './types';
 
 function concept(id: string, prereqs: string[] = []): Concept {
-  return { id, name: id, blurb: '', prereqs, sessionIds: [] };
+  return { id, name: id, area: 'A', blurb: '', prereqs, sessionIds: [] };
 }
 
 function map(...concepts: Concept[]): ConceptMap {

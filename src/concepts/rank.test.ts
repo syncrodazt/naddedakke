@@ -4,7 +4,7 @@ import { dependents } from './graph';
 import type { Concept, ConceptMap } from './types';
 
 function concept(id: string, over: Partial<Concept> = {}): Concept {
-  return { id, name: id, blurb: '', prereqs: [], sessionIds: [], ...over };
+  return { id, name: id, area: 'A', blurb: '', prereqs: [], sessionIds: [], ...over };
 }
 
 function map(...concepts: Concept[]): ConceptMap {

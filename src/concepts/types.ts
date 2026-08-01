@@ -22,6 +22,15 @@ export type Concept = {
   name: string;
   /** One sentence, in the learner's language: what this concept is. */
   blurb: string;
+  /**
+   * The subject this belongs to — "Web security", "Wave physics".
+   *
+   * Purely for reading the map. A flat graph of thirty concepts from six
+   * unrelated fields is a wall of cards with no way in; grouped into subjects,
+   * most prerequisite edges stay inside one band and the ones that cross are
+   * the interesting ones.
+   */
+  area: string;
   /** Concept ids this builds on. The only edge type in stage 1. */
   prereqs: string[];
   /**

@@ -162,6 +162,7 @@ export class MockClaudeService implements TeachService {
         {
           id: 'mock-foundation',
           name: 'モックの土台',
+          area: 'モック領域A',
           blurb: 'これはモックの概念マップです。',
           prereqs: [],
           sessionIds: first ? [first] : [],
@@ -170,6 +171,7 @@ export class MockClaudeService implements TeachService {
         {
           id: 'mock-next',
           name: 'モックの次の一歩',
+          area: 'モック領域A',
           blurb: 'ANTHROPIC_API_KEY（または GEMINI_API_KEY）を設定すると本物が生成されます。',
           prereqs: ['mock-foundation'],
           sessionIds: [],
@@ -178,6 +180,7 @@ export class MockClaudeService implements TeachService {
         {
           id: 'mock-later',
           name: 'モックのその先',
+          area: 'モック領域B',
           blurb: 'まだ手が届かない概念の例です。',
           prereqs: ['mock-next'],
           sessionIds: [],

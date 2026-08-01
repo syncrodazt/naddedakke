@@ -8,6 +8,9 @@ import type { Concept, ConceptMap } from './types';
 
 export class ConceptMapError extends Error {}
 
+/** Band for concepts the model did not file anywhere. */
+export const UNSORTED = '—';
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -46,13 +49,16 @@ export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap 
   const seen = new Set<string>();
   for (const entry of parsed.concepts) {
     if (!isRecord(entry)) continue;
-    const { id, name, blurb, prereqs, sessionIds, why } = entry;
+    const { id, name, area, blurb, prereqs, sessionIds, why } = entry;
     if (typeof id !== 'string' || !ID.test(id) || seen.has(id)) continue;
     if (typeof name !== 'string' || name.trim() === '') continue;
     seen.add(id);
     concepts.push({
       id,
       name: name.trim(),
+      // Everything must land in some band, so an unlabelled concept gets one
+      // rather than vanishing from the layout.
+      area: typeof area === 'string' && area.trim() !== '' ? area.trim() : UNSORTED,
       blurb: typeof blurb === 'string' ? blurb.trim() : '',
       prereqs: strings(prereqs).filter((p) => ID.test(p) && p !== id),
       // A notebook id the model invented would make an unknown concept look

@@ -63,7 +63,12 @@ export function NodeShell({
           useGraphStore.getState().setNodeSize(nodeId, { width: p.width, height: p.height })
         }
       />
-      <Handle type="target" position={Position.Left} className={styles.handle} />
+      {/* Four attachment points, not two. A branch hangs BELOW its parent, so
+          an edge that can only leave the right-hand side has to curve back
+          round and pass behind the card it came from — which is exactly what it
+          used to do. See toFlowEdge for which kind uses which. */}
+      <Handle type="target" id="in-l" position={Position.Left} className={styles.handle} />
+      <Handle type="target" id="in-t" position={Position.Top} className={styles.handle} />
       <div className={styles.card} data-accent={accent} data-understood={understood || undefined}>
         <div className={`${styles.header} drag-handle`}>
           <span className={styles.seq} title="chronological order">
@@ -96,7 +101,8 @@ export function NodeShell({
           +
         </button>
       )}
-      <Handle type="source" position={Position.Right} className={styles.handle} />
+      <Handle type="source" id="out-r" position={Position.Right} className={styles.handle} />
+      <Handle type="source" id="out-b" position={Position.Bottom} className={styles.handle} />
     </div>
   );
 }

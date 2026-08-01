@@ -56,11 +56,28 @@ const ARROW_COLOR: Record<REdge['kind'], string> = {
   depends: 'var(--alias)',
 };
 
+// Where an edge leaves and arrives, by what it means.
+//
+// The spine and the dataflow run left to right, so those attach side to side.
+// A question hangs below the passage that provoked it, so those leave the
+// bottom and arrive at the top — a straight drop, instead of a curve out of the
+// right-hand side that loops back behind the parent card.
+const EDGE_PORTS: Record<REdge['kind'], { source: string; target: string; type: string }> = {
+  next: { source: 'out-r', target: 'in-l', type: 'default' },
+  depends: { source: 'out-r', target: 'in-l', type: 'default' },
+  why: { source: 'out-b', target: 'in-t', type: 'smoothstep' },
+  reply: { source: 'out-b', target: 'in-t', type: 'smoothstep' },
+};
+
 export function toFlowEdge(redge: REdge): Edge {
+  const ports = EDGE_PORTS[redge.kind];
   return {
     id: redge.id,
     source: redge.source,
     target: redge.target,
+    sourceHandle: ports.source,
+    targetHandle: ports.target,
+    type: ports.type,
     className: `edge-${redge.kind}`,
     markerEnd: {
       type: MarkerType.ArrowClosed,

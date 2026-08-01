@@ -205,7 +205,7 @@ export function buildConceptMapPrompt(req: ConceptMapRequest): ChatPrompt {
     system:
       'You map out what someone should learn next, as a prerequisite graph.\n' +
       'Reply with ONE JSON object and nothing else — no prose, no code fence:\n' +
-      '{"concepts":[{"id":string,"name":string,"blurb":string,' +
+      '{"concepts":[{"id":string,"name":string,"area":string,"blurb":string,' +
       '"prereqs":[string],"sessionIds":[string],"why":string}]}\n' +
       'Rules:\n' +
       '- "id" is a lowercase kebab-case slug, unique, stable and descriptive ' +
@@ -224,6 +224,11 @@ export function buildConceptMapPrompt(req: ConceptMapRequest): ChatPrompt {
       'in several of their notebooks under different names, say so in "why".\n' +
       '- "why" is one sentence naming what in THEIR notebooks this connects to, ' +
       'and what understanding it would open up.\n' +
+      '- "area" is the subject it belongs to, 1-3 words (e.g. "Web security", ' +
+      '"Wave physics", "Probability"). REUSE the same wording across concepts ' +
+      'that belong together — the map is grouped by it, so near-duplicate labels ' +
+      'like "Cryptography" and "Crypto" split one subject into two. Aim for ' +
+      '3-6 areas in total, not one per concept.\n' +
       `- "name", "blurb" and "why" are written in ${req.langLabel}. Ids stay ` +
       'ASCII slugs.',
     user:

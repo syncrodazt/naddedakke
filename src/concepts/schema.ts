@@ -12,10 +12,11 @@ export const CONCEPT_MAP_SCHEMA: Record<string, unknown> = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['id', 'name', 'blurb', 'prereqs', 'sessionIds', 'why'],
+        required: ['id', 'name', 'area', 'blurb', 'prereqs', 'sessionIds', 'why'],
         properties: {
           id: { type: 'string' },
           name: { type: 'string' },
+          area: { type: 'string' },
           blurb: { type: 'string' },
           prereqs: { type: 'array', items: { type: 'string' } },
           sessionIds: { type: 'array', items: { type: 'string' } },

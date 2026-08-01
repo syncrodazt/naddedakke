@@ -95,7 +95,7 @@ describe('parseConceptMap', () => {
 
 describe('breakCycles', () => {
   function concept(id: string, prereqs: string[] = []): Concept {
-    return { id, name: id, blurb: '', prereqs, sessionIds: [] };
+    return { id, name: id, area: 'A', blurb: '', prereqs, sessionIds: [] };
   }
 
   it('leaves an acyclic map untouched', () => {
