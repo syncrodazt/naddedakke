@@ -1,0 +1,17 @@
+/* Sidebar beside canvas. The canvas must be a real flex child rather than a
+   full-bleed layer with padding: React Flow measures its container to work out
+   the viewport, so shifting it visually would leave every coordinate wrong. */
+.shell {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.main {
+  flex: 1;
+  /* Without this a flex item refuses to shrink below its content, and the
+     canvas would push the sidebar off screen instead of making room. */
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}

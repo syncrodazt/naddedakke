@@ -10,6 +10,8 @@ import { MetricsBridge } from './canvas/MetricsBridge';
 import { CommandPalette } from './canvas/CommandPalette';
 import { Library } from './library/Library';
 import { useLibraryStore } from './library/libraryStore';
+import { Sidebar } from './library/Sidebar';
+import appStyles from './App.module.css';
 import { ShareDialog } from './share/ShareDialog';
 import { GuestBanner } from './share/GuestBanner';
 import { enterGuestFromUrl } from './share/guest';
@@ -41,6 +43,7 @@ function App() {
   const selectedIds = useSelectionStore((s) => s.selected);
   const view = useLibraryStore((s) => s.view);
   const guest = useShareStore((s) => s.guest);
+  const sidebarOpen = useLibraryStore((s) => s.sidebarOpen);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +91,9 @@ function App() {
       } else if (e.key === ',') {
         e.preventDefault();
         usePanelStore.getState().toggle('settings');
+      } else if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        useLibraryStore.getState().toggleSidebar();
       }
     }
     window.addEventListener('keydown', onKey);
@@ -158,12 +164,19 @@ function App() {
     <ReactFlowProvider>
       <MetricsBridge />
       <GuestBanner />
-      <Toolbar />
-      <Canvas
-        nodes={flowNodes}
-        edges={flowEdges}
-        readOnly={replayActive || guest?.canEdit === false}
-      />
+      <div className={appStyles.shell}>
+        {/* A guest holds exactly one notebook; a list of "others" would be
+            their own, which is not what this screen is about. */}
+        {sidebarOpen && !guest && <Sidebar />}
+        <div className={appStyles.main}>
+          <Toolbar />
+          <Canvas
+            nodes={flowNodes}
+            edges={flowEdges}
+            readOnly={replayActive || guest?.canEdit === false}
+          />
+        </div>
+      </div>
       <FallbackBanner />
       <SyncIndicator />
       {replayActive && <ReplayBar />}

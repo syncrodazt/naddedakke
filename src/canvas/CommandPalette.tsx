@@ -10,11 +10,17 @@ import { usePanelStore } from '../store/panelStore';
 import { useAuthStore } from '../store/authStore';
 import { useStrings } from '../i18n';
 import { startLesson } from '../services/lesson';
+import { promptDialog } from '../store/uiStore';
+import { matchesNewCommand } from './paletteCommands';
 import { useCameraNav } from './useCameraNav';
 import styles from './CommandPalette.module.css';
 
 type Entry =
   | { kind: 'session' | 'example'; id: string; title: string }
+  // Actions, not notebooks: found by typing what you want to DO. Kept in the
+  // same list because "new" is a thing you look for here, and a separate menu
+  // for it would be one more place to remember.
+  | { kind: 'new' }
   // Typing something no notebook matches is usually not a failed search — it
   // is the thing you want to learn. Offer it as the action rather than an
   // empty list.
@@ -61,15 +67,17 @@ export function CommandPalette() {
       .map((ex) => ({ id: ex.id, title: ex.label, kind: 'example' }));
     const topic = query.trim();
     const needle = topic.toLowerCase();
-    const matches =
-      needle === ''
-        ? [...saved, ...unloaded]
-        : [...saved, ...unloaded].filter((e) =>
-            'title' in e ? e.title.toLowerCase().includes(needle) : false,
-          );
+    if (needle === '') return [...saved, ...unloaded];
+
+    const matches = [...saved, ...unloaded].filter((e) =>
+      'title' in e ? e.title.toLowerCase().includes(needle) : false,
+    );
+    // "new" is an action, so it leads: someone who typed it wants to create,
+    // not to find a notebook that happens to have "new" in its name.
+    const commands: Entry[] = matchesNewCommand(needle) ? [{ kind: 'new' }] : [];
     // The ask row goes last, so Enter on a typed word still opens the notebook
     // that matches it; you have to arrow down to start something new.
-    return topic === '' ? matches : [...matches, { kind: 'ask' as const, topic }];
+    return [...commands, ...matches, { kind: 'ask' as const, topic }];
   }, [sessions, query]);
 
   if (!open) return null;
@@ -77,6 +85,13 @@ export function CommandPalette() {
   async function choose(entry: Entry) {
     close();
     useRevealStore.getState().showAll();
+    if (entry.kind === 'new') {
+      const topic = (await promptDialog(strings.topicPrompt, '', strings.topicPlaceholder))?.trim();
+      if (!topic) return;
+      const chunkId = await startLesson(topic);
+      panToNode(chunkId);
+      return;
+    }
     if (entry.kind === 'ask') {
       const chunkId = await startLesson(entry.topic);
       panToNode(chunkId);
@@ -124,7 +139,11 @@ export function CommandPalette() {
           {entries.length === 0 && <p className={styles.empty}>{strings.paletteEmpty}</p>}
           {entries.map((entry, i) => (
             <button
-              key={entry.kind === 'ask' ? 'ask' : `${entry.kind}:${entry.id}`}
+              key={
+                entry.kind === 'ask' || entry.kind === 'new'
+                  ? entry.kind
+                  : `${entry.kind}:${entry.id}`
+              }
               type="button"
               role="option"
               aria-selected={i === cursor}
@@ -132,7 +151,13 @@ export function CommandPalette() {
               onMouseEnter={() => setCursor(i)}
               onClick={() => void choose(entry)}
             >
-              {entry.kind === 'ask' ? (
+              {entry.kind === 'new' ? (
+                <>
+                  <span className={styles.ask}>＋</span>
+                  <span className={styles.rowTitle}>{strings.paletteNew}</span>
+                  <span className={styles.tag}>{strings.paletteNewHint}</span>
+                </>
+              ) : entry.kind === 'ask' ? (
                 <>
                   <span className={styles.ask}>＋</span>
                   <span className={styles.rowTitle}>

@@ -205,14 +205,24 @@ export function Toolbar() {
   return (
     <div className={styles.toolbar}>
       {!guest && (
-        <button
-          type="button"
-          className={styles.button}
-          title={strings.libraryBack}
-          onClick={() => useLibraryStore.getState().show('library')}
-        >
-          ←
-        </button>
+        <>
+          <button
+            type="button"
+            className={styles.button}
+            title={strings.sidebarToggle}
+            onClick={() => useLibraryStore.getState().toggleSidebar()}
+          >
+            ▤
+          </button>
+          <button
+            type="button"
+            className={styles.button}
+            title={strings.libraryBack}
+            onClick={() => useLibraryStore.getState().show('library')}
+          >
+            ←
+          </button>
+        </>
       )}
       <button
         type="button"

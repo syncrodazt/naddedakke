@@ -10,8 +10,21 @@ import { rangeBetween } from './grouping';
 
 export type View = 'library' | 'canvas';
 
+const SIDEBAR_KEY = 'nandedakke.sidebar';
+
+/** Remembered across reloads: an editor that forgets its sidebar is annoying. */
+function initialSidebar(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
 type LibraryState = {
   view: View;
+  /** Notebook list beside the canvas. Ctrl/⌘+B. */
+  sidebarOpen: boolean;
   selected: Set<string>;
   /** Where the last plain click landed — the fixed end of a shift-click range. */
   anchor: string | null;
@@ -19,6 +32,7 @@ type LibraryState = {
 
 type LibraryActions = {
   show: (view: View) => void;
+  toggleSidebar: () => void;
   /** Plain click: this one only, and it becomes the anchor. */
   select: (id: string) => void;
   /** Ctrl/⌘-click: add or remove without disturbing the rest. */
@@ -35,10 +49,22 @@ export const useLibraryStore = create<LibraryState & LibraryActions>()((set, get
   // The library is the front door: it is the only screen that can answer "what
   // was I working on?", which is the question you arrive with.
   view: 'library',
+  sidebarOpen: initialSidebar(),
   selected: new Set(),
   anchor: null,
 
   show: (view) => set({ view, selected: new Set(), anchor: null }),
+
+  toggleSidebar: () =>
+    set((s) => {
+      const sidebarOpen = !s.sidebarOpen;
+      try {
+        localStorage.setItem(SIDEBAR_KEY, sidebarOpen ? '1' : '0');
+      } catch {
+        // private mode — it just won't survive a reload
+      }
+      return { sidebarOpen };
+    }),
 
   select: (id) => set({ selected: new Set([id]), anchor: id }),
 
