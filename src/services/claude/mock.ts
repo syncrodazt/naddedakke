@@ -4,6 +4,7 @@ import type {
   LessonChunkRequest,
   TeachService,
   TranslateRequest,
+  ConceptMapRequest,
 } from './types';
 
 const CANNED: { keywords: string[]; md: string }[] = [
@@ -146,6 +147,43 @@ export class MockClaudeService implements TeachService {
         },
       ],
       goalOf: 'monthly_saving',
+    });
+  }
+
+  // A tiny but genuinely acyclic map, so the ranking, the readiness gate and
+  // the list can all be exercised with no API key configured. The first concept
+  // is claimed by the learner's first notebook, so "known" has something to
+  // mean and the gate is actually visible.
+  async suggestConcepts(req: ConceptMapRequest): Promise<string> {
+    await delay(500);
+    const first = req.inventory[0]?.id;
+    return JSON.stringify({
+      concepts: [
+        {
+          id: 'mock-foundation',
+          name: 'モックの土台',
+          blurb: 'これはモックの概念マップです。',
+          prereqs: [],
+          sessionIds: first ? [first] : [],
+          why: 'あなたの最初のノートが扱っています。',
+        },
+        {
+          id: 'mock-next',
+          name: 'モックの次の一歩',
+          blurb: 'ANTHROPIC_API_KEY（または GEMINI_API_KEY）を設定すると本物が生成されます。',
+          prereqs: ['mock-foundation'],
+          sessionIds: [],
+          why: '土台の上に直接積み上がります。',
+        },
+        {
+          id: 'mock-later',
+          name: 'モックのその先',
+          blurb: 'まだ手が届かない概念の例です。',
+          prereqs: ['mock-next'],
+          sessionIds: [],
+          why: '次の一歩を理解すると開きます。',
+        },
+      ],
     });
   }
 

@@ -4,6 +4,7 @@ import type {
   LessonChunkRequest,
   TeachService,
   TranslateRequest,
+  ConceptMapRequest,
 } from './types';
 import { MockClaudeService } from './mock';
 import { GeminiService } from '../gemini';
@@ -43,6 +44,10 @@ class RoutingService implements TeachService {
 
   translate(req: TranslateRequest): Promise<string> {
     return this.pick().translate(req);
+  }
+
+  suggestConcepts(req: ConceptMapRequest): Promise<string> {
+    return this.pick().suggestConcepts(req);
   }
 }
 

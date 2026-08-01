@@ -43,6 +43,16 @@ export type TranslateRequest = {
   signal?: AbortSignal;
 };
 
+export type ConceptMapRequest = {
+  /** What the learner already has: one entry per notebook, titles + headings. */
+  inventory: { id: string; title: string; headings: string[] }[];
+  /** How many NEW concepts to propose beyond what the notebooks already cover. */
+  want: number;
+  /** The learner's language, so names and blurbs come back readable. */
+  langLabel: string;
+  signal?: AbortSignal;
+};
+
 // The one seam between the graph and the LLM. Swapping providers (mock,
 // Gemini, Anthropic) never touches the store or UI.
 export interface TeachService {
@@ -57,4 +67,7 @@ export interface TeachService {
   // Many nodes per call, resolving whole: translations are applied a batch at a
   // time and a half-translated body has nowhere to go.
   translate(req: TranslateRequest): Promise<string>;
+  // A proposed map of what to learn next. One document, reviewed before it is
+  // shown as a recommendation — same as a back-cast plan.
+  suggestConcepts(req: ConceptMapRequest): Promise<string>;
 }

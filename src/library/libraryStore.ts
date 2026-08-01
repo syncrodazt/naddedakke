@@ -8,7 +8,7 @@ import { rangeBetween } from './grouping';
 // they are siblings — hoisting it any lower would mean threading it through
 // every row.
 
-export type View = 'library' | 'canvas';
+export type View = 'library' | 'canvas' | 'next';
 
 const SIDEBAR_KEY = 'nandedakke.sidebar';
 

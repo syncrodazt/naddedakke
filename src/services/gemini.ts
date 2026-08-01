@@ -4,6 +4,7 @@ import type {
   LessonChunkRequest,
   TeachService,
   TranslateRequest,
+  ConceptMapRequest,
 } from './claude/types';
 import {
   buildAnswerPrompt,
@@ -11,6 +12,7 @@ import {
   buildLessonChunkPrompt,
   buildResponsePrompt,
   buildTranslatePrompt,
+  buildConceptMapPrompt,
   type ChatPrompt,
 } from './prompts';
 import { streamSseText } from './sse';
@@ -78,6 +80,13 @@ export class GeminiService implements TeachService {
       json: true,
       noThinking: true,
     });
+    for await (const delta of stream) out += delta;
+    return out;
+  }
+
+  async suggestConcepts(req: ConceptMapRequest): Promise<string> {
+    let out = '';
+    const stream = this.streamChat(buildConceptMapPrompt(req), req.signal, { json: true });
     for await (const delta of stream) out += delta;
     return out;
   }

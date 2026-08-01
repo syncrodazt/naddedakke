@@ -1,0 +1,203 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 32px max(24px, calc(50vw - 460px)) 90px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 52ch;
+}
+
+.headActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.primary,
+.back {
+  border: 1px solid var(--grid);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.back {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.primary:hover:enabled,
+.back:hover {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.warn {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--branch);
+  border-radius: 10px;
+  color: var(--branch);
+  background: var(--card);
+}
+
+.note {
+  margin: 0 0 18px;
+  padding: 9px 13px;
+  border: 1px dashed var(--grid);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty {
+  color: var(--muted);
+  max-width: 56ch;
+}
+
+.groupHeading {
+  margin: 22px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--grid);
+  border-radius: 11px;
+  padding: 13px 15px;
+}
+
+.cardBlocked {
+  composes: card;
+  /* Not a warning — just not yet. It stays readable so you can see what is
+     waiting behind the prerequisite. */
+  opacity: 0.72;
+  border-style: dashed;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.rank {
+  flex: 0 0 auto;
+  min-width: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.tagMet,
+.tagUnlocks {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.tagMet {
+  border: 1px solid var(--alias);
+  color: var(--alias);
+}
+
+.tagUnlocks {
+  border: 1px solid var(--grid);
+  color: var(--muted);
+}
+
+.open {
+  flex: 0 0 auto;
+  border: 1px solid var(--grid);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.open:hover:enabled {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.open:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.blurb {
+  margin: 6px 0 0 29px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.why {
+  margin: 4px 0 0 29px;
+  font-size: 12.5px;
+  color: var(--alias);
+}
+
+.missing {
+  margin: 4px 0 0 29px;
+  font-size: 12.5px;
+  color: var(--branch);
+}

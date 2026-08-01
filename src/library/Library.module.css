@@ -192,3 +192,15 @@
   font-weight: 600;
   padding-right: 4px;
 }
+
+.headActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.secondary {
+  composes: primary;
+  font-weight: 400;
+  color: var(--muted);
+}

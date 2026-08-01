@@ -1,10 +1,17 @@
 import Dexie, { type Table } from 'dexie';
 import type { REdge, RNode, Session } from '../model/types';
+import type { ConceptMap } from '../concepts/types';
 
 export class NandeDB extends Dexie {
   sessions!: Table<Session, string>;
   nodes!: Table<RNode, string>;
   edges!: Table<REdge, string>;
+  /**
+   * The "what to learn next" map. One row, id 'current' — it is a regenerable
+   * proposal about a subject, not a record of anything the learner did, so
+   * there is no history to keep.
+   */
+  concepts!: Table<ConceptMap, string>;
 
   constructor() {
     super('nandedakke');
@@ -20,6 +27,12 @@ export class NandeDB extends Dexie {
       sessions: 'id, createdAt, updatedAt',
       nodes: 'id, sessionId, [sessionId+seq]',
       edges: 'id, sessionId',
+    });
+    this.version(3).stores({
+      sessions: 'id, createdAt, updatedAt',
+      nodes: 'id, sessionId, [sessionId+seq]',
+      edges: 'id, sessionId',
+      concepts: 'id',
     });
   }
 }

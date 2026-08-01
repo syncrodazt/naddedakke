@@ -255,9 +255,18 @@ export function Library() {
     <div className={styles.screen} ref={surface} onPointerDown={onPointerDown}>
       <header className={styles.header}>
         <h1 className={styles.brand}>{strings.appTitle}</h1>
-        <button type="button" className={styles.primary} onClick={() => void handleNew()}>
-          ＋ {strings.newLesson}
-        </button>
+        <span className={styles.headActions}>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={() => useLibraryStore.getState().show('next')}
+          >
+            {strings.nextUpNav}
+          </button>
+          <button type="button" className={styles.primary} onClick={() => void handleNew()}>
+            ＋ {strings.newLesson}
+          </button>
+        </span>
       </header>
 
       {guestError !== null && (

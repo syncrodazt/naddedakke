@@ -3,6 +3,7 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   TranslateRequest,
+  ConceptMapRequest,
 } from './claude/types';
 
 // Prompt construction is provider-agnostic: every service receives a plain
@@ -183,5 +184,54 @@ export function buildTranslatePrompt(req: TranslateRequest): ChatPrompt {
       'and give that passage in ' +
       `${req.targetLabel}.`,
     user: JSON.stringify({ items: req.items }),
+  };
+}
+
+/**
+ * "What should I learn next?"
+ *
+ * The map is GENERATED, not mined out of the notebooks. Mining could only ever
+ * describe what the learner has already met, which is the opposite of the
+ * question — and it could never notice that a component tree in a UI framework
+ * and an assembly tree in CAD are the same idea, because that takes knowledge
+ * of the world rather than knowledge of the graph.
+ *
+ * Every concept must say what it connects to. A recommendation with no stated
+ * reason is one the learner can only obey, which is the wrong relationship to
+ * have with a curriculum a machine wrote.
+ */
+export function buildConceptMapPrompt(req: ConceptMapRequest): ChatPrompt {
+  return {
+    system:
+      'You map out what someone should learn next, as a prerequisite graph.\n' +
+      'Reply with ONE JSON object and nothing else — no prose, no code fence:\n' +
+      '{"concepts":[{"id":string,"name":string,"blurb":string,' +
+      '"prereqs":[string],"sessionIds":[string],"why":string}]}\n' +
+      'Rules:\n' +
+      '- "id" is a lowercase kebab-case slug, unique, stable and descriptive ' +
+      '(e.g. "nyquist-limit"). Use it, not the name, inside "prereqs".\n' +
+      '- "prereqs" lists the concepts someone must understand BEFORE this one, ' +
+      'by id, referencing only ids in this same reply. The graph must be ' +
+      'acyclic: never make two concepts require each other.\n' +
+      '- "sessionIds" lists the notebooks below that already cover this ' +
+      'concept, using their exact ids. Use [] when none do. NEVER invent an id.\n' +
+      '- Include BOTH: concepts the notebooks already cover (so the graph is ' +
+      'anchored in what they have), and new ones they have not met.\n' +
+      `- Propose about ${req.want} concepts they have NOT met yet, chosen so ` +
+      'that each genuinely builds on something in their notebooks.\n' +
+      '- Prefer transferable ideas over trivia: a concept that recurs across ' +
+      'domains is worth more than one fact. If the same underlying idea appears ' +
+      'in several of their notebooks under different names, say so in "why".\n' +
+      '- "why" is one sentence naming what in THEIR notebooks this connects to, ' +
+      'and what understanding it would open up.\n' +
+      `- "name", "blurb" and "why" are written in ${req.langLabel}. Ids stay ` +
+      'ASCII slugs.',
+    user:
+      "## The learner's notebooks\n\n" +
+      (req.inventory.length === 0
+        ? '(none yet — propose a starting graph for a curious beginner)'
+        : req.inventory
+            .map((n) => `- id: ${n.id}\n  title: ${n.title}\n  covers: ${n.headings.join('; ')}`)
+            .join('\n')),
   };
 }

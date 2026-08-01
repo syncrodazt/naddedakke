@@ -4,6 +4,7 @@ import type {
   LessonChunkRequest,
   TeachService,
   TranslateRequest,
+  ConceptMapRequest,
 } from './claude/types';
 import {
   buildAnswerPrompt,
@@ -11,6 +12,7 @@ import {
   buildLessonChunkPrompt,
   buildResponsePrompt,
   buildTranslatePrompt,
+  buildConceptMapPrompt,
   type ChatPrompt,
 } from './prompts';
 import { extractClaudeText, streamSseText } from './sse';
@@ -18,6 +20,7 @@ import { currentModel } from '../store/modelStore';
 import { GOAL_PLAN_SCHEMA } from '../gyakusan/planSchema';
 import { LESSON_CHUNK_SCHEMA } from './lessonSchema';
 import { TRANSLATE_SCHEMA } from './translateSchema';
+import { CONCEPT_MAP_SCHEMA } from '../concepts/schema';
 
 // Streams from the /api/claude proxy (Vite middleware in dev, Vercel edge
 // function in production). The Anthropic API key never reaches the browser.
@@ -91,6 +94,19 @@ export class ClaudeService implements TeachService {
     const stream = this.streamChat(buildTranslatePrompt(req), req.signal, {
       schema: TRANSLATE_SCHEMA,
       effort: 'low',
+    });
+    for await (const delta of stream) out += delta;
+    return out;
+  }
+
+  async suggestConcepts(req: ConceptMapRequest): Promise<string> {
+    let out = '';
+    // High effort: this is the one call that decides what the learner spends
+    // the next weeks on, and it has to hold a whole dependency graph straight
+    // in its head. Nothing is shown until it parses.
+    const stream = this.streamChat(buildConceptMapPrompt(req), req.signal, {
+      schema: CONCEPT_MAP_SCHEMA,
+      effort: 'high',
     });
     for await (const delta of stream) out += delta;
     return out;

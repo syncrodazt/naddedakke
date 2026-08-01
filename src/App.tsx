@@ -10,6 +10,7 @@ import { MetricsBridge } from './canvas/MetricsBridge';
 import { CanvasShortcuts } from './canvas/CanvasShortcuts';
 import { CommandPalette } from './canvas/CommandPalette';
 import { Library } from './library/Library';
+import { NextUp } from './concepts/NextUp';
 import { useLibraryStore } from './library/libraryStore';
 import { Sidebar } from './library/Sidebar';
 import appStyles from './App.module.css';
@@ -150,6 +151,16 @@ function App() {
 
   // The library is a full screen, not an overlay: it replaces the canvas rather
   // than floating over it, so nothing behind it keeps running.
+  if (view === 'next') {
+    return (
+      <>
+        <NextUp />
+        <SettingsDialog />
+        <DialogHost />
+      </>
+    );
+  }
+
   if (view === 'library') {
     return (
       // The provider is here only so the palette can share one implementation

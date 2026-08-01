@@ -82,6 +82,13 @@ export function Sidebar() {
       <button
         type="button"
         className={styles.foot}
+        onClick={() => useLibraryStore.getState().show('next')}
+      >
+        {strings.nextUpNav}
+      </button>
+      <button
+        type="button"
+        className={styles.foot}
         onClick={() => useLibraryStore.getState().show('library')}
       >
         {strings.libraryBack}
