@@ -3,6 +3,7 @@ import { providerOf, useModelStore } from '../store/modelStore';
 import { usePanelStore } from '../store/panelStore';
 import { LANGS, useLangStore, useStrings, type Lang } from '../i18n';
 import { AuthPanel } from './AuthPanel';
+import { SHORTCUTS, keyCaps, modLabel } from './shortcuts';
 import styles from './SettingsDialog.module.css';
 
 /**
@@ -20,6 +21,7 @@ export function SettingsDialog() {
   const setModel = useModelStore((s) => s.setSelected);
   const lang = useLangStore((s) => s.lang);
   const setLang = useLangStore((s) => s.setLang);
+  const mod = modLabel();
 
   if (!open) return null;
 
@@ -79,6 +81,36 @@ export function SettingsDialog() {
         <div className={styles.field}>
           <span className={styles.label}>{strings.cloudTitle}</span>
           <AuthPanel />
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.label}>{strings.shortcutsTitle}</span>
+          <div className={styles.shortcuts}>
+            {SHORTCUTS.map((group) => (
+              <section key={group.id}>
+                <h3 className={styles.scGroup}>{strings[group.title] as string}</h3>
+                <dl className={styles.scList}>
+                  {group.items.map((item) => (
+                    <div key={item.label} className={styles.scRow}>
+                      <dt className={styles.scKeys}>
+                        {keyCaps(item, mod).map((cap, i) => (
+                          // Separators like "–" are not keys, so they are not
+                          // drawn as ones.
+                          <kbd
+                            key={`${item.label}-${i}`}
+                            className={cap === '–' ? styles.scSep : styles.scKey}
+                          >
+                            {cap}
+                          </kbd>
+                        ))}
+                      </dt>
+                      <dd className={styles.scWhat}>{strings[item.label] as string}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ))}
+          </div>
         </div>
       </div>
     </div>,

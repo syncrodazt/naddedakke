@@ -102,3 +102,66 @@
   color: #fff;
   background: var(--alias);
 }
+
+/* Keyboard shortcuts. Long enough to scroll on its own rather than pushing the
+   settings above it off screen. */
+.shortcuts {
+  max-height: 42vh;
+  overflow-y: auto;
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+  padding: 4px 12px 10px;
+}
+
+.scGroup {
+  margin: 12px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scList {
+  margin: 0;
+}
+
+.scRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.scKeys {
+  flex: 0 0 132px;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.scKey {
+  border: 1px solid var(--grid);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.scSep {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 1px;
+}
+
+.scWhat {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}

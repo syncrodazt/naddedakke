@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
+import type { RNode } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { useSelectionStore } from './selectionStore';
 import { useCameraNav } from './useCameraNav';
@@ -41,6 +42,20 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
   const { panToNode } = useCameraNav();
 
   useEffect(() => {
+    /**
+     * Where keyboard navigation starts when nothing is focused: whatever is in
+     * the middle of the screen, not the first node of the lesson — that may be
+     * a long way from what the learner is looking at.
+     */
+    function nearestToViewportCentre(nodes: Record<string, RNode>): string | null {
+      const { x, y, zoom } = flow.getViewport();
+      const centre = {
+        x: (window.innerWidth / 2 - x) / zoom,
+        y: (window.innerHeight / 2 - y) / zoom,
+      };
+      return nearestTo(nodes, centre, currentMetrics());
+    }
+
     function focus(nodeId: string) {
       useSelectionStore.setState({ selected: new Set([nodeId]) });
       panToNode(nodeId);
@@ -65,6 +80,20 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
         return;
       }
 
+      // Zoom into whatever is focused. The counterpart to Shift+1: one shows
+      // you the whole argument, this one shows you the passage.
+      if (e.shiftKey && (e.key === '2' || e.key === '@')) {
+        e.preventDefault();
+        const [only] = [...useSelectionStore.getState().selected];
+        const target = only ?? nearestToViewportCentre(nodes);
+        if (!target) return;
+        // maxZoom, because fitting one card to the window alone would magnify a
+        // short node until the text was absurd.
+        void flow.fitView({ nodes: [{ id: target }], duration: 500, maxZoom: 1.6, padding: 0.25 });
+        useSelectionStore.setState({ selected: new Set([target]) });
+        return;
+      }
+
       if (!readOnly && e.shiftKey && (e.key === 'T' || e.key === 't')) {
         e.preventDefault();
         runTidy(flow, lastTidyDirection());
@@ -77,15 +106,7 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
 
       const selected = [...useSelectionStore.getState().selected];
       if (selected.length !== 1) {
-        // Nothing focused yet (or a multi-selection): start from whatever is in
-        // the middle of the screen, not from the first node of the lesson —
-        // that may be a long way from what the learner is looking at.
-        const { x, y, zoom } = flow.getViewport();
-        const center = {
-          x: (window.innerWidth / 2 - x) / zoom,
-          y: (window.innerHeight / 2 - y) / zoom,
-        };
-        const start = nearestTo(nodes, center, currentMetrics());
+        const start = nearestToViewportCentre(nodes);
         if (start) focus(start);
         return;
       }
