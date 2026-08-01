@@ -110,6 +110,10 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
         onNodesChange={onNodesChange}
         onNodeContextMenu={readOnly ? undefined : onNodeContextMenu}
         nodesDraggable={!readOnly}
+        // React Flow's own a11y binds the arrow keys to MOVING the selected
+        // node. Arrows here navigate between nodes instead, so its handler has
+        // to go or every press would drag the card a few pixels.
+        disableKeyboardA11y
         fitView
         minZoom={0.1}
         proOptions={{ hideAttribution: false }}

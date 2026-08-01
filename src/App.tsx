@@ -7,6 +7,7 @@ import { FallbackBanner } from './canvas/FallbackBanner';
 import { GoalReview } from './canvas/GoalReview';
 import { SyncIndicator } from './canvas/SyncIndicator';
 import { MetricsBridge } from './canvas/MetricsBridge';
+import { CanvasShortcuts } from './canvas/CanvasShortcuts';
 import { CommandPalette } from './canvas/CommandPalette';
 import { Library } from './library/Library';
 import { useLibraryStore } from './library/libraryStore';
@@ -167,6 +168,7 @@ function App() {
   return (
     <ReactFlowProvider>
       <MetricsBridge />
+      <CanvasShortcuts readOnly={replayActive || guest?.canEdit === false} />
       <GuestBanner />
       <div className={appStyles.shell}>
         {/* A guest holds exactly one notebook; a list of "others" would be

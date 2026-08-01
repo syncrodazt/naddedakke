@@ -22,6 +22,7 @@ import { usePanelStore } from '../store/panelStore';
 import { useLibraryStore } from '../library/libraryStore';
 import { useShareStore } from '../share/shareStore';
 import type { LayoutDirection } from '../layout/layout';
+import { runTidy } from './tidy';
 import styles from './Toolbar.module.css';
 
 export function Toolbar() {
@@ -104,20 +105,7 @@ export function Toolbar() {
   }
 
   function handleTidy(direction: LayoutDirection) {
-    // Feed Tidy the sizes React Flow measured on screen. Card heights are
-    // driven by however much prose the model wrote, so laying out from an
-    // estimate is what made tall cards overlap their branches.
-    // Measured sizes live on the *internal* node — getNodes() hands back the
-    // controlled nodes we passed in, whose `measured` is always empty.
-    const metrics = Object.fromEntries(
-      getNodes().map((n) => {
-        const measured = getInternalNode(n.id)?.measured;
-        return [n.id, { width: measured?.width, height: measured?.height }];
-      }),
-    );
-    useGraphStore.getState().tidyLayout(metrics, direction);
-    // Let the position updates flush to React Flow before fitting.
-    window.setTimeout(() => void fitView({ duration: 500 }), 60);
+    runTidy({ getNodes, getInternalNode, fitView }, direction);
   }
 
   // Understanding progress: understood nodes / total content nodes. Counts
@@ -308,7 +296,7 @@ export function Toolbar() {
       )}
       {session && (
         <ToolbarMenu
-          title={strings.tidy}
+          title={`${strings.tidy} (Shift+T)`}
           trigger={`⤢ ${strings.tidy}`}
           items={[
             {
@@ -324,6 +312,15 @@ export function Toolbar() {
           ]}
         />
       )}
+      <button
+        type="button"
+        className={styles.button}
+        title={`${strings.fitAll} · ${strings.navHint}`}
+        onClick={() => void fitView({ duration: 500 })}
+        disabled={!session}
+      >
+        ⤡
+      </button>
       <button
         type="button"
         className={styles.button}
