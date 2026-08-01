@@ -45,6 +45,15 @@
   color: var(--muted);
 }
 
+.warn {
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  border: 1px solid var(--branch);
+  border-radius: 10px;
+  color: var(--branch);
+  background: var(--card);
+}
+
 .group {
   margin-bottom: 26px;
 }

@@ -24,6 +24,17 @@ export function setFlushListener(fn: ((snapshot: Snapshot) => void) | null): voi
   onFlushed = fn;
 }
 
+// When set, edits go HERE instead of to Dexie: the browser is inside someone
+// else's shared notebook, which is not the learner's to keep. Writing it to the
+// local database would quietly add a notebook to their library that they do not
+// own and cannot fully sync — so a guest session touches no local storage at
+// all, and its edits (if the link allows any) go straight back to the share.
+let guestSink: ((snapshot: Snapshot) => void) | null = null;
+
+export function setGuestSink(fn: ((snapshot: Snapshot) => void) | null): void {
+  guestSink = fn;
+}
+
 const dirty = {
   session: false,
   nodeIds: new Set<string>(),
@@ -83,6 +94,22 @@ export async function flushNow(): Promise<void> {
   }
   if (!getSnapshot) return;
   const snap = getSnapshot();
+
+  if (guestSink) {
+    const hadWork =
+      dirty.session ||
+      dirty.nodeIds.size > 0 ||
+      dirty.edgeIds.size > 0 ||
+      dirty.deletedNodeIds.size > 0 ||
+      dirty.deletedEdgeIds.size > 0;
+    dirty.session = false;
+    dirty.nodeIds.clear();
+    dirty.edgeIds.clear();
+    dirty.deletedNodeIds.clear();
+    dirty.deletedEdgeIds.clear();
+    if (hadWork) guestSink(snap);
+    return;
+  }
 
   const sessionPut = dirty.session && snap.session ? [snap.session] : [];
   const nodePuts = [...dirty.nodeIds].map((id) => snap.nodes[id]).filter((n) => n !== undefined);

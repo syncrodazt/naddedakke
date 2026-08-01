@@ -20,6 +20,7 @@ import { translateNotebook } from '../services/translate';
 import { useTranslateStore } from '../store/translateStore';
 import { usePanelStore } from '../store/panelStore';
 import { useLibraryStore } from '../library/libraryStore';
+import { useShareStore } from '../share/shareStore';
 import type { LayoutDirection } from '../layout/layout';
 import styles from './Toolbar.module.css';
 
@@ -40,6 +41,7 @@ export function Toolbar() {
   const revealCount = useRevealStore((s) => s.count);
   const revealBaseSeq = useRevealStore((s) => s.baseSeq);
   const contentLang = useGraphStore((s) => s.session?.contentLang);
+  const guest = useShareStore((s) => s.guest);
   const translating = useTranslateStore((s) => s.active);
   const translateDone = useTranslateStore((s) => s.done);
   const translateTotal = useTranslateStore((s) => s.total);
@@ -202,14 +204,16 @@ export function Toolbar() {
 
   return (
     <div className={styles.toolbar}>
-      <button
-        type="button"
-        className={styles.button}
-        title={strings.libraryBack}
-        onClick={() => useLibraryStore.getState().show('library')}
-      >
-        ←
-      </button>
+      {!guest && (
+        <button
+          type="button"
+          className={styles.button}
+          title={strings.libraryBack}
+          onClick={() => useLibraryStore.getState().show('library')}
+        >
+          ←
+        </button>
+      )}
       <button
         type="button"
         className={styles.project}
@@ -348,6 +352,15 @@ export function Toolbar() {
         trigger="⋯"
         align="right"
         items={[
+          ...(session && !guest
+            ? [
+                {
+                  key: 'share',
+                  label: strings.shareMenu,
+                  onSelect: () => void useShareStore.getState().openFor(session.id),
+                },
+              ]
+            : []),
           ...(session && !revealActive
             ? [{ key: 'relearn', label: strings.relearn, onSelect: () => void handleRelearn() }]
             : []),

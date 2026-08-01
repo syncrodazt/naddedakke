@@ -5,6 +5,7 @@ import { examples } from '../fixture/examples';
 import { useGraphStore } from '../store/graphStore';
 import { useAuthStore } from '../store/authStore';
 import { useLibraryStore } from './libraryStore';
+import { useShareStore } from '../share/shareStore';
 import { useStrings, useLangStore } from '../i18n';
 import { alertDialog, confirmDialog, promptDialog } from '../store/uiStore';
 import { startLesson } from '../services/lesson';
@@ -44,6 +45,9 @@ export function Library() {
   const syncNonce = useAuthStore((s) => s.syncNonce);
   const sessionsRevision = useGraphStore((s) => s.sessionsRevision);
   const selected = useLibraryStore((s) => s.selected);
+  // A share link that could not be opened lands the visitor here instead; say
+  // why, or it looks as though the link simply did nothing.
+  const guestError = useShareStore((s) => s.guestError);
   const show = useLibraryStore((s) => s.show);
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -126,7 +130,11 @@ export function Library() {
   // fight the click that opens it.
   function onPointerDown(e: React.PointerEvent) {
     if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest('[data-card]')) return;
+    // Anything you can press is not background. Without this, pressing a button
+    // in the selection bar counted as "clicked empty space", cleared the
+    // selection, and unmounted the bar before the click could ever land on it —
+    // so Share, Export and Delete all did nothing.
+    if ((e.target as HTMLElement).closest('[data-card], button, input, [role="toolbar"]')) return;
     const origin = { x: e.clientX, y: e.clientY };
     const additive = e.ctrlKey || e.metaKey || e.shiftKey;
     const before = new Set(useLibraryStore.getState().selected);
@@ -252,6 +260,12 @@ export function Library() {
         </button>
       </header>
 
+      {guestError !== null && (
+        <p className={styles.warn} role="alert">
+          {strings.guestUnavailable}
+        </p>
+      )}
+
       {sessions.length === 0 && unopened.length === 0 && (
         <p className={styles.empty}>{strings.libraryEmpty}</p>
       )}
@@ -349,6 +363,22 @@ export function Library() {
       {selected.size > 0 && (
         <div className={styles.actionBar} role="toolbar">
           <span className={styles.count}>{strings.librarySelected(selected.size)}</span>
+          <button
+            type="button"
+            onClick={() => {
+              const ids = [...selected];
+              // Sharing is per notebook: one link, one notebook, one set of
+              // people. A bulk share would have to invent what that means.
+              if (ids.length !== 1) {
+                void alertDialog(strings.shareOne);
+                return;
+              }
+              void useShareStore.getState().openFor(ids[0]!);
+            }}
+            disabled={busy}
+          >
+            {strings.shareMenu}
+          </button>
           <button type="button" onClick={() => void handleExport()} disabled={busy}>
             {strings.exportSession}
           </button>

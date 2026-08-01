@@ -10,6 +10,10 @@ import { MetricsBridge } from './canvas/MetricsBridge';
 import { CommandPalette } from './canvas/CommandPalette';
 import { Library } from './library/Library';
 import { useLibraryStore } from './library/libraryStore';
+import { ShareDialog } from './share/ShareDialog';
+import { GuestBanner } from './share/GuestBanner';
+import { enterGuestFromUrl } from './share/guest';
+import { useShareStore } from './share/shareStore';
 import { SettingsDialog } from './canvas/SettingsDialog';
 import { usePanelStore } from './store/panelStore';
 import { useSelectionStore } from './canvas/selectionStore';
@@ -36,6 +40,7 @@ function App() {
   const revealCount = useRevealStore((s) => s.count);
   const selectedIds = useSelectionStore((s) => s.selected);
   const view = useLibraryStore((s) => s.view);
+  const guest = useShareStore((s) => s.guest);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +52,15 @@ function App() {
       // Nothing is seeded for a first-time visitor: the library already lists
       // the example notebooks, so an empty one is an invitation rather than a
       // dead end, and no notebook appears that the learner did not choose.
+      // A share link takes over completely: the visitor asked for one specific
+      // notebook, and their own library is not what they came for.
+      if (await enterGuestFromUrl(window.location.href)) {
+        if (!cancelled) {
+          useLibraryStore.getState().show('canvas');
+          setReady(true);
+        }
+        return;
+      }
       const rows = await db.sessions.toArray();
       if (cancelled) return;
       const latest = rows.sort((a, b) => lastTouched(b) - lastTouched(a))[0];
@@ -68,6 +82,8 @@ function App() {
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.key === 'k' || e.key === 'K') {
         e.preventDefault();
+        // A guest has exactly one notebook; there is nothing to switch to.
+        if (useShareStore.getState().guest) return;
         usePanelStore.getState().toggle('palette');
       } else if (e.key === ',') {
         e.preventDefault();
@@ -132,6 +148,7 @@ function App() {
       <>
         <Library />
         <SettingsDialog />
+        <ShareDialog />
         <DialogHost />
       </>
     );
@@ -140,13 +157,19 @@ function App() {
   return (
     <ReactFlowProvider>
       <MetricsBridge />
+      <GuestBanner />
       <Toolbar />
-      <Canvas nodes={flowNodes} edges={flowEdges} readOnly={replayActive} />
+      <Canvas
+        nodes={flowNodes}
+        edges={flowEdges}
+        readOnly={replayActive || guest?.canEdit === false}
+      />
       <FallbackBanner />
       <SyncIndicator />
       {replayActive && <ReplayBar />}
       <CommandPalette />
       <SettingsDialog />
+      <ShareDialog />
       <DialogHost />
       <GoalReview />
     </ReactFlowProvider>

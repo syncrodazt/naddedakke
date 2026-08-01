@@ -1,0 +1,142 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(18 32 46 / 32%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  z-index: 60;
+}
+
+.card {
+  width: min(560px, calc(100vw - 32px));
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--grid);
+  border-radius: 14px;
+  padding: 18px 20px 20px;
+  box-shadow: 0 18px 48px rgb(18 32 46 / 22%);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.close {
+  border: 1px solid var(--grid);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.state {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.warn {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--branch);
+}
+
+.row {
+  border-top: 1px solid var(--grid);
+  padding: 12px 0;
+}
+
+.rowHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.rowLabel {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rowHint {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.linkLine {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.url {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font: inherit;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.linkLine button,
+.create {
+  border: 1px solid var(--grid);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.linkLine button:hover:enabled,
+.create:hover:enabled {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.danger:hover:enabled {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.linkLine button:disabled,
+.create:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.publish {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  border-top: 1px solid var(--grid);
+  padding-top: 12px;
+  cursor: pointer;
+}
+
+.publishLabel {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+}

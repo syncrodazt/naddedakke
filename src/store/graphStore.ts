@@ -91,6 +91,7 @@ type GraphActions = {
   applyTranslations: (lang: string, items: NodeTranslation[]) => void;
   setPendingQuestion: (questionId: string | null) => void;
   applyImport: (payload: SessionExport) => Promise<void>;
+  loadGuestSession: (payload: SessionExport) => void;
 };
 
 type GraphStore = GraphState & GraphActions;
@@ -743,6 +744,23 @@ export const useGraphStore = create<GraphState & GraphActions>()(
 
         setPendingQuestion(questionId) {
           set({ pendingQuestionId: questionId });
+        },
+
+        // Someone else's notebook, opened from a share link. Same shape as
+        // applyImport, but it touches no storage: the graph is not the guest's
+        // to keep, so it lives only as long as the tab does.
+        loadGuestSession(payload) {
+          set({
+            session: payload.session,
+            nodes: Object.fromEntries(payload.nodes.map((n) => [n.id, n])),
+            edges: Object.fromEntries(payload.edges.map((e) => [e.id, e])),
+            streamingNodeId: null,
+            pendingQuestionId: null,
+            computeIssues: {},
+            lessonComplete: false,
+          });
+          runRecompute();
+          clearHistory();
         },
 
         async applyImport(payload) {
