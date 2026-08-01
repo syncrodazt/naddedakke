@@ -7,6 +7,22 @@
   padding: 32px max(24px, calc(50vw - 460px)) 90px;
 }
 
+/* Tree mode: the window IS the view. No page scroll, no outer padding below
+   the header — the canvas takes whatever is left. */
+.screenTree {
+  composes: screen;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.screenTree .header {
+  margin-bottom: 14px;
+}
+
 .header {
   display: flex;
   align-items: flex-start;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -6,6 +6,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   type Edge,
 } from '@xyflow/react';
 import { useStrings } from '../i18n';
@@ -20,6 +21,8 @@ const nodeTypes = { concept: ConceptNode };
 type Props = {
   map: ConceptMap;
   ranked: RankedConcept[];
+  /** Shown as a caption over the canvas rather than above it, to keep the room. */
+  hint: string;
   onOpen: (item: RankedConcept) => void;
 };
 
@@ -31,7 +34,7 @@ type Props = {
  * Selecting a concept fades everything outside its lineage, because the
  * question you are asking of a tree is always "what does this one sit between".
  */
-export function ConceptTree({ map, ranked, onOpen }: Props) {
+export function ConceptTree({ map, ranked, hint, onOpen }: Props) {
   const strings = useStrings();
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -115,8 +118,10 @@ export function ConceptTree({ map, ranked, onOpen }: Props) {
             <Background variant={BackgroundVariant.Lines} color="var(--grid)" gap={32} />
             <MiniMap pannable zoomable nodeColor="var(--grid)" maskColor="rgb(18 32 46 / 0.08)" />
             <Controls showInteractive={false} />
+            <TreeCamera lit={lit} />
           </ReactFlow>
         </ReactFlowProvider>
+        {selected === null && <p className={styles.hint}>{hint}</p>}
       </div>
 
       {detailConcept && (
@@ -208,4 +213,42 @@ function Related({
       )}
     </div>
   );
+}
+
+/**
+ * Frames the selected concept's lineage.
+ *
+ * Two reasons, and the second is the one that matters: selecting is supposed to
+ * mean "show me just this line of the tree", and the detail panel opening takes
+ * a third of the width away — without a refit the very nodes you just asked
+ * about slide underneath it.
+ *
+ * Renders null and lives inside the provider, so `useReactFlow` re-rendering on
+ * viewport changes cannot drag the whole tree with it.
+ */
+function TreeCamera({ lit }: { lit: Set<string> | null }) {
+  const flow = useReactFlow();
+  // A joined key rather than the Set: a new Set object every render would refit
+  // the camera on every render, fighting the user's own panning.
+  const key = lit === null ? '' : [...lit].sort().join(',');
+  useEffect(() => {
+    // Deferred one beat: selecting mounts the detail panel, which takes a third
+    // of the width away. React Flow re-measures on a ResizeObserver, so fitting
+    // in this same commit would fit to the width the canvas had a moment ago
+    // and leave the nodes it just framed sitting underneath the panel.
+    const timer = window.setTimeout(() => {
+      if (key === '') {
+        void flow.fitView({ duration: 400 });
+        return;
+      }
+      void flow.fitView({
+        nodes: key.split(',').map((id) => ({ id })),
+        duration: 400,
+        maxZoom: 1.2,
+        padding: 0.2,
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [key, flow]);
+  return null;
 }

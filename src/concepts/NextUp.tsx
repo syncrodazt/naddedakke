@@ -56,12 +56,17 @@ export function NextUp() {
     await startLesson(item.concept.name);
   }
 
+  const tree = map !== null && mode === 'tree';
+
   return (
-    <div className={styles.screen}>
+    // The tree fills the window rather than sitting in a box on a scrolling
+    // page: a graph you have to scroll the page to see is a graph you cannot
+    // read, and the surrounding prose is guidance for the list anyway.
+    <div className={tree ? styles.screenTree : styles.screen}>
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>{strings.nextUpTitle}</h1>
-          <p className={styles.sub}>{strings.nextUpIntro}</p>
+          {!tree && <p className={styles.sub}>{strings.nextUpIntro}</p>}
         </div>
         <div className={styles.headActions}>
           {map && (
@@ -108,17 +113,19 @@ export function NextUp() {
 
       {!loading && !map && !busy && <p className={styles.empty}>{strings.nextUpEmpty}</p>}
 
-      {map && stale.length > 0 && (
+      {!tree && map && stale.length > 0 && (
         <p className={styles.note}>
           {strings.nextUpStale(stale.length)} — {stale.slice(0, 3).join(', ')}
         </p>
       )}
 
-      {map && mode === 'tree' && (
-        <>
-          <p className={styles.note}>{strings.conceptTreeHint}</p>
-          <ConceptTree map={map} ranked={ranked} onOpen={(item) => void open(item)} />
-        </>
+      {tree && map && (
+        <ConceptTree
+          map={map}
+          ranked={ranked}
+          hint={strings.conceptTreeHint}
+          onOpen={(item) => void open(item)}
+        />
       )}
 
       {mode === 'list' && ready.length > 0 && (

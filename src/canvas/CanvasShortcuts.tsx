@@ -3,7 +3,6 @@ import { useReactFlow } from '@xyflow/react';
 import type { RNode } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { useSelectionStore } from './selectionStore';
-import { useCameraNav } from './useCameraNav';
 import { currentMetrics } from '../layout/metrics';
 import { nearestTo, nextInDirection, type Direction } from './spatialNav';
 import { lastTidyDirection, runTidy } from './tidy';
@@ -18,6 +17,12 @@ import { lastTidyDirection, runTidy } from './tidy';
 // tabs and cannot be intercepted, Ctrl+T/N/W are gone entirely — so these use
 // Shift plus a letter or digit, which no browser claims and which is what
 // canvas tools (Figma, Miro) already use for exactly these two actions.
+
+/** How close a focused node is brought. Capped so short cards stay readable. */
+const FOCUS_ZOOM = 1.6;
+const FOCUS_PADDING = 0.25;
+/** Camera time for one arrow step — short, because arrows get held down. */
+const STEP_MS = 260;
 
 const ARROWS: Record<string, Direction> = {
   ArrowUp: 'up',
@@ -39,7 +44,6 @@ type Props = {
 
 export function CanvasShortcuts({ readOnly = false }: Props) {
   const flow = useReactFlow();
-  const { panToNode } = useCameraNav();
 
   useEffect(() => {
     /**
@@ -56,9 +60,24 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
       return nearestTo(nodes, centre, currentMetrics());
     }
 
-    function focus(nodeId: string) {
+    /**
+     * Land on a node: select it and bring the camera in on it.
+     *
+     * Fitting the node rather than centring at a fixed zoom is the point —
+     * arrowing across a graph you are zoomed out of used to slide the viewport
+     * over unreadable cards. `duration` is short because arrows get held down,
+     * and an animation longer than the gap between presses lags behind the key.
+     */
+    function focus(nodeId: string, duration = STEP_MS) {
       useSelectionStore.setState({ selected: new Set([nodeId]) });
-      panToNode(nodeId);
+      void flow.fitView({
+        nodes: [{ id: nodeId }],
+        duration,
+        // Without a cap, fitting one short card to the window magnifies its
+        // text to absurdity.
+        maxZoom: FOCUS_ZOOM,
+        padding: FOCUS_PADDING,
+      });
     }
 
     function onKey(e: KeyboardEvent) {
@@ -87,10 +106,9 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
         const [only] = [...useSelectionStore.getState().selected];
         const target = only ?? nearestToViewportCentre(nodes);
         if (!target) return;
-        // maxZoom, because fitting one card to the window alone would magnify a
-        // short node until the text was absurd.
-        void flow.fitView({ nodes: [{ id: target }], duration: 500, maxZoom: 1.6, padding: 0.25 });
-        useSelectionStore.setState({ selected: new Set([target]) });
+        // Same move the arrows make, just deliberately slower: this one is a
+        // single considered press rather than one of a run.
+        focus(target, 500);
         return;
       }
 
@@ -117,7 +135,7 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [flow, panToNode, readOnly]);
+  }, [flow, readOnly]);
 
   return null;
 }
