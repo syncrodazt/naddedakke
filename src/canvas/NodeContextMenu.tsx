@@ -5,6 +5,7 @@ import { collectSubtree } from '../store/subtree';
 import { confirmDialog } from '../store/uiStore';
 import { useStrings } from '../i18n';
 import { decomposeNode } from '../services/goal';
+import { findSourcesFor } from '../sources/find';
 import styles from './NodeContextMenu.module.css';
 
 export type MenuState = { x: number; y: number; nodeId: string };
@@ -52,8 +53,9 @@ export function NodeContextMenu({
 
   if (!node) return null;
   // Every node kind can be branched from and marked understood — gyakusan
-  // notebooks use the same system as learn notebooks.
-  const isLearnContent = node.kind !== 'video';
+  // notebooks use the same system as learn notebooks, and a video node carries
+  // a real caption you can question.
+  const isLearnContent = true;
   // Not gated on session.mode: a notebook is one canvas, and asking for the
   // next lesson step beside a set of numbers is a reasonable thing to want.
   const canAdvance = session !== null && !lessonComplete && !streaming;
@@ -66,8 +68,15 @@ export function NodeContextMenu({
   // quantity it is the inputs it is computed from; for prose it is the concept
   // you must already hold to follow it.
   const isQuantity = node.kind === 'goal' || node.kind === 'derived' || node.kind === 'variable';
-  const isProse = node.kind === 'chunk' || node.kind === 'answer' || node.kind === 'question';
+  const isProse =
+    node.kind === 'chunk' ||
+    node.kind === 'answer' ||
+    node.kind === 'question' ||
+    node.kind === 'video';
   const canBackcast = (isQuantity || isProse) && !streaming;
+  // Anything with prose in it has claims in it, and a claim is the thing a
+  // source is for. A bare number does not.
+  const canFindSources = isProse && !streaming;
 
   function handleDelete() {
     const count = collectSubtree(menu.nodeId, edges).size;
@@ -117,6 +126,19 @@ export function NodeContextMenu({
           }}
         >
           {isQuantity ? strings.decomposeNode : strings.prerequisite}
+        </button>
+      )}
+      {canFindSources && (
+        <button
+          type="button"
+          className={styles.item}
+          onClick={() => {
+            const nodeId = menu.nodeId;
+            onClose();
+            void findSourcesFor(nodeId);
+          }}
+        >
+          {node.sources?.length ? strings.findMoreSources : strings.findSources}
         </button>
       )}
       {canRegenerate && (

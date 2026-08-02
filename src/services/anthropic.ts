@@ -3,6 +3,7 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   LessonPlanRequest,
+  SourceRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -13,6 +14,7 @@ import {
   buildLessonChunkPrompt,
   buildLessonPlanPrompt,
   buildResponsePrompt,
+  buildSourcesPrompt,
   buildTranslatePrompt,
   buildConceptMapPrompt,
   type ChatPrompt,
@@ -40,6 +42,8 @@ type ChatOptions = {
    * `budget_tokens` is rejected with a 400.
    */
   effort?: 'low' | 'medium' | 'high';
+  /** Let the model search the web before answering. */
+  search?: boolean;
 };
 
 export class ClaudeService implements TeachService {
@@ -59,6 +63,21 @@ export class ClaudeService implements TeachService {
       throw new Error(`claude proxy failed (${res.status}): ${detail.slice(0, 200)}`);
     }
     yield* streamSseText(res.body, extractClaudeText);
+  }
+
+  async findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }> {
+    let out = '';
+    // Search on, and no schema. Search is the whole point — a source recalled
+    // from memory is exactly the unverifiable claim this is meant to replace —
+    // and structured output is dropped because it is not documented to compose
+    // with a server tool. The reply is parsed leniently instead, which it has
+    // to be anyway for the providers that ignore schemas.
+    const stream = this.streamChat(buildSourcesPrompt(req), req.signal, {
+      search: true,
+      effort: 'low',
+    });
+    for await (const delta of stream) out += delta;
+    return { raw: out, searched: true };
   }
 
   async planLesson(req: LessonPlanRequest): Promise<string> {

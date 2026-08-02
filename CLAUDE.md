@@ -25,9 +25,17 @@ Two modes share one canvas engine:
    return) reactively recomputes every downstream node (e.g., required monthly
    savings) — a dataflow/spreadsheet graph, like Blueprint pins.
 
-Answers can be plain text, or **interactive tutorial nodes** (inline SVG figures,
-canvas playgrounds with sliders). Video nodes come later — design the node type
-enum to allow it, don't build it.
+Answers can be plain text, **interactive tutorial nodes** (inline SVG figures,
+canvas playgrounds with sliders), or **video nodes** (a YouTube embed starting
+at the timestamp that matters).
+
+Any prose node can also carry **sources** — where its claims can be checked.
+This is the answer to "the quality depends entirely on the model": the claim
+stays the model's, but it now points somewhere the learner can go and disagree
+with it. Sources are found on demand by a separate call, never generated with
+the lesson body, and every URL is re-derived through `sources/url.ts` rather
+than echoed. A link the model recalled and a link it found by searching are
+marked differently, because only one of them is evidence.
 
 ## Design lineage (important context)
 
@@ -75,7 +83,7 @@ type NodeKind = 'chunk'      // Claude's lesson step (spine)
               | 'answer'     // Claude's reply to a question
               | 'playground' // interactive figure (self-contained JS component key + params)
               | 'goal' | 'variable' | 'derived'   // gyakusan
-              | 'video';     // reserved, unimplemented
+              | 'video';     // YouTube embed at a timestamp, from a source
 
 type RNode = {
   id: string; sessionId: string; kind: NodeKind;
@@ -189,6 +197,10 @@ auto-layout may move nodes, seq never changes.
   `{schemaVersion: 1, session, nodes, edges}`).
 - Markdown rendering: `react-markdown` + KaTeX for math. Sanitize — node
   content comes from an LLM.
+- Never put a model-written string into an `href` or an iframe `src`. Sources go
+  through `safeUrl` (https only) and videos through `youtubeRef`/`embedUrl`,
+  which rebuild the URL from an id matched against YouTube's grammar. A
+  fabricated link that renders as a real one is worse than no sources at all.
 - Sandboxing: playground components are first-party code only for now. If/when
   LLM-generated interactive HTML is supported, it goes in a sandboxed iframe
   (`sandbox="allow-scripts"`, no same-origin). Never `dangerouslySetInnerHTML`

@@ -5,7 +5,9 @@ import {
   type RNode,
   type Session,
   type SessionExport,
+  type Source,
 } from '../model/types';
+import { kindOf, safeUrl, youtubeRef } from '../sources/url';
 
 export function exportSession(
   session: Session,
@@ -65,6 +67,51 @@ function validateStringMap(v: unknown, where: string): Record<string, string> {
   for (const [k, val] of Object.entries(v)) {
     if (typeof val !== 'string') fail(`${where}.${k}`);
     out[k] = val;
+  }
+  return out;
+}
+
+/**
+ * Sources out of an imported file.
+ *
+ * The URL is re-derived through safeUrl rather than trusted, and an entry that
+ * does not survive that is DROPPED rather than failing the import. An exported
+ * notebook can be edited by hand or shared by someone else, so this is one of
+ * the places a `javascript:` URL would try to get in — and losing one citation
+ * is a much smaller harm than refusing to open a notebook.
+ */
+function validateSources(entries: unknown[], nodeId: string): Source[] {
+  const out: Source[] = [];
+  for (const entry of entries) {
+    if (!isRecord(entry)) fail(`node ${nodeId} source is not an object`);
+    const { id, kind, url, title, note, videoId, at, searched } = entry;
+    if (typeof id !== 'string' || id === '') fail(`node ${nodeId} source.id`);
+    if (typeof url !== 'string') fail(`node ${nodeId} source.url`);
+    if (typeof title !== 'string') fail(`node ${nodeId} source.title`);
+    const safe = safeUrl(url);
+    if (safe === null) continue; // unopenable, so not a citation
+    const source: Source = {
+      id,
+      kind: kindOf(safe, typeof kind === 'string' ? kind : ''),
+      url: safe,
+      title,
+    };
+    if (note !== undefined) {
+      if (typeof note !== 'string') fail(`node ${nodeId} source.note`);
+      source.note = note;
+    }
+    // Rebuilt from the URL, not read from the file: the id is what goes into an
+    // iframe src, and it must match YouTube's grammar or there is no video.
+    const ref = youtubeRef(safe);
+    if (ref) {
+      source.videoId = ref.videoId;
+      if (typeof at === 'number' && Number.isFinite(at) && at > 0) source.at = Math.floor(at);
+      else if (ref.at !== undefined) source.at = ref.at;
+    } else if (videoId !== undefined && typeof videoId !== 'string') {
+      fail(`node ${nodeId} source.videoId`);
+    }
+    if (searched === true) source.searched = true;
+    out.push(source);
   }
   return out;
 }
@@ -151,6 +198,10 @@ function validateNode(v: unknown, sessionId: string): RNode {
       fail(`node ${id} planStep`);
     }
     node.planStep = v.planStep;
+  }
+  if (v.sources !== undefined) {
+    if (!Array.isArray(v.sources)) fail(`node ${id} sources`);
+    node.sources = validateSources(v.sources, id);
   }
   if (v.varName !== undefined) {
     if (typeof v.varName !== 'string') fail(`node ${id} varName`);

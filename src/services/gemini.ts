@@ -3,6 +3,7 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   LessonPlanRequest,
+  SourceRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -13,6 +14,7 @@ import {
   buildLessonChunkPrompt,
   buildLessonPlanPrompt,
   buildResponsePrompt,
+  buildSourcesPrompt,
   buildTranslatePrompt,
   buildConceptMapPrompt,
   type ChatPrompt,
@@ -61,6 +63,20 @@ export class GeminiService implements TeachService {
     }
     if (!res.body) throw new Error('chat proxy returned no body');
     yield* streamSseText(res.body);
+  }
+
+  async findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }> {
+    let out = '';
+    // `searched: false`, and it matters: this proxy has no search tool wired up,
+    // so these links come out of the model's memory. They are still worth
+    // offering — a remembered arXiv id is often right — but the learner is told
+    // which kind of link they are looking at rather than left to assume.
+    const stream = this.streamChat(buildSourcesPrompt(req), req.signal, {
+      json: true,
+      noThinking: true,
+    });
+    for await (const delta of stream) out += delta;
+    return { raw: out, searched: false };
   }
 
   async planLesson(req: LessonPlanRequest): Promise<string> {

@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import { useGraphStore } from '../../store/graphStore';
 import { useReplayStore } from '../../replay/replayStore';
+import { useSourceStore } from '../../sources/sourceStore';
+import { SourceList } from '../../sources/SourceList';
+import { useCameraNav } from '../useCameraNav';
 import { useStrings } from '../../i18n';
 import styles from './NodeShell.module.css';
 
@@ -43,6 +46,15 @@ export function NodeShell({
   // right signal — it is how the canvas says "here" — but the resize handles
   // that normally come with it would be an edit during a read-only playback.
   const replaying = useReplayStore((s) => s.active);
+  // Sources live on the shell rather than in each node component: they are
+  // footnotes to whatever the card says, and every kind of card can have them.
+  const kind = useGraphStore((s) => s.nodes[nodeId]?.kind);
+  const stored = useGraphStore((s) => s.nodes[nodeId]?.sources);
+  // A video node already IS its video: the player is there, with its own link
+  // out. Listing the same source underneath would be the card citing itself.
+  const sources = kind === 'video' ? stored?.filter((s) => s.videoId === undefined) : stored;
+  const finding = useSourceStore((s) => s.findingFor === nodeId);
+  const { zoomToNode } = useCameraNav();
 
   return (
     // The wrapper is unclipped so the hover "+" can poke below; the card clips.
@@ -96,6 +108,18 @@ export function NodeShell({
         </div>
         <div data-node-body className={`${styles.body} nodrag nowheel`}>
           {children}
+          {sources && sources.length > 0 && (
+            <SourceList
+              sources={sources}
+              onWatch={(source) => {
+                // The caption is a real markdown body, so なんで？ works inside
+                // it — a video you cannot question would be a dead end.
+                const caption = `**${source.title}**\n\n${source.note ?? ''}`.trim();
+                zoomToNode(useGraphStore.getState().addVideo(nodeId, source, caption));
+              }}
+            />
+          )}
+          {finding && <p className={styles.finding}>{strings.sourcesSearching}</p>}
         </div>
       </div>
       {onAddIdea && (

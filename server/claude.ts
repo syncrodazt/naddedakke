@@ -31,6 +31,15 @@ export type ClaudePayload = {
    * we expose. `budget_tokens` is rejected outright by these models.
    */
   effort?: 'low' | 'medium' | 'high';
+  /**
+   * Let the model search the web before answering.
+   *
+   * `web_search_20250305` — the basic tool — rather than a newer version on
+   * purpose: the later ones run search inside code execution by default, which
+   * Haiku 4.5 does not support, and this app offers Haiku. One tool definition
+   * that works on every model we list beats three that need per-model handling.
+   */
+  search?: boolean;
 };
 
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5';
@@ -53,6 +62,9 @@ export function isClaudeModel(id: string | undefined): boolean {
 // a ceiling, not an allocation — nothing is spent by raising it.
 const MAX_TOKENS = 32000;
 
+const WEB_SEARCH_TOOL = 'web_search_20250305';
+const MAX_SEARCHES = 5;
+
 export function isClaudePayload(v: unknown): v is ClaudePayload {
   if (typeof v !== 'object' || v === null) return false;
   const o = v as Record<string, unknown>;
@@ -61,7 +73,11 @@ export function isClaudePayload(v: unknown): v is ClaudePayload {
     typeof o.user === 'string' &&
     (o.model === undefined || typeof o.model === 'string') &&
     (o.schema === undefined || (typeof o.schema === 'object' && o.schema !== null)) &&
-    (o.effort === undefined || o.effort === 'low' || o.effort === 'medium' || o.effort === 'high')
+    (o.effort === undefined ||
+      o.effort === 'low' ||
+      o.effort === 'medium' ||
+      o.effort === 'high') &&
+    (o.search === undefined || typeof o.search === 'boolean')
   );
 }
 
@@ -79,7 +95,7 @@ export function buildRequestBody(
   if (withSchema && payload.schema) {
     outputConfig.format = { type: 'json_schema', schema: payload.schema };
   }
-  return {
+  const body: Record<string, unknown> = {
     model,
     max_tokens: MAX_TOKENS,
     system: payload.system,
@@ -87,6 +103,12 @@ export function buildRequestBody(
     output_config: outputConfig,
     stream: true,
   };
+  // Capped: this app searches to find a handful of sources for one passage, and
+  // an uncapped tool on a vague prompt can run ten searches for the same thing.
+  if (payload.search) {
+    body.tools = [{ type: WEB_SEARCH_TOOL, name: 'web_search', max_uses: MAX_SEARCHES }];
+  }
+  return body;
   // No temperature / top_p / top_k / thinking.budget_tokens: these models
   // reject all four with a 400.
 }

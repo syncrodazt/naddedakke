@@ -29,6 +29,14 @@ export type LessonChunkRequest = {
   signal?: AbortSignal;
 };
 
+export type SourceRequest = {
+  topic: string; // the notebook's subject, so a search has something to go on
+  passageMd: string; // the node the sources are for
+  langLabel: string; // the learner's language, for the notes
+  wantVideo: boolean; // ask for a video with a timestamp, not only reading
+  signal?: AbortSignal;
+};
+
 export type GoalPlanRequest = {
   goal: string; // the learner's goal, in their own words
   // Set when decomposing ONE node inside a graph that already exists: these
@@ -83,4 +91,9 @@ export interface TeachService {
   // A proposed map of what to learn next. One document, reviewed before it is
   // shown as a recommendation — same as a back-cast plan.
   suggestConcepts(req: ConceptMapRequest): Promise<string>;
+  // Places the claims in a node can be checked, or watched. One document,
+  // reviewed before it is attached. `searched` says whether the provider
+  // actually looked things up rather than recalling links, which changes what
+  // the result is worth and is shown to the learner.
+  findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }>;
 }

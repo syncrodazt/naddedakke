@@ -6,9 +6,9 @@ import { PlaygroundNode } from './PlaygroundNode';
 import { VariableNode } from './VariableNode';
 import { DerivedNode } from './DerivedNode';
 import { GoalNode } from './GoalNode';
+import { VideoNode } from './VideoNode';
 
-// One component per NodeKind; 'video' stays unimplemented by design and
-// falls back to React Flow's default node.
+// One component per NodeKind.
 export const nodeTypes: NodeTypes = {
   chunk: ChunkNode,
   question: QuestionNode,
@@ -17,4 +17,5 @@ export const nodeTypes: NodeTypes = {
   variable: VariableNode,
   derived: DerivedNode,
   goal: GoalNode,
+  video: VideoNode,
 };

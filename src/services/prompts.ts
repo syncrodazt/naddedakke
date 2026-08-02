@@ -3,6 +3,7 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   LessonPlanRequest,
+  SourceRequest,
   TranslateRequest,
   ConceptMapRequest,
 } from './claude/types';
@@ -218,6 +219,50 @@ function buildPlannedChunkPrompt(
       `## Chunks so far\n\n${previous}\n\n` +
       `Write step ${index + 1}: ${step.title}` +
       (step.gist === '' ? '' : `\n\nIt must establish: ${step.gist}`),
+  };
+}
+
+/**
+ * Where a passage can be checked, and where it can be watched.
+ *
+ * The rules are almost all about honesty, because this is the one call whose
+ * whole value is that its output is not invented. A fabricated URL that renders
+ * as a real one is worse than no sources at all — it converts "the model said
+ * so" into the appearance of evidence, which is the exact thing the learner
+ * came here to get away from.
+ */
+export function buildSourcesPrompt(req: SourceRequest): ChatPrompt {
+  return {
+    system:
+      'You find sources for a passage from a lesson. Reply with ONE JSON object ' +
+      'and nothing else — no prose, no code fence:\n' +
+      '{"sources":[{"url":string,"title":string,"kind":string,"note":string,' +
+      '"at":string}]}\n' +
+      '- 3 to 5 sources, best first. Prefer primary material: the original ' +
+      'paper, the specification, the reference implementation, the ' +
+      "author's own explanation.\n" +
+      '- "url": the real, complete https URL. If you are not certain a URL ' +
+      'exists, LEAVE THE SOURCE OUT. Never guess a URL from a pattern, never ' +
+      'reconstruct one from memory of a title, and never invent a plausible ' +
+      'path on a real domain. Too few sources is a fine answer; a wrong link ' +
+      'is not.\n' +
+      '- "kind": one of "paper", "repo", "video", "web".\n' +
+      '- "note": ONE sentence on what this source settles that the passage ' +
+      `only asserts. Write it in ${req.langLabel}.\n` +
+      '- "at": for a video only — where the relevant part starts, as "M:SS" or ' +
+      '"H:MM:SS". Give it only if you know that specific part of that specific ' +
+      "video; a made-up timestamp wastes more of the learner's time than no " +
+      'timestamp does. Omit "at" otherwise.' +
+      (req.wantVideo
+        ? '\n- Include at least one "video" source if a genuinely good one ' +
+          'exists — something that shows the thing rather than describing it. ' +
+          'If there is not one, say so by returning none rather than filling ' +
+          'the slot.'
+        : ''),
+    user:
+      `## Topic\n\n${req.topic}\n\n` +
+      `## The passage\n\n${req.passageMd}\n\n` +
+      'Find sources for this passage.',
   };
 }
 

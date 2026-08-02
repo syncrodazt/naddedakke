@@ -1,3 +1,5 @@
+import type { Source } from '../sources/types';
+
 /**
  * One step of the plan a lesson is taught against.
  *
@@ -34,6 +36,8 @@ export type Session = {
   outline?: LessonStep[];
 };
 
+export type { Source, SourceKind } from '../sources/types';
+
 export type NodeKind =
   | 'chunk' // Claude's lesson step (spine)
   | 'question' // user's なんで？ (branch) — stores the highlighted text
@@ -61,6 +65,12 @@ export type RNode = {
    * progress figure a lie.
    */
   planStep?: number;
+  /**
+   * Where the claims in this node can be checked, or watched. Additive: found
+   * on demand, never generated with the body, so a node without them is a node
+   * nobody has asked about yet rather than one with nothing behind it.
+   */
+  sources?: Source[];
   content: {
     md: string; // markdown body, as originally written
     highlights: Highlight[];

@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { temporal } from 'zundo';
-import type { Highlight, LessonStep, REdge, RNode, Session, SessionExport } from '../model/types';
+import type {
+  Highlight,
+  LessonStep,
+  REdge,
+  RNode,
+  Session,
+  SessionExport,
+  Source,
+} from '../model/types';
 import { newId } from '../model/ids';
 import { recomputeGraph } from '../gyakusan/engine';
 import { reanchorHighlights } from '../markdown/reanchor';
@@ -64,6 +72,8 @@ type GraphActions = {
   loadSession: (id: string) => Promise<boolean>;
   addChunk: (md: string, planStep?: number) => string;
   setOutline: (steps: LessonStep[]) => void;
+  setSources: (nodeId: string, sources: Source[]) => void;
+  addVideo: (parentNodeId: string, source: Source, captionMd: string) => string;
   addWhyBranch: (
     parentId: string,
     sel: SelectionRange,
@@ -690,6 +700,54 @@ export const useGraphStore = create<GraphState & GraphActions>()(
 
         // Which language to READ this notebook in. A view setting, not an edit:
         // nothing about the graph changes, so it is deliberately outside undo.
+        setSources(nodeId, sources) {
+          const node = get().nodes[nodeId];
+          if (!node) return;
+          commit({ nodes: [{ ...node, sources }] });
+        },
+
+        /**
+         * Put a video on the canvas, hanging off the node it came from.
+         *
+         * A `reply` edge, not a `why`: nothing was asked. The graph is
+         * answering the passage with something you can watch, which is the same
+         * relationship an answer has to its question, and it hangs below the
+         * parent exactly as one does.
+         *
+         * The caption is markdown like any other node body, so なんで？ works
+         * inside it — a video you cannot question would be a dead end in a
+         * canvas whose whole point is that nothing is.
+         */
+        addVideo(parentNodeId, source, captionMd) {
+          const { session, nodes } = get();
+          if (!session) throw new Error('no active session');
+          const parent = nodes[parentNodeId];
+          if (!parent) throw new Error(`unknown node ${parentNodeId}`);
+
+          const node: RNode = {
+            id: newId(),
+            sessionId: session.id,
+            kind: 'video',
+            seq: nextSeq(),
+            position: freePosition(answerPosition(parent), 'video'),
+            content: freshContent(captionMd),
+            sources: [source],
+          };
+          commit({
+            nodes: [node],
+            edges: [
+              {
+                id: newId(),
+                sessionId: session.id,
+                kind: 'reply',
+                source: parent.id,
+                target: node.id,
+              },
+            ],
+          });
+          return node.id;
+        },
+
         setOutline(steps) {
           const session = get().session;
           if (!session) return;

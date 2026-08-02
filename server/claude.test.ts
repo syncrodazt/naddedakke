@@ -21,6 +21,26 @@ describe('claude proxy payload guards', () => {
     expect(isClaudePayload(null)).toBe(false);
   });
 
+  it('accepts the search flag, and only as a boolean', () => {
+    expect(isClaudePayload({ ...base, search: true })).toBe(true);
+    expect(isClaudePayload({ ...base, search: 'yes' })).toBe(false);
+  });
+
+  it('asks for the web search tool only when the caller wants it', () => {
+    const plain = buildRequestBody(base, 'claude-opus-5', false);
+    expect(plain.tools).toBeUndefined();
+
+    const searching = buildRequestBody({ ...base, search: true }, 'claude-opus-5', false);
+    const tools = searching.tools as { type: string; name: string; max_uses: number }[];
+    expect(tools).toHaveLength(1);
+    // The basic tool, not a dynamic-filtering one: the later versions run
+    // search inside code execution by default, which Haiku 4.5 cannot do.
+    expect(tools[0]!.type).toBe('web_search_20250305');
+    expect(tools[0]!.name).toBe('web_search');
+    // Capped, or a vague prompt runs ten searches for one passage.
+    expect(tools[0]!.max_uses).toBeGreaterThan(0);
+  });
+
   it('rejects fields of the wrong type or an unknown effort level', () => {
     expect(isClaudePayload({ ...base, model: 5 })).toBe(false);
     expect(isClaudePayload({ ...base, schema: 'object' })).toBe(false);
@@ -164,6 +184,12 @@ describe('api/claude.ts stays in sync with the proxy core', () => {
 
   it('offers the same model ids', () => {
     for (const m of CLAUDE_MODELS) expect(edge, `edge missing ${m.id}`).toContain(m.id);
+  });
+
+  it('both offer the same web search tool', () => {
+    const tool = (src: string) => /WEB_SEARCH_TOOL = '([^']+)'/.exec(src)?.[1];
+    expect(tool(edge)).toBe(tool(core));
+    expect(tool(core)).toBe('web_search_20250305');
   });
 
   it('both retry without the schema on a 400', () => {

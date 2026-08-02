@@ -72,6 +72,20 @@ const MOCK_PLAN_STEPS = MOCK_LESSON_CHUNKS;
 
 /** Canned answers streamed in small tokens so the UI exercises real streaming. */
 export class MockClaudeService implements TeachService {
+  /**
+   * Deliberately empty.
+   *
+   * Every other mock here stands in for real output so the app can be used
+   * offline. This one must not: the entire point of a source is that it is a
+   * real place you can go and check, and canned links dressed up as findings
+   * would be the precise lie the feature exists to prevent. With no key there
+   * is nothing to search, and saying so is the honest answer.
+   */
+  async findSources(): Promise<{ raw: string; searched: boolean }> {
+    await delay(200);
+    return { raw: JSON.stringify({ sources: [] }), searched: false };
+  }
+
   // The same shape a real provider is asked for, so the plan panel and the
   // step-by-step teaching flow work with no API key configured.
   async planLesson(req: LessonPlanRequest): Promise<string> {

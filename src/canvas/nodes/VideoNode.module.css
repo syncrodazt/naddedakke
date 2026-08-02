@@ -1,0 +1,45 @@
+/* 16:9, held by the padding trick so the card can be resized freely and the
+   player keeps its shape rather than letterboxing itself. */
+.frame {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+.player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+
+.link {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--grid);
+}
+
+.link:hover {
+  color: var(--alias);
+  border-bottom-color: var(--alias);
+}
+
+.at {
+  font-variant-numeric: tabular-nums;
+  color: var(--alias);
+  border: 1px solid var(--alias);
+  border-radius: 4px;
+  padding: 0 3px;
+}
