@@ -2,6 +2,7 @@ import type {
   AnswerRequest,
   GoalPlanRequest,
   LessonChunkRequest,
+  LessonPlanRequest,
   TranslateRequest,
   ConceptMapRequest,
 } from './claude/types';
@@ -118,8 +119,44 @@ export function buildPrerequisitePrompt(req: LessonChunkRequest): ChatPrompt {
   };
 }
 
+/**
+ * The whole plan, before any of the lesson is written.
+ *
+ * Asked for separately rather than inferred from the chunks as they arrive,
+ * because the point is to have it BEFORE the first one: the learner decides
+ * whether this is the route they want, and how they want to walk it, while
+ * there is still nothing to undo.
+ *
+ * Titles and gists only — deliberately not the teaching. A gist says what the
+ * step establishes, which is what makes the list readable as an argument
+ * instead of a table of contents.
+ */
+export function buildLessonPlanPrompt(req: LessonPlanRequest): ChatPrompt {
+  return {
+    system:
+      `${TUTOR_PERSONA}\n` +
+      'Before teaching anything, you plan the lesson. Reply with ONE JSON object ' +
+      'and nothing else — no prose, no code fence:\n' +
+      '{"steps":[{"title":string,"gist":string}]}\n' +
+      '- 6 to 12 steps, in the order they must be understood: each one may only ' +
+      'depend on the steps before it. This is a first-principles route, not a ' +
+      'list of subtopics.\n' +
+      '- "title": what that step establishes, at most 8 words.\n' +
+      '- "gist": ONE sentence saying what the learner will be able to do or see ' +
+      'after it, and why it has to come before the rest.\n' +
+      '- Do NOT teach here. No explanations, no examples, no formulas.\n' +
+      `- Write every title and gist in ${req.langLabel}.`,
+    user: `## Topic\n\n${req.topic}\n\nPlan the lesson.`,
+  };
+}
+
 export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
   if (req.prerequisiteFor !== undefined) return buildPrerequisitePrompt(req);
+  const plan = req.plan;
+  if (plan) {
+    const step = plan.steps[plan.stepIndex];
+    if (step) return buildPlannedChunkPrompt(req, plan, plan.stepIndex, step);
+  }
   const previous =
     req.previousChunksMd.length > 0
       ? req.previousChunksMd.map((md, i) => `### Chunk ${i + 1}\n${md}`).join('\n\n')
@@ -141,6 +178,46 @@ export function buildLessonChunkPrompt(req: LessonChunkRequest): ChatPrompt {
       `## Topic\n\n${req.topic}\n\n` +
       `## Chunks so far\n\n${previous}\n\n` +
       `Write chunk ${req.chunkIndex + 1}.`,
+  };
+}
+
+/**
+ * One chunk of a lesson that already has a plan.
+ *
+ * The plan was shown to the learner before a word of the lesson existed, so it
+ * is a promise: this writes the step they were shown, in the place they were
+ * shown it. The rest of the plan goes in as context — a step written blind to
+ * what follows it repeats the later ones or steals their punchline.
+ */
+function buildPlannedChunkPrompt(
+  req: LessonChunkRequest,
+  plan: { steps: { title: string; gist: string }[] },
+  index: number,
+  step: { title: string; gist: string },
+): ChatPrompt {
+  const outline = plan.steps
+    .map((s, i) => `${i + 1}. ${s.title}${s.gist === '' ? '' : ` — ${s.gist}`}`)
+    .join('\n');
+  const previous =
+    req.previousChunksMd.length > 0
+      ? req.previousChunksMd.map((md, i) => `### Chunk ${i + 1}\n${md}`).join('\n\n')
+      : '(none yet)';
+  return {
+    system:
+      `${TUTOR_PERSONA}\n` +
+      'You are teaching a lesson that has already been planned and shown to the ' +
+      'learner. Write ONLY the step you are asked for — not the whole lesson, ' +
+      'and not the steps after it.\n' +
+      'Cover exactly that step: do not merge it with the next one, do not skip ' +
+      'ahead, and do not restate a step already written.\n' +
+      `${CHUNK_JSON_RULES}\n` +
+      '- "done": true only when the step you are writing is the last in the plan.',
+    user:
+      `## Topic\n\n${req.topic}\n\n` +
+      `## The plan\n\n${outline}\n\n` +
+      `## Chunks so far\n\n${previous}\n\n` +
+      `Write step ${index + 1}: ${step.title}` +
+      (step.gist === '' ? '' : `\n\nIt must establish: ${step.gist}`),
   };
 }
 

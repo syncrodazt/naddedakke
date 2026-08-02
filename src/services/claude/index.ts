@@ -2,6 +2,7 @@ import type {
   AnswerRequest,
   GoalPlanRequest,
   LessonChunkRequest,
+  LessonPlanRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -28,6 +29,10 @@ class RoutingService implements TeachService {
 
   private pick(): TeachService {
     return currentModel().startsWith('claude-') ? this.claude : this.gemini;
+  }
+
+  planLesson(req: LessonPlanRequest): Promise<string> {
+    return this.pick().planLesson(req);
   }
 
   streamAnswer(req: AnswerRequest): AsyncGenerator<string> {

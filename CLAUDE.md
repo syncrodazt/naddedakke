@@ -126,9 +126,17 @@ auto-layout may move nodes, seq never changes.
   `question`. No depth limit.
 
 ### 3. Claude integration (MVP)
-- Teaching flow: user gives a topic → Claude returns the lesson **one chunk at a
-  time** (Socratic style — small chunk, then wait; do not dump 10 chunks at
-  once). Each accepted chunk becomes a spine node with a `next` edge.
+- Teaching flow: user gives a topic → Claude first returns the **plan** (6-12
+  steps, each a title plus a one-line gist of what it establishes), which is
+  stored on the session and shown in full straight away. Then the lesson is
+  written **one chunk at a time** against that plan (Socratic style — small
+  chunk, then wait). Each chunk becomes a spine node with a `next` edge and
+  records which plan step it teaches.
+- The plan is shown before any teaching because a lesson delivered card by card
+  is unreadable as an argument: you cannot tell whether you are three steps
+  from the point or thirty. Showing titles and gists is not dumping the lesson.
+- How to walk the plan is the learner's choice: step by step (the default and
+  the pedagogy) or all at once, for when they would rather read it whole.
 - Use the Messages API with streaming; render tokens into the node live.
 - Context sent per question = the ancestor chain (root chunk → … → highlighted
   parent → the quoted highlight), NOT the whole graph. Keeps prompts small and
@@ -218,7 +226,9 @@ npm run lint       # eslint + prettier check
 ## Don'ts
 
 - Don't build an Obsidian-style force-directed association graph. Ever.
-- Don't dump the whole lesson at once; chunk-by-chunk is the pedagogy.
+- Don't write the whole lesson before the learner asks for it; chunk-by-chunk
+  is the pedagogy and the default. Showing the *plan* up front is not the same
+  thing, and "write them all" is an explicit choice the learner makes.
 - Don't renumber `seq`, don't derive order from positions.
 - Don't put the Anthropic API key in client-shipped code.
 - Don't add a backend/database/auth before the local-first MVP works.

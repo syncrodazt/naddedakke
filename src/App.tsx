@@ -22,6 +22,8 @@ import { SettingsDialog } from './canvas/SettingsDialog';
 import { usePanelStore } from './store/panelStore';
 import { useSelectionStore } from './canvas/selectionStore';
 import { ReplayPanel } from './replay/ReplayPanel';
+import { PlanPanel } from './lesson/PlanPanel';
+import { usePlanStore } from './lesson/planStore';
 import { useReplayStore } from './replay/replayStore';
 import { useRevealStore } from './replay/revealStore';
 import { useVisibilityStore } from './replay/visibilityStore';
@@ -46,6 +48,7 @@ function App() {
   const view = useLibraryStore((s) => s.view);
   const guest = useShareStore((s) => s.guest);
   const sidebarOpen = useLibraryStore((s) => s.sidebarOpen);
+  const planOpen = usePlanStore((s) => s.open);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,7 +206,9 @@ function App() {
         {/* A real flex child, not an overlay: the canvas has to keep the space
             it is actually given, or replay would centre nodes underneath the
             track list. */}
-        {replayActive && <ReplayPanel />}
+        {/* One right-hand slot, and replay wins it: while replaying, the plan
+            would describe a lesson that is being re-shown a node at a time. */}
+        {replayActive ? <ReplayPanel /> : planOpen && <PlanPanel />}
       </div>
       <FallbackBanner />
       <SyncIndicator />

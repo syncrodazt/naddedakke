@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useGraphStore } from '../store/graphStore';
 import { useReplayStore } from '../replay/replayStore';
+import { usePlanStore } from '../lesson/planStore';
+import { taughtSteps } from '../services/plan';
 import { useRevealStore } from '../replay/revealStore';
 import { sortedBySeq } from '../replay/visibility';
 import { exportSession, validateImport } from '../db/exportImport';
@@ -31,6 +33,7 @@ export function Toolbar() {
   const streaming = useGraphStore((s) => s.streamingNodeId !== null);
   const lessonComplete = useGraphStore((s) => s.lessonComplete);
   const startReplay = useReplayStore((s) => s.start);
+  const planOpen = usePlanStore((s) => s.open);
   const nodes = useGraphStore((s) => s.nodes);
   const canUndo = useCanUndo();
   const canRedo = useCanRedo();
@@ -49,6 +52,9 @@ export function Toolbar() {
   const fileInput = useRef<HTMLInputElement>(null);
   const { fitView, getNodes, getInternalNode } = useReactFlow();
   const { panToNode } = useCameraNav();
+
+  // How much of the plan is written, read off the chunks themselves.
+  const planTaught = taughtSteps(nodes).size;
 
   // Original nodes for the reveal counter (nodes present when reveal began).
   const revealTotal = revealActive
@@ -283,6 +289,17 @@ export function Toolbar() {
             {strings.revealShowAll}
           </button>
         </>
+      )}
+      {session?.outline && (
+        <button
+          type="button"
+          className={styles.button}
+          title={strings.lessonPlanShow}
+          data-on={planOpen || undefined}
+          onClick={() => usePlanStore.getState().toggle()}
+        >
+          ☰ {planTaught}/{session.outline.length}
+        </button>
       )}
       {session && !lessonComplete && (
         <button

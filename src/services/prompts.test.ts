@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnswerPrompt, buildLessonChunkPrompt, buildResponsePrompt } from './prompts';
+import {
+  buildAnswerPrompt,
+  buildLessonChunkPrompt,
+  buildLessonPlanPrompt,
+  buildResponsePrompt,
+} from './prompts';
 
 describe('prompt builders', () => {
   it('answer prompt carries the quote, question, and ancestor context', () => {
@@ -40,6 +45,37 @@ describe('prompt builders', () => {
     expect(p.user).toContain('can you think of situations');
     expect(p.user).toContain('because the brain ignores');
     expect(p.system).toContain('feedback');
+  });
+
+  it('writes the step the learner was shown, not whatever comes next', () => {
+    // The plan was shown before a word of the lesson existed, so it is a
+    // promise. A chunk prompt that ignored it would quietly break that.
+    const steps = [
+      { title: 'What a wave is', gist: 'ground for the rest' },
+      { title: 'Superposition', gist: 'two waves in one place' },
+      { title: 'Interference', gist: 'what that looks like' },
+    ];
+    const p = buildLessonChunkPrompt({
+      sessionId: 's',
+      topic: 'waves',
+      previousChunksMd: ['## What a wave is'],
+      chunkIndex: 1,
+      plan: { steps, stepIndex: 1 },
+    });
+    expect(p.user).toContain('Write step 2: Superposition');
+    expect(p.user).toContain('two waves in one place');
+    // The rest of the plan goes in too: a step written blind to what follows
+    // repeats the later ones or steals their punchline.
+    expect(p.user).toContain('3. Interference');
+    expect(p.system).toContain('not the whole lesson');
+  });
+
+  it('plans without teaching', () => {
+    const p = buildLessonPlanPrompt({ topic: 'waves', langLabel: 'ไทย' });
+    expect(p.system).toContain('"steps"');
+    expect(p.system).toContain('Do NOT teach here');
+    expect(p.system).toContain('ไทย');
+    expect(p.user).toContain('waves');
   });
 
   it('instructs the model to mirror the learner language', () => {

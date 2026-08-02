@@ -2,6 +2,7 @@ import type {
   AnswerRequest,
   GoalPlanRequest,
   LessonChunkRequest,
+  LessonPlanRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -66,8 +67,23 @@ function delay(ms: number): Promise<void> {
 
 const MOCK_LESSON_CHUNKS = 3;
 
+/** A plan the same length as the mock lesson, so the two agree offline. */
+const MOCK_PLAN_STEPS = MOCK_LESSON_CHUNKS;
+
 /** Canned answers streamed in small tokens so the UI exercises real streaming. */
 export class MockClaudeService implements TeachService {
+  // The same shape a real provider is asked for, so the plan panel and the
+  // step-by-step teaching flow work with no API key configured.
+  async planLesson(req: LessonPlanRequest): Promise<string> {
+    await delay(300);
+    return JSON.stringify({
+      steps: Array.from({ length: MOCK_PLAN_STEPS }, (_, i) => ({
+        title: `${req.topic} — ステップ${i + 1}（モック）`,
+        gist: `モックの計画です。実際の計画は API キーを設定すると生成されます。`,
+      })),
+    });
+  }
+
   async *streamAnswer(req: AnswerRequest): AsyncGenerator<string> {
     const md = pickAnswer(req);
     const tokens = md.match(/\S+\s*/g) ?? [md];
@@ -81,7 +97,8 @@ export class MockClaudeService implements TeachService {
   // Emits the same JSON envelope a real provider is asked for, so the streaming
   // parser and the check-question composition are exercised offline too.
   async *streamLessonChunk(req: LessonChunkRequest): AsyncGenerator<string> {
-    const n = req.chunkIndex + 1;
+    const n = (req.plan ? req.plan.stepIndex : req.chunkIndex) + 1;
+    const total = req.plan ? req.plan.steps.length : MOCK_LESSON_CHUNKS;
     const payload = JSON.stringify({
       chunkTitle: `${req.topic} — その${n}`,
       md:
@@ -90,7 +107,7 @@ export class MockClaudeService implements TeachService {
         `\`.env.local\` に \`ANTHROPIC_API_KEY\`（または \`GEMINI_API_KEY\`）を` +
         `設定すると生成されます。`,
       checkQuestion: `このチャンク${n}の要点を一言で言うと？`,
-      done: n >= MOCK_LESSON_CHUNKS,
+      done: n >= total,
     });
     // Arbitrary split points: the parser must not care where deltas land.
     for (let i = 0; i < payload.length; i += 12) {

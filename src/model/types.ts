@@ -1,3 +1,13 @@
+/**
+ * One step of the plan a lesson is taught against.
+ *
+ * The plan is written before any of the lesson is, and shown in full from the
+ * first moment: knowing there are ten steps and roughly what they are is what
+ * makes the first one make sense. `gist` says what the step establishes, so the
+ * list reads as an argument rather than a table of contents.
+ */
+export type LessonStep = { title: string; gist: string };
+
 export type Session = {
   id: string;
   title: string;
@@ -16,6 +26,12 @@ export type Session = {
    * original body and gains translations alongside it (see RNode.content).
    */
   contentLang?: string;
+  /**
+   * The lesson's plan, as agreed before teaching started. Undefined on
+   * notebooks made before plans existed, and on ones that never had a topic to
+   * plan (a back-cast, an imported graph).
+   */
+  outline?: LessonStep[];
 };
 
 export type NodeKind =
@@ -37,6 +53,14 @@ export type RNode = {
   size?: { width: number; height: number }; // user-resized dimensions (optional)
   branchIntent?: 'why' | 'respond' | 'idea'; // question node: なんで？ / learner's answer / free-form idea
   understood?: boolean; // learner marked this node understood (closes the loop)
+  /**
+   * Which outline step this chunk teaches (0-based index into
+   * `Session.outline`). Undefined for chunks that are not part of the plan —
+   * a prerequisite spliced in because the learner got lost is real work, but it
+   * is not a step that was promised, and counting it as one would make the
+   * progress figure a lie.
+   */
+  planStep?: number;
   content: {
     md: string; // markdown body, as originally written
     highlights: Highlight[];

@@ -81,6 +81,12 @@
   white-space: nowrap;
 }
 
+/* A toggle that is currently on — the panel it opens is on screen. */
+.button[data-on] {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
 .button:hover:enabled {
   color: var(--ink);
   border-color: var(--muted);

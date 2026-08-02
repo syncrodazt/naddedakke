@@ -45,6 +45,16 @@ function validateSession(v: unknown): Session {
     if (typeof v.contentLang !== 'string') fail('session.contentLang');
     session.contentLang = v.contentLang;
   }
+  if (v.outline !== undefined) {
+    if (!Array.isArray(v.outline)) fail('session.outline');
+    session.outline = v.outline.map((step, i) => {
+      if (!isRecord(step)) fail(`session.outline[${i}]`);
+      const { title, gist } = step;
+      if (typeof title !== 'string') fail(`session.outline[${i}].title`);
+      if (typeof gist !== 'string') fail(`session.outline[${i}].gist`);
+      return { title, gist };
+    });
+  }
   return session;
 }
 
@@ -135,6 +145,12 @@ function validateNode(v: unknown, sessionId: string): RNode {
   if (v.understood !== undefined) {
     if (typeof v.understood !== 'boolean') fail(`node ${id} understood`);
     node.understood = v.understood;
+  }
+  if (v.planStep !== undefined) {
+    if (typeof v.planStep !== 'number' || !Number.isInteger(v.planStep) || v.planStep < 0) {
+      fail(`node ${id} planStep`);
+    }
+    node.planStep = v.planStep;
   }
   if (v.varName !== undefined) {
     if (typeof v.varName !== 'string') fail(`node ${id} varName`);

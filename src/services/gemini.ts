@@ -2,6 +2,7 @@ import type {
   AnswerRequest,
   GoalPlanRequest,
   LessonChunkRequest,
+  LessonPlanRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -10,6 +11,7 @@ import {
   buildAnswerPrompt,
   buildGoalPlanPrompt,
   buildLessonChunkPrompt,
+  buildLessonPlanPrompt,
   buildResponsePrompt,
   buildTranslatePrompt,
   buildConceptMapPrompt,
@@ -59,6 +61,19 @@ export class GeminiService implements TeachService {
     }
     if (!res.body) throw new Error('chat proxy returned no body');
     yield* streamSseText(res.body);
+  }
+
+  async planLesson(req: LessonPlanRequest): Promise<string> {
+    let out = '';
+    // No thinking, for the same reason as the other structured calls: it shares
+    // the token budget with the answer, and a plan that comes back truncated is
+    // a plan the learner cannot be shown.
+    const stream = this.streamChat(buildLessonPlanPrompt(req), req.signal, {
+      json: true,
+      noThinking: true,
+    });
+    for await (const delta of stream) out += delta;
+    return out;
   }
 
   streamAnswer(req: AnswerRequest): AsyncGenerator<string> {

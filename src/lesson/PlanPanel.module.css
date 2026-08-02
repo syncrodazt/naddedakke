@@ -1,0 +1,195 @@
+.panel {
+  flex: 0 0 300px;
+  width: 300px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-left: 1px solid var(--grid);
+  box-shadow: -4px 0 18px rgb(18 32 46 / 0.06);
+  z-index: 10;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 6px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.close {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--branch);
+  background: var(--bg);
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 14px 10px;
+}
+
+.counter {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryText {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 10px;
+  border-bottom: 1px solid var(--grid);
+}
+
+.stepBtn,
+.allBtn,
+.cancelBtn {
+  font: inherit;
+  font-size: 12px;
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  border: 1px solid var(--grid);
+  background: var(--card);
+  color: var(--ink);
+}
+
+/* Step-by-step is the default the lesson is designed around, so it is the
+   filled button; "all at once" is the deliberate other choice. */
+.stepBtn {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.stepBtn:disabled,
+.allBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.allBtn:not(:disabled):hover {
+  border-color: var(--alias);
+  color: var(--alias);
+}
+
+.cancelBtn {
+  border-color: var(--branch);
+  color: var(--branch);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px 8px;
+  list-style: none;
+}
+
+.row,
+.rowPending {
+  font: inherit;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--bg);
+}
+
+/* A step that has not been written yet. Still fully readable — knowing what is
+   coming is the whole point — just not somewhere you can go. */
+.rowPending {
+  cursor: default;
+}
+
+.rowPending .stepTitle {
+  color: var(--muted);
+}
+
+.row[data-current],
+.rowPending[data-current] {
+  background: var(--bg);
+  box-shadow: inset 2px 0 0 var(--branch);
+}
+
+.num {
+  flex: none;
+  width: 18px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.row .num {
+  color: var(--alias);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stepTitle {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.gist {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.abort {
+  font: inherit;
+  font-size: 12px;
+  margin: 0 14px 12px;
+  padding: 6px;
+  border: 1px solid var(--branch);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--branch);
+  cursor: pointer;
+}

@@ -2,6 +2,7 @@ import type {
   AnswerRequest,
   GoalPlanRequest,
   LessonChunkRequest,
+  LessonPlanRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -10,6 +11,7 @@ import {
   buildAnswerPrompt,
   buildGoalPlanPrompt,
   buildLessonChunkPrompt,
+  buildLessonPlanPrompt,
   buildResponsePrompt,
   buildTranslatePrompt,
   buildConceptMapPrompt,
@@ -19,6 +21,7 @@ import { extractClaudeText, streamSseText } from './sse';
 import { currentModel } from '../store/modelStore';
 import { GOAL_PLAN_SCHEMA } from '../gyakusan/planSchema';
 import { LESSON_CHUNK_SCHEMA } from './lessonSchema';
+import { LESSON_PLAN_SCHEMA } from './planSchema';
 import { TRANSLATE_SCHEMA } from './translateSchema';
 import { CONCEPT_MAP_SCHEMA } from '../concepts/schema';
 
@@ -56,6 +59,19 @@ export class ClaudeService implements TeachService {
       throw new Error(`claude proxy failed (${res.status}): ${detail.slice(0, 200)}`);
     }
     yield* streamSseText(res.body, extractClaudeText);
+  }
+
+  async planLesson(req: LessonPlanRequest): Promise<string> {
+    let out = '';
+    // High effort, and worth the wait: this one call decides the shape of
+    // everything taught afterwards, and it is short, so thinking has room in
+    // the budget here that it does not have when the answer is a long document.
+    const stream = this.streamChat(buildLessonPlanPrompt(req), req.signal, {
+      schema: LESSON_PLAN_SCHEMA,
+      effort: 'high',
+    });
+    for await (const delta of stream) out += delta;
+    return out;
   }
 
   streamAnswer(req: AnswerRequest): AsyncGenerator<string> {

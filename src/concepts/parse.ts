@@ -1,4 +1,5 @@
 import type { Concept, ConceptMap } from './types';
+import { salvageArrayObjects, stripFence } from '../services/jsonSalvage';
 
 // Parsing a proposed concept map.
 //
@@ -13,15 +14,6 @@ export const UNSORTED = '—';
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
-}
-
-function stripFence(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed.startsWith('```')) return trimmed;
-  return trimmed
-    .replace(/^```[a-zA-Z]*\s*/, '')
-    .replace(/```\s*$/, '')
-    .trim();
 }
 
 /** Slugs only: ids end up as React keys and as links from notebooks. */
@@ -41,46 +33,9 @@ export type ParseOptions = {
  * mid-object — which makes the whole thing unparseable even though thirteen of
  * the fourteen concepts arrived intact. Rather than throw all of that away,
  * whatever finished is recovered.
- *
- * Braces inside strings do not count, or a blurb containing one would end its
- * object early and produce nonsense.
  */
 export function salvageConcepts(raw: string): unknown[] {
-  const marker = raw.indexOf('"concepts"');
-  const open = marker === -1 ? -1 : raw.indexOf('[', marker);
-  if (open === -1) return [];
-
-  const out: unknown[] = [];
-  let depth = 0;
-  let start = -1;
-  let inString = false;
-  let escaped = false;
-
-  for (let i = open + 1; i < raw.length; i++) {
-    const ch = raw[i]!;
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') inString = true;
-    else if (ch === '{') {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (ch === '}') {
-      depth--;
-      if (depth === 0 && start !== -1) {
-        try {
-          out.push(JSON.parse(raw.slice(start, i + 1)));
-        } catch {
-          // A complete-looking object that still will not parse is skipped.
-        }
-        start = -1;
-      }
-    } else if (ch === ']' && depth === 0) break;
-  }
-  return out;
+  return salvageArrayObjects(raw, 'concepts');
 }
 
 export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap {

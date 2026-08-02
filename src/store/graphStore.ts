@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { temporal } from 'zundo';
-import type { Highlight, REdge, RNode, Session, SessionExport } from '../model/types';
+import type { Highlight, LessonStep, REdge, RNode, Session, SessionExport } from '../model/types';
 import { newId } from '../model/ids';
 import { recomputeGraph } from '../gyakusan/engine';
 import { reanchorHighlights } from '../markdown/reanchor';
@@ -62,7 +62,8 @@ type GraphState = {
 type GraphActions = {
   createSession: (title: string) => Promise<string>;
   loadSession: (id: string) => Promise<boolean>;
-  addChunk: (md: string) => string;
+  addChunk: (md: string, planStep?: number) => string;
+  setOutline: (steps: LessonStep[]) => void;
   addWhyBranch: (
     parentId: string,
     sel: SelectionRange,
@@ -307,7 +308,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
           return true;
         },
 
-        addChunk(md) {
+        addChunk(md, planStep) {
           const { session, nodes } = get();
           if (!session) throw new Error('no active session');
           const chunks = Object.values(nodes)
@@ -321,6 +322,7 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             seq: nextSeq(),
             position: freePosition(spinePosition(chunks.length), 'chunk'),
             content: freshContent(md),
+            ...(planStep === undefined ? {} : { planStep }),
           };
           commit({
             nodes: [node],
@@ -688,6 +690,13 @@ export const useGraphStore = create<GraphState & GraphActions>()(
 
         // Which language to READ this notebook in. A view setting, not an edit:
         // nothing about the graph changes, so it is deliberately outside undo.
+        setOutline(steps) {
+          const session = get().session;
+          if (!session) return;
+          set({ session: { ...session, outline: steps } });
+          markDirty({ session: true });
+        },
+
         setContentLang(lang) {
           const session = get().session;
           if (!session || session.contentLang === lang) return;

@@ -7,6 +7,12 @@ export type AnswerRequest = {
   signal?: AbortSignal;
 };
 
+export type LessonPlanRequest = {
+  topic: string; // what the learner asked to understand, in their own words
+  langLabel: string; // the learner's language, in its own name
+  signal?: AbortSignal;
+};
+
 export type LessonChunkRequest = {
   sessionId: string;
   topic: string;
@@ -16,6 +22,10 @@ export type LessonChunkRequest = {
   // the markdown of the chunk that lost them. The reply is still one lesson
   // chunk, so the same stream parser and node handling apply.
   prerequisiteFor?: string;
+  // The plan this lesson was promised against, and which step is being written.
+  // Passed so the chunk that arrives is the step the learner was shown, rather
+  // than whatever the model would have chosen next on its own.
+  plan?: { steps: { title: string; gist: string }[]; stepIndex: number };
   signal?: AbortSignal;
 };
 
@@ -56,6 +66,9 @@ export type ConceptMapRequest = {
 // The one seam between the graph and the LLM. Swapping providers (mock,
 // Gemini, Anthropic) never touches the store or UI.
 export interface TeachService {
+  // The whole lesson's plan, before any of it is taught. One document,
+  // resolving whole: a half-written plan cannot be shown as a promise.
+  planLesson(req: LessonPlanRequest): Promise<string>;
   streamAnswer(req: AnswerRequest): AsyncGenerator<string>; // yields markdown deltas
   // Yields deltas of a JSON lesson-chunk object; LessonStreamParser turns those
   // into live markdown. A provider that replies with plain markdown instead is
