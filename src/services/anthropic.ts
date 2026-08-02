@@ -20,6 +20,7 @@ import {
   type ChatPrompt,
 } from './prompts';
 import { extractClaudeText, streamSseText } from './sse';
+import { sawClaudeSearch } from './grounding';
 import { currentModel } from '../store/modelStore';
 import { GOAL_PLAN_SCHEMA } from '../gyakusan/planSchema';
 import { LESSON_CHUNK_SCHEMA } from './lessonSchema';
@@ -44,6 +45,8 @@ type ChatOptions = {
   effort?: 'low' | 'medium' | 'high';
   /** Let the model search the web before answering. */
   search?: boolean;
+  /** Called if the stream shows a server tool running — i.e. a search ran. */
+  onSearched?: () => void;
 };
 
 export class ClaudeService implements TeachService {
@@ -52,21 +55,25 @@ export class ClaudeService implements TeachService {
     signal?: AbortSignal,
     opts: ChatOptions = {},
   ): AsyncGenerator<string> {
+    const { onSearched, ...wire } = opts;
     const res = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...prompt, ...opts, model: currentModel() }),
+      body: JSON.stringify({ ...prompt, ...wire, model: currentModel() }),
       signal,
     });
     if (!res.ok || !res.body) {
       const detail = await res.text().catch(() => '');
       throw new Error(`claude proxy failed (${res.status}): ${detail.slice(0, 200)}`);
     }
-    yield* streamSseText(res.body, extractClaudeText);
+    yield* streamSseText(res.body, extractClaudeText, (data) => {
+      if (sawClaudeSearch(data)) onSearched?.();
+    });
   }
 
   async findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }> {
     let out = '';
+    let searched = false;
     // Search on, and no schema. Search is the whole point — a source recalled
     // from memory is exactly the unverifiable claim this is meant to replace —
     // and structured output is dropped because it is not documented to compose
@@ -75,9 +82,15 @@ export class ClaudeService implements TeachService {
     const stream = this.streamChat(buildSourcesPrompt(req), req.signal, {
       search: true,
       effort: 'low',
+      onSearched: () => {
+        searched = true;
+      },
     });
     for await (const delta of stream) out += delta;
-    return { raw: out, searched: true };
+    // Reported, not assumed: the model may decide it already knows the answer
+    // and never search, and links it wrote from memory must not wear the badge
+    // that says otherwise.
+    return { raw: out, searched };
   }
 
   async planLesson(req: LessonPlanRequest): Promise<string> {

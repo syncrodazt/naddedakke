@@ -35,7 +35,11 @@ stays the model's, but it now points somewhere the learner can go and disagree
 with it. Sources are found on demand by a separate call, never generated with
 the lesson body, and every URL is re-derived through `sources/url.ts` rather
 than echoed. A link the model recalled and a link it found by searching are
-marked differently, because only one of them is evidence.
+marked differently, because only one of them is evidence — and which one it is
+is read off the stream (Anthropic `server_tool_use`, Gemini
+`groundingMetadata`), never assumed from the fact that search was requested.
+Gemini's grounding cannot be combined with JSON mode; the API rejects the pair,
+so the sources call goes unstructured and is parsed leniently.
 
 ## Design lineage (important context)
 

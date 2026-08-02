@@ -44,10 +44,18 @@ export function parseSseDataLine(line: string): unknown | null {
   }
 }
 
-/** Async-iterate text deltas out of an SSE byte stream. */
+/**
+ * Async-iterate text deltas out of an SSE byte stream.
+ *
+ * `onEvent` sees every parsed payload, text or not. It exists for the things
+ * that ride alongside the text and are not part of it — grounding metadata,
+ * a note that a server tool ran — which the caller needs but the node body
+ * must never contain.
+ */
 export async function* streamSseText(
   body: ReadableStream<Uint8Array>,
   extract: DeltaExtractor = extractGeminiText,
+  onEvent?: (data: unknown) => void,
 ): AsyncGenerator<string> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -62,6 +70,7 @@ export async function* streamSseText(
       for (const line of lines) {
         const data = parseSseDataLine(line.trim());
         if (data !== null) {
+          onEvent?.(data);
           const text = extract(data);
           if (text !== '') yield text;
         }
@@ -69,6 +78,7 @@ export async function* streamSseText(
     }
     const data = parseSseDataLine(buffer.trim());
     if (data !== null) {
+      onEvent?.(data);
       const text = extract(data);
       if (text !== '') yield text;
     }

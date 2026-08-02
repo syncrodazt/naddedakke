@@ -151,6 +151,28 @@ describe('transformSse', () => {
     expect(out.join('')).toBe('data: {"text":"real"}\n\n');
   });
 
+  it('reports a search actually running, and only a real one', async () => {
+    // The client shows sources differently depending on this flag, so it has to
+    // mean "a search ran" and not "we asked for one".
+    const searchBlock = `data: ${JSON.stringify({
+      type: 'content_block_start',
+      index: 1,
+      content_block: { type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search' },
+    })}\n\n`;
+    const textBlock = `data: ${JSON.stringify({
+      type: 'content_block_start',
+      index: 0,
+      content_block: { type: 'text', text: '' },
+    })}\n\n`;
+    const out = await through(textBlock + searchBlock + delta('found it'));
+    expect(out.join('')).toBe('data: {"searched":true}\n\ndata: {"text":"found it"}\n\n');
+  });
+
+  it('does not report a search when none ran', async () => {
+    const out = await through(delta('from memory'));
+    expect(out.join('')).not.toContain('searched');
+  });
+
   it('surfaces an error that arrived after the stream opened', async () => {
     const out = await through(
       delta('partial') +
@@ -209,7 +231,9 @@ describe('api/claude.ts stays in sync with the proxy core', () => {
     for (const src of [edge, core]) {
       expect(src).toContain('emit(controller, { text:');
       expect(src).toContain('emit(controller, { error:');
+      expect(src).toContain('emit(controller, { searched: true }');
       expect(src).toContain('text_delta');
+      expect(src).toContain('server_tool_use');
     }
   });
 

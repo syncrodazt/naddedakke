@@ -20,6 +20,7 @@ import {
   type ChatPrompt,
 } from './prompts';
 import { streamSseText } from './sse';
+import { sawGeminiGrounding } from './grounding';
 import { currentModel, useModelStore } from '../store/modelStore';
 import { isModelUnavailable } from './modelHealth';
 
@@ -29,13 +30,25 @@ export class GeminiService implements TeachService {
   private async *streamChat(
     prompt: ChatPrompt,
     signal?: AbortSignal,
-    opts: { json?: boolean; noThinking?: boolean } = {},
+    opts: {
+      json?: boolean;
+      noThinking?: boolean;
+      search?: boolean;
+      /** Called if grounding metadata shows up — i.e. a search really ran. */
+      onGrounded?: () => void;
+    } = {},
   ): AsyncGenerator<string> {
+    const { onGrounded, ...wire } = opts;
+    const watch = onGrounded
+      ? (data: unknown) => {
+          if (sawGeminiGrounding(data)) onGrounded();
+        }
+      : undefined;
     const send = (model: string) =>
       fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...prompt, ...opts, model }),
+        body: JSON.stringify({ ...prompt, ...wire, model }),
         signal,
       });
 
@@ -55,28 +68,48 @@ export class GeminiService implements TeachService {
             const retryDetail = await res.text().catch(() => '');
             throw new Error(`chat proxy failed (${res.status}): ${retryDetail.slice(0, 200)}`);
           }
-          yield* streamSseText(res.body);
+          yield* streamSseText(res.body, undefined, watch);
           return;
         }
       }
       throw new Error(`chat proxy failed (${res.status}): ${detail.slice(0, 200)}`);
     }
     if (!res.body) throw new Error('chat proxy returned no body');
-    yield* streamSseText(res.body);
+    yield* streamSseText(res.body, undefined, watch);
   }
 
   async findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }> {
     let out = '';
-    // `searched: false`, and it matters: this proxy has no search tool wired up,
-    // so these links come out of the model's memory. They are still worth
-    // offering — a remembered arXiv id is often right — but the learner is told
-    // which kind of link they are looking at rather than left to assume.
+    let searched = false;
+    // Grounding with Google Search, and deliberately no JSON mode: the API
+    // refuses the two together, so this reply comes back as prose-wrapped JSON
+    // and parseSources reads it leniently. Worth the trade — the whole value of
+    // a source is that it was not recalled.
+    //
+    // `searched` is set only if grounding actually shows up in the stream. A
+    // model that decided it already knew, or one too old to hold the tool at
+    // all, produces remembered links, and the learner is told so rather than
+    // left to assume.
+    //
+    // Not used: groundingMetadata.groundingChunks. Its `web.uri` values are
+    // vertexaisearch.cloud.google.com redirects, so harvesting them would give
+    // every source Google's hostname — no domain to show, no YouTube id to
+    // recognise, no video. The links come from the model's text, which grounding
+    // made real; the metadata is read only as evidence that a search ran.
+    //
+    // Open item: Google's grounding terms ask that Search Suggestions
+    // (groundingMetadata.searchEntryPoint) be displayed alongside grounded
+    // results. Rendering it would mean forwarding that field through the proxy
+    // and finding somewhere on the card for it.
     const stream = this.streamChat(buildSourcesPrompt(req), req.signal, {
-      json: true,
+      search: true,
       noThinking: true,
+      onGrounded: () => {
+        searched = true;
+      },
     });
     for await (const delta of stream) out += delta;
-    return { raw: out, searched: false };
+    return { raw: out, searched };
   }
 
   async planLesson(req: LessonPlanRequest): Promise<string> {

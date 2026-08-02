@@ -18,6 +18,12 @@ type ChatPayload = {
   model?: string;
   json?: boolean;
   noThinking?: boolean;
+  /**
+   * Google Search grounding. Mutually exclusive with `json`: the API rejects
+   * the pair with "controlled generation is not supported with google_search
+   * tool", so search wins and the reply is parsed leniently instead.
+   */
+  search?: boolean;
 };
 
 // Thinking tokens are billed against maxOutputTokens, so a budget sized for the
@@ -33,7 +39,8 @@ function isChatPayload(v: unknown): v is ChatPayload {
     typeof o.user === 'string' &&
     (o.model === undefined || typeof o.model === 'string') &&
     (o.json === undefined || typeof o.json === 'boolean') &&
-    (o.noThinking === undefined || typeof o.noThinking === 'boolean')
+    (o.noThinking === undefined || typeof o.noThinking === 'boolean') &&
+    (o.search === undefined || typeof o.search === 'boolean')
   );
 }
 
@@ -70,10 +77,14 @@ export default async function handler(req: Request): Promise<Response> {
   const generationConfig = (withOptional: boolean): object => {
     const base: Record<string, unknown> = { maxOutputTokens: MAX_OUTPUT_TOKENS };
     if (!withOptional) return base;
-    if (payload.json) base.responseMimeType = 'application/json';
+    // Never both: the API refuses the combination outright.
+    if (payload.json && !payload.search) base.responseMimeType = 'application/json';
     if (payload.noThinking) base.thinkingConfig = { thinkingBudget: 0 };
     return base;
   };
+
+  const tools = (withOptional: boolean): object[] | undefined =>
+    withOptional && payload.search ? [{ google_search: {} }] : undefined;
 
   const send = (withOptional: boolean): Promise<Response> =>
     fetch(url, {
@@ -83,13 +94,16 @@ export default async function handler(req: Request): Promise<Response> {
         systemInstruction: { parts: [{ text: payload.system }] },
         contents: [{ role: 'user', parts: [{ text: payload.user }] }],
         generationConfig: generationConfig(withOptional),
+        ...(tools(withOptional) ? { tools: tools(withOptional) } : {}),
       }),
     });
 
-  const wantsOptional = Boolean(payload.json || payload.noThinking);
+  const wantsOptional = Boolean(payload.json || payload.noThinking || payload.search);
   let upstream = await send(wantsOptional);
-  // Models that don't understand responseMimeType/thinkingConfig reject the
-  // whole request; drop the optional hints and ask again plainly.
+  // Models that don't understand responseMimeType/thinkingConfig/tools reject
+  // the whole request; drop the optional hints and ask again plainly. The
+  // client decides what to SHOW from whether grounding appears in the stream,
+  // so a silent retry cannot pass an ungrounded answer off as a searched one.
   if (wantsOptional && upstream.status === 400) upstream = await send(false);
 
   return new Response(upstream.body, {

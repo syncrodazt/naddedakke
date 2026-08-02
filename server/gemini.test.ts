@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildGenerationConfig, isChatPayload, sanitizeModel } from './gemini.ts';
+import { buildGenerationConfig, buildTools, isChatPayload, sanitizeModel } from './gemini.ts';
 
 describe('proxy payload + model guards', () => {
   it('accepts a well-formed chat payload with optional model', () => {
@@ -57,9 +57,47 @@ describe('buildGenerationConfig', () => {
   });
 });
 
+describe('buildTools', () => {
+  const base = { system: 's', user: 'u' };
+
+  it('sends the Google Search tool only when asked', () => {
+    expect(buildTools(base, true)).toBeUndefined();
+    expect(buildTools({ ...base, search: true }, true)).toEqual([{ google_search: {} }]);
+  });
+
+  it('drops the tool on the plain retry', () => {
+    // The retry exists for models that reject the tool outright — Gemma, older
+    // Gemini. Sending it again would fail the request for the same reason.
+    expect(buildTools({ ...base, search: true }, false)).toBeUndefined();
+  });
+});
+
+describe('search and JSON mode are never combined', () => {
+  const base = { system: 's', user: 'u' };
+
+  it('drops responseMimeType when searching', () => {
+    // Not our preference — the API rejects the pair with "controlled generation
+    // is not supported with google_search tool", so asking for both fails the
+    // whole request instead of degrading.
+    const cfg = buildGenerationConfig({ ...base, json: true, search: true }, true);
+    expect(cfg).not.toHaveProperty('responseMimeType');
+  });
+
+  it('still asks for JSON when not searching', () => {
+    expect(buildGenerationConfig({ ...base, json: true }, true)).toMatchObject({
+      responseMimeType: 'application/json',
+    });
+  });
+});
+
 describe('isChatPayload', () => {
   it('accepts the optional hints', () => {
     expect(isChatPayload({ system: 's', user: 'u', json: true, noThinking: true })).toBe(true);
+  });
+
+  it('accepts the search flag, and only as a boolean', () => {
+    expect(isChatPayload({ system: 's', user: 'u', search: true })).toBe(true);
+    expect(isChatPayload({ system: 's', user: 'u', search: 'yes' })).toBe(false);
   });
 
   it('rejects hints of the wrong type', () => {
@@ -84,6 +122,14 @@ describe('api/chat.ts stays in sync with the proxy core', () => {
     for (const field of ['responseMimeType', 'thinkingConfig', 'thinkingBudget']) {
       expect(edge, `edge missing ${field}`).toContain(field);
       expect(core, `core missing ${field}`).toContain(field);
+    }
+  });
+
+  it('both send the same search tool, and neither pairs it with JSON mode', () => {
+    for (const src of [edge, core]) {
+      expect(src).toContain('google_search');
+      // The guard that keeps the incompatible pair apart.
+      expect(src).toContain('payload.json && !payload.search');
     }
   });
 

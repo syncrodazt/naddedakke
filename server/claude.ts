@@ -144,10 +144,18 @@ export function transformSse(): TransformStream<Uint8Array, Uint8Array> {
     const evt = data as {
       type?: string;
       delta?: { type?: string; text?: string };
+      content_block?: { type?: string };
       error?: { message?: string; type?: string };
     };
     if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
       emit(controller, { text: evt.delta.text ?? '' });
+    } else if (
+      evt.type === 'content_block_start' &&
+      evt.content_block?.type === 'server_tool_use'
+    ) {
+      // A search really ran. The client shows sources differently depending on
+      // this, so it is reported as fact rather than assumed from the request.
+      emit(controller, { searched: true });
     } else if (evt.type === 'error') {
       // The status line is long gone; the stream is the only honest channel left.
       emit(controller, { error: evt.error?.message ?? evt.error?.type ?? 'stream error' });

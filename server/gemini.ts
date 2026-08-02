@@ -11,6 +11,17 @@ export type ChatPayload = {
   json?: boolean;
   /** Turn model "thinking" off — deterministic structure beats deliberation. */
   noThinking?: boolean;
+  /**
+   * Let the model search with Google before answering (Grounding with Google
+   * Search).
+   *
+   * Mutually exclusive with `json`, and not by our choice: the API rejects the
+   * pair outright with "controlled generation is not supported with
+   * google_search tool". Search wins where both are asked for — the caller that
+   * wants search wants real URLs, and a reply it has to parse leniently is a
+   * far smaller loss than links out of the model's memory.
+   */
+  search?: boolean;
 };
 
 // Thinking tokens are billed against maxOutputTokens, so a budget sized for the
@@ -30,7 +41,8 @@ export function isChatPayload(v: unknown): v is ChatPayload {
     typeof o.user === 'string' &&
     (o.model === undefined || typeof o.model === 'string') &&
     (o.json === undefined || typeof o.json === 'boolean') &&
-    (o.noThinking === undefined || typeof o.noThinking === 'boolean')
+    (o.noThinking === undefined || typeof o.noThinking === 'boolean') &&
+    (o.search === undefined || typeof o.search === 'boolean')
   );
 }
 
@@ -42,9 +54,16 @@ export function isChatPayload(v: unknown): v is ChatPayload {
 export function buildGenerationConfig(payload: ChatPayload, withOptional: boolean): object {
   const base: Record<string, unknown> = { maxOutputTokens: MAX_OUTPUT_TOKENS };
   if (!withOptional) return base;
-  if (payload.json) base.responseMimeType = 'application/json';
+  // Never both: the API refuses the combination, so asking for it would fail
+  // the whole request rather than degrade.
+  if (payload.json && !payload.search) base.responseMimeType = 'application/json';
   if (payload.noThinking) base.thinkingConfig = { thinkingBudget: 0 };
   return base;
+}
+
+/** The Google Search tool, or nothing. Sent only when the caller asked. */
+export function buildTools(payload: ChatPayload, withOptional: boolean): object[] | undefined {
+  return withOptional && payload.search ? [{ google_search: {} }] : undefined;
 }
 
 // A client-supplied model id goes straight into the request URL path, so allow
@@ -95,14 +114,19 @@ export async function proxyChat(
         systemInstruction: { parts: [{ text: payload.system }] },
         contents: [{ role: 'user', parts: [{ text: payload.user }] }],
         generationConfig: buildGenerationConfig(payload, withOptional),
+        ...(buildTools(payload, withOptional) ? { tools: buildTools(payload, withOptional) } : {}),
       }),
     });
 
-  const wantsOptional = Boolean(payload.json || payload.noThinking);
+  const wantsOptional = Boolean(payload.json || payload.noThinking || payload.search);
   const first = await send(wantsOptional);
-  // A model that doesn't understand responseMimeType/thinkingConfig rejects the
-  // whole request. Rather than failing the user's turn over an optional hint,
-  // drop the hints and ask again plainly.
+  // A model that doesn't understand responseMimeType/thinkingConfig/tools
+  // rejects the whole request — and the app lets the learner pick Gemma and
+  // older Gemini, which understand none of them. Rather than failing the turn
+  // over an optional hint, drop the hints and ask again plainly. What the
+  // client shows then is decided by whether grounding actually appears in the
+  // stream, not by what we asked for, so a silent retry cannot make an
+  // ungrounded answer look like a searched one.
   if (wantsOptional && first.status === 400) return send(false);
   return first;
 }
