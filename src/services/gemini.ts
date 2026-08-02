@@ -86,7 +86,15 @@ export class GeminiService implements TeachService {
 
   async suggestConcepts(req: ConceptMapRequest): Promise<string> {
     let out = '';
-    const stream = this.streamChat(buildConceptMapPrompt(req), req.signal, { json: true });
+    // No thinking, for the same reason as the back-cast plan above: this asks
+    // for one large structured document, and deliberation shares the token
+    // budget with the answer — spend it thinking and the reply comes back
+    // truncated or empty, which reads to the learner as "could not read the
+    // suggestions" with nothing to act on.
+    const stream = this.streamChat(buildConceptMapPrompt(req), req.signal, {
+      json: true,
+      noThinking: true,
+    });
     for await (const delta of stream) out += delta;
     return out;
   }

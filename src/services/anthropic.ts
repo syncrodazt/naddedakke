@@ -101,12 +101,14 @@ export class ClaudeService implements TeachService {
 
   async suggestConcepts(req: ConceptMapRequest): Promise<string> {
     let out = '';
-    // High effort: this is the one call that decides what the learner spends
-    // the next weeks on, and it has to hold a whole dependency graph straight
-    // in its head. Nothing is shown until it parses.
+    // Medium, not high. This is the one call that decides what the learner
+    // spends the next weeks on, so more deliberation is tempting — but thinking
+    // shares max_tokens with the answer, and the answer here is a long
+    // document. Spend too much of the budget upstream and it comes back
+    // truncated, which is worth less than a slightly less considered map.
     const stream = this.streamChat(buildConceptMapPrompt(req), req.signal, {
       schema: CONCEPT_MAP_SCHEMA,
-      effort: 'high',
+      effort: 'medium',
     });
     for await (const delta of stream) out += delta;
     return out;

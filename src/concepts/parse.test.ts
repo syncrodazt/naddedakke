@@ -212,3 +212,54 @@ describe('cross-domain links', () => {
     expect(total).toBe(1);
   });
 });
+
+describe('a reply that ran out of budget', () => {
+  it('recovers the concepts that arrived before it was cut off', () => {
+    // Thirteen good concepts and one half-written is worth far more than the
+    // "could not read the suggestions" that JSON.parse alone would give.
+    const truncated =
+      '{"concepts":[' +
+      '{"id":"a","name":"A","area":"X","prereqs":[],"sessionIds":[]},' +
+      '{"id":"b","name":"B","area":"X","prereqs":["a"],"sessionIds":[]},' +
+      '{"id":"c","name":"C","area":"X","prer';
+    const map = parseConceptMap(truncated, OPTIONS);
+    expect(map.concepts.map((c) => c.id)).toEqual(['a', 'b']);
+    expect(map.concepts[1]!.prereqs).toEqual(['a']);
+  });
+
+  it('is not fooled by a closing brace inside a blurb', () => {
+    // A CLOSING brace is the dangerous one: counted as structure it ends the
+    // object early, and the half-object left behind fails to parse — so the
+    // concept disappears rather than merely reading oddly.
+    const truncated =
+      '{"concepts":[' +
+      '{"id":"a","name":"A","area":"X","blurb":"a closing } brace","prereqs":[],"sessionIds":[]},' +
+      '{"id":"b","name":"B"';
+    const map = parseConceptMap(truncated, OPTIONS);
+    expect(map.concepts.map((c) => c.id)).toEqual(['a']);
+    expect(map.concepts[0]!.blurb).toBe('a closing } brace');
+  });
+
+  it('is not fooled by an escaped quote', () => {
+    // Mis-reading the escape ends the string early, which then exposes the
+    // brace inside it as structure and loses the concept.
+    const truncated =
+      '{"concepts":[{"id":"a","name":"A","area":"X","blurb":"say \\"}\\" now",' +
+      '"prereqs":[],"sessionIds":[]},{"id":"b"';
+    const map = parseConceptMap(truncated, OPTIONS);
+    expect(map.concepts.map((c) => c.id)).toEqual(['a']);
+    expect(map.concepts[0]!.blurb).toBe('say "}" now');
+  });
+
+  it('says the model returned nothing when it returned nothing', () => {
+    // An empty reply and a chatty one need different things done about them, so
+    // they must not share a message.
+    expect(() => parseConceptMap('   ', OPTIONS)).toThrow(/returned nothing/);
+  });
+
+  it('quotes what came back when it was not JSON at all', () => {
+    expect(() => parseConceptMap('Sorry, I cannot help with that.', OPTIONS)).toThrow(
+      /Sorry, I cannot help/,
+    );
+  });
+});

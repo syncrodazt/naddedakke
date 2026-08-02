@@ -34,20 +34,82 @@ export type ParseOptions = {
   builtFrom: string[];
 };
 
-export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stripFence(raw));
-  } catch {
-    throw new ConceptMapError('reply was not JSON');
+/**
+ * Complete `{...}` objects inside the reply's `concepts` array.
+ *
+ * A concept map is a long document, and a reply that runs out of budget stops
+ * mid-object — which makes the whole thing unparseable even though thirteen of
+ * the fourteen concepts arrived intact. Rather than throw all of that away,
+ * whatever finished is recovered.
+ *
+ * Braces inside strings do not count, or a blurb containing one would end its
+ * object early and produce nonsense.
+ */
+export function salvageConcepts(raw: string): unknown[] {
+  const marker = raw.indexOf('"concepts"');
+  const open = marker === -1 ? -1 : raw.indexOf('[', marker);
+  if (open === -1) return [];
+
+  const out: unknown[] = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = open + 1; i < raw.length; i++) {
+    const ch = raw[i]!;
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try {
+          out.push(JSON.parse(raw.slice(start, i + 1)));
+        } catch {
+          // A complete-looking object that still will not parse is skipped.
+        }
+        start = -1;
+      }
+    } else if (ch === ']' && depth === 0) break;
   }
-  if (!isRecord(parsed) || !Array.isArray(parsed.concepts)) {
-    throw new ConceptMapError('reply has no "concepts" array');
+  return out;
+}
+
+export function parseConceptMap(raw: string, options: ParseOptions): ConceptMap {
+  let entries: unknown[];
+  try {
+    const parsed: unknown = JSON.parse(stripFence(raw));
+    if (!isRecord(parsed) || !Array.isArray(parsed.concepts)) {
+      throw new ConceptMapError('reply has no "concepts" array');
+    }
+    entries = parsed.concepts;
+  } catch (err) {
+    if (err instanceof ConceptMapError) throw err;
+    entries = salvageConcepts(raw);
+    if (entries.length === 0) {
+      // Say what actually came back. "Not JSON" alone reads the same for an
+      // empty reply, an error page and a chatty model, and those need
+      // different things done about them.
+      const text = raw.trim();
+      throw new ConceptMapError(
+        text === ''
+          ? 'the model returned nothing — try again, or pick another model in Settings'
+          : `reply was not JSON (${text.length} chars, starts: ${text.slice(0, 80)})`,
+      );
+    }
   }
 
   const concepts: Concept[] = [];
   const seen = new Set<string>();
-  for (const entry of parsed.concepts) {
+  for (const entry of entries) {
     if (!isRecord(entry)) continue;
     const { id, name, area, blurb, prereqs, sessionIds, why, sameAs } = entry;
     if (typeof id !== 'string' || !ID.test(id) || seen.has(id)) continue;
