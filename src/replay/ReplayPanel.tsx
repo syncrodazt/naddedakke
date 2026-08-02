@@ -3,7 +3,7 @@ import type { NodeKind } from '../model/types';
 import { useGraphStore } from '../store/graphStore';
 import { displayContent } from '../model/content';
 import { headingOf } from '../markdown/heading';
-import { useCameraNav } from '../canvas/useCameraNav';
+import { FOCUS_MS, STEP_MS, useCameraNav } from '../canvas/useCameraNav';
 import { isTyping } from '../canvas/isTyping';
 import { useStrings, type TextKey } from '../i18n';
 import { BEAT_MS, useReplayStore, type ReplaySpeed } from './replayStore';
@@ -41,8 +41,16 @@ export function ReplayPanel() {
   const { playing, cursor, speed, exit, setPlaying, setCursor, setSpeed, step } = useReplayStore();
   const nodes = useGraphStore((s) => s.nodes);
   const contentLang = useGraphStore((s) => s.session?.contentLang);
-  const { panToNode } = useCameraNav();
+  const { zoomToNode } = useCameraNav();
   const listRef = useRef<HTMLDivElement>(null);
+  // Read inside the camera effect without making it a dependency: play/pause
+  // must not by itself re-aim the camera at the node you are already on.
+  const playingRef = useRef(playing);
+  // Declared before the camera effect so it is already current when that runs:
+  // an arrow press clears `playing` and moves the cursor in one update.
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   // Titles come from the body the learner is actually reading, translation and
   // all — the list has to match the cards.
@@ -72,11 +80,20 @@ export function ReplayPanel() {
     return () => clearTimeout(t);
   }, [playing, cursor, total, speed, setPlaying]);
 
-  // Camera follows the newest revealed node — on beats, arrows and clicks alike.
+  // Camera lands on the newest revealed node — on beats, arrows and clicks
+  // alike. It zooms in rather than merely centring: replay is for reading the
+  // step you just arrived at, and a card too small to read is not an arrival.
+  //
+  // The move waits a frame because the node is revealed by the same render that
+  // moved the cursor, and React Flow cannot fit a node it has not measured yet.
   useEffect(() => {
     const newest = rows[cursor - 1];
-    if (newest) panToNode(newest.id);
-  }, [cursor, rows, panToNode]);
+    if (!newest) return;
+    const raf = requestAnimationFrame(() =>
+      zoomToNode(newest.id, playingRef.current ? FOCUS_MS : STEP_MS),
+    );
+    return () => cancelAnimationFrame(raf);
+  }, [cursor, rows, zoomToNode]);
 
   // Keep the row you are on in view without stealing the scrollbar from someone
   // reading ahead of it.

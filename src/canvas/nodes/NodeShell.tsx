@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import { useGraphStore } from '../../store/graphStore';
+import { useReplayStore } from '../../replay/replayStore';
 import { useStrings } from '../../i18n';
 import styles from './NodeShell.module.css';
 
@@ -38,6 +39,10 @@ export function NodeShell({
   const strings = useStrings();
   const understood = useGraphStore((s) => s.nodes[nodeId]?.understood ?? false);
   const toggleUnderstood = useGraphStore((s) => s.toggleUnderstood);
+  // Replay focuses each node as it arrives, which selects it. Selection is the
+  // right signal — it is how the canvas says "here" — but the resize handles
+  // that normally come with it would be an edit during a read-only playback.
+  const replaying = useReplayStore((s) => s.active);
 
   return (
     // The wrapper is unclipped so the hover "+" can poke below; the card clips.
@@ -48,7 +53,7 @@ export function NodeShell({
         // Handles appear only while this node is selected. No `color` prop —
         // React Flow applies it after our styles and would repaint the invisible
         // grab lines a solid colour.
-        isVisible={selected}
+        isVisible={selected && !replaying}
         handleStyle={{
           width: 10,
           height: 10,
