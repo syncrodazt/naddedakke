@@ -7,6 +7,8 @@ import { FOCUS_MS, STEP_MS, useCameraNav } from './useCameraNav';
 import { currentMetrics } from '../layout/metrics';
 import { nearestTo, nextInDirection, type Direction } from './spatialNav';
 import { lastTidyDirection, runTidy } from './tidy';
+import { isTyping } from './isTyping';
+import { useReplayStore } from '../replay/replayStore';
 
 // Canvas keyboard shortcuts.
 //
@@ -25,12 +27,6 @@ const ARROWS: Record<string, Direction> = {
   ArrowLeft: 'left',
   ArrowRight: 'right',
 };
-
-function isTyping(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  if (!el) return false;
-  return el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
-}
 
 type Props = {
   /** Replay and read-only guests get navigation, but nothing that rearranges. */
@@ -96,6 +92,9 @@ export function CanvasShortcuts({ readOnly = false }: Props) {
 
       const direction = ARROWS[e.key];
       if (!direction || e.shiftKey) return;
+      // During replay the arrows belong to the track list: they step along the
+      // timeline. Moving focus around the canvas as well would fight it.
+      if (useReplayStore.getState().active) return;
       e.preventDefault();
 
       const selected = [...useSelectionStore.getState().selected];

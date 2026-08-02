@@ -7,7 +7,7 @@ import type { Strings } from '../i18n';
 // adding it here means it is not discoverable, which is close to it not
 // existing — nobody guesses Shift+T.
 
-export type ShortcutGroupId = 'canvas' | 'notebook' | 'palette' | 'library';
+export type ShortcutGroupId = 'canvas' | 'notebook' | 'replay' | 'palette' | 'library';
 
 export type Shortcut = {
   /** Rendered as separate key caps. `Mod` becomes ⌘ or Ctrl per platform. */
@@ -39,6 +39,15 @@ export const SHORTCUTS: ShortcutGroup[] = [
       { keys: ['Mod', ','], label: 'scSettings' },
       { keys: ['Mod', 'Z'], label: 'scUndo' },
       { keys: ['Mod', 'Shift', 'Z'], label: 'scRedo' },
+    ],
+  },
+  {
+    id: 'replay',
+    title: 'scReplayGroup',
+    items: [
+      { keys: ['↑', '↓'], label: 'scReplayStep' },
+      { keys: ['Space'], label: 'scReplayPlay' },
+      { keys: ['Esc'], label: 'scReplayExit' },
     ],
   },
   {

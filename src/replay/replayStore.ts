@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { stepCursor } from './timeline';
 
 export type ReplaySpeed = 0.5 | 1 | 2;
 
@@ -16,6 +17,8 @@ type ReplayActions = {
   exit: () => void;
   setPlaying: (playing: boolean) => void;
   setCursor: (cursor: number) => void;
+  /** Move by hand — one node forward or back. Taking the wheel stops playback. */
+  step: (delta: number, total: number) => void;
   setSpeed: (speed: ReplaySpeed) => void;
 };
 
@@ -29,5 +32,7 @@ export const useReplayStore = create<ReplayState & ReplayActions>()((set) => ({
   exit: () => set({ active: false, playing: false, cursor: 0 }),
   setPlaying: (playing) => set({ playing }),
   setCursor: (cursor) => set({ cursor: Math.max(0, cursor), playing: false }),
+  step: (delta, total) =>
+    set((s) => ({ cursor: stepCursor(s.cursor, delta, total), playing: false })),
   setSpeed: (speed) => set({ speed }),
 }));

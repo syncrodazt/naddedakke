@@ -5,32 +5,46 @@
 // own — it is the part that decides whether typing "new" gets you a new
 // notebook or an unhelpful empty list.
 
-/**
- * What someone might type to mean "new notebook". The English words stay
- * matchable in every interface language: they are what a keyboard reaches for
- * first, and someone typing "new" in a Thai UI still means new.
- */
-export const NEW_KEYWORDS = [
-  'new',
-  'notebook',
-  'create',
-  'ใหม่',
-  'โน้ตใหม่',
-  'สร้าง',
-  '新規',
-  '新しい',
-];
+export type PaletteCommand = 'new' | 'replay';
 
 /**
- * Whether the query is reaching for "new notebook".
+ * What someone might type to mean each action. The English words stay matchable
+ * in every interface language: they are what a keyboard reaches for first, and
+ * someone typing "new" in a Thai UI still means new.
+ */
+export const COMMAND_KEYWORDS: Record<PaletteCommand, string[]> = {
+  new: ['new', 'notebook', 'create', 'ใหม่', 'โน้ตใหม่', 'สร้าง', '新規', '新しい'],
+  replay: ['replay', 'play', 'rewind', 'timeline', 'เล่นซ้ำ', 'ย้อน', 'リプレイ', '再生'],
+};
+
+/** Kept for the common case; `matchingCommands` is the general form. */
+export const NEW_KEYWORDS = COMMAND_KEYWORDS.new;
+
+/**
+ * Whether the query is reaching for this action.
  *
  * Prefix matching, not substring: a topic like "neural networks" must not
- * surface the command, and "renew" is not a request to create anything.
+ * surface "new notebook", and "renew" is not a request to create anything.
  */
-export function matchesNewCommand(query: string): boolean {
+export function matchesCommand(command: PaletteCommand, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (needle === '') return false;
-  return NEW_KEYWORDS.some((k) => k.startsWith(needle));
+  return COMMAND_KEYWORDS[command].some((k) => k.startsWith(needle));
+}
+
+export function matchesNewCommand(query: string): boolean {
+  return matchesCommand('new', query);
+}
+
+/**
+ * The actions this query reaches, in the order they should be offered.
+ *
+ * `available` is passed in rather than assumed: "replay" only means something
+ * once a notebook is open, and offering an action that cannot run is worse than
+ * not offering it — it takes the top row, which is where Enter lands.
+ */
+export function matchingCommands(query: string, available: PaletteCommand[]): PaletteCommand[] {
+  return available.filter((c) => matchesCommand(c, query));
 }
 
 /**

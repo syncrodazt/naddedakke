@@ -3,6 +3,15 @@ import { dict, type Lang, type Strings } from './dict';
 
 export { LANGS, type Lang, type Strings } from './dict';
 
+/**
+ * The keys whose value is plain text. Some entries are functions that take a
+ * count, so code that looks a label up by key and renders it needs to say it
+ * only ever names a plain one.
+ */
+export type TextKey = {
+  [K in keyof Strings]: Strings[K] extends string ? K : never;
+}[keyof Strings];
+
 const STORAGE_KEY = 'nandedakke.lang';
 
 /** Stored choice wins; otherwise follow the browser, falling back to Japanese. */

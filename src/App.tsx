@@ -21,7 +21,7 @@ import { useShareStore } from './share/shareStore';
 import { SettingsDialog } from './canvas/SettingsDialog';
 import { usePanelStore } from './store/panelStore';
 import { useSelectionStore } from './canvas/selectionStore';
-import { ReplayBar } from './replay/ReplayBar';
+import { ReplayPanel } from './replay/ReplayPanel';
 import { useReplayStore } from './replay/replayStore';
 import { useRevealStore } from './replay/revealStore';
 import { useVisibilityStore } from './replay/visibilityStore';
@@ -101,6 +101,13 @@ function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Leaving the canvas ends the replay. The panel unmounts with the screen, and
+  // a replay still running behind the library would resume mid-way through when
+  // you came back, from a cursor counted over a notebook you may have left.
+  useEffect(() => {
+    if (view !== 'canvas' && replayActive) useReplayStore.getState().exit();
+  }, [view, replayActive]);
 
   // Rank each node 1..N by seq so the visible #N badge stays contiguous even
   // after deletes (seq itself never renumbers). Computed over ALL nodes so a
@@ -184,7 +191,7 @@ function App() {
       <div className={appStyles.shell}>
         {/* A guest holds exactly one notebook; a list of "others" would be
             their own, which is not what this screen is about. */}
-        {sidebarOpen && !guest && <Sidebar />}
+        {sidebarOpen && !guest && !replayActive && <Sidebar />}
         <div className={appStyles.main}>
           <Toolbar />
           <Canvas
@@ -193,10 +200,13 @@ function App() {
             readOnly={replayActive || guest?.canEdit === false}
           />
         </div>
+        {/* A real flex child, not an overlay: the canvas has to keep the space
+            it is actually given, or replay would centre nodes underneath the
+            track list. */}
+        {replayActive && <ReplayPanel />}
       </div>
       <FallbackBanner />
       <SyncIndicator />
-      {replayActive && <ReplayBar />}
       <CommandPalette />
       <SettingsDialog />
       <ShareDialog />

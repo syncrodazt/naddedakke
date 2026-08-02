@@ -9,10 +9,16 @@ import { useLibraryStore } from '../library/libraryStore';
 import { useRevealStore } from '../replay/revealStore';
 import { usePanelStore } from '../store/panelStore';
 import { useAuthStore } from '../store/authStore';
-import { useStrings } from '../i18n';
+import { useStrings, type TextKey } from '../i18n';
 import { startLesson } from '../services/lesson';
 import { promptDialog } from '../store/uiStore';
-import { MAX_DIGIT_ROWS, digitTarget, matchesNewCommand } from './paletteCommands';
+import {
+  MAX_DIGIT_ROWS,
+  digitTarget,
+  matchingCommands,
+  type PaletteCommand,
+} from './paletteCommands';
+import { useReplayStore } from '../replay/replayStore';
 import { useCameraNav } from './useCameraNav';
 import styles from './CommandPalette.module.css';
 
@@ -21,11 +27,21 @@ type Entry =
   // Actions, not notebooks: found by typing what you want to DO. Kept in the
   // same list because "new" is a thing you look for here, and a separate menu
   // for it would be one more place to remember.
-  | { kind: 'new' }
+  | { kind: 'command'; command: PaletteCommand }
   // Typing something no notebook matches is usually not a failed search — it
   // is the thing you want to learn. Offer it as the action rather than an
   // empty list.
   | { kind: 'ask'; topic: string };
+
+const COMMAND_LABEL: Record<PaletteCommand, TextKey> = {
+  new: 'paletteNew',
+  replay: 'paletteReplay',
+};
+const COMMAND_HINT: Record<PaletteCommand, TextKey> = {
+  new: 'paletteNewHint',
+  replay: 'paletteReplayHint',
+};
+const COMMAND_ICON: Record<PaletteCommand, string> = { new: '＋', replay: '▶' };
 
 /**
  * Ctrl/⌘+K — switch notebook.
@@ -45,6 +61,9 @@ export function CommandPalette() {
   const syncNonce = useAuthStore((s) => s.syncNonce);
   const sessionsRevision = useGraphStore((s) => s.sessionsRevision);
   const currentId = useGraphStore((s) => s.session?.id);
+  // Replay is only offered once there is something to replay. An action that
+  // cannot run would still take the top row, which is where Enter lands.
+  const hasNodes = useGraphStore((s) => Object.keys(s.nodes).length > 0);
   const { fitView } = useReactFlow();
   const { panToNode } = useCameraNav();
 
@@ -102,24 +121,35 @@ export function CommandPalette() {
     const matches = [...saved, ...unloaded].filter((e) =>
       'title' in e ? e.title.toLowerCase().includes(needle) : false,
     );
-    // "new" is an action, so it leads: someone who typed it wants to create,
-    // not to find a notebook that happens to have "new" in its name.
-    const commands: Entry[] = matchesNewCommand(needle) ? [{ kind: 'new' }] : [];
+    // Actions lead: someone who typed "new" wants to create, not to find a
+    // notebook that happens to have "new" in its name.
+    const available: PaletteCommand[] = hasNodes ? ['new', 'replay'] : ['new'];
+    const commands: Entry[] = matchingCommands(needle, available).map((command) => ({
+      kind: 'command',
+      command,
+    }));
     // The ask row goes last, so Enter on a typed word still opens the notebook
     // that matches it; you have to arrow down to start something new.
     return [...commands, ...matches, { kind: 'ask' as const, topic }];
-  }, [sessions, query]);
+  }, [sessions, query, hasNodes]);
 
   if (!open) return null;
 
   async function choose(entry: Entry) {
     close();
     useRevealStore.getState().showAll();
+    // Whatever you picked, the replay you were watching is over — its cursor
+    // counts nodes of the notebook it started in.
+    useReplayStore.getState().exit();
     // Picking anything here means "take me to it", and it lives on the canvas.
     // Opening a notebook while leaving the library up would look like nothing
     // happened.
     useLibraryStore.getState().show('canvas');
-    if (entry.kind === 'new') {
+    if (entry.kind === 'command') {
+      if (entry.command === 'replay') {
+        useReplayStore.getState().start();
+        return;
+      }
       const topic = (await promptDialog(strings.topicPrompt, '', strings.topicPlaceholder))?.trim();
       if (!topic) return;
       const chunkId = await startLesson(topic);
@@ -192,9 +222,11 @@ export function CommandPalette() {
           {entries.map((entry, i) => (
             <button
               key={
-                entry.kind === 'ask' || entry.kind === 'new'
-                  ? entry.kind
-                  : `${entry.kind}:${entry.id}`
+                entry.kind === 'ask'
+                  ? 'ask'
+                  : entry.kind === 'command'
+                    ? `command:${entry.command}`
+                    : `${entry.kind}:${entry.id}`
               }
               type="button"
               role="option"
@@ -207,13 +239,14 @@ export function CommandPalette() {
               {showDigits && i < MAX_DIGIT_ROWS ? (
                 <span className={styles.digit}>{i + 1}</span>
               ) : (
-                entry.kind !== 'ask' && entry.kind !== 'new' && <span className={styles.digitGap} />
+                entry.kind !== 'ask' &&
+                entry.kind !== 'command' && <span className={styles.digitGap} />
               )}
-              {entry.kind === 'new' ? (
+              {entry.kind === 'command' ? (
                 <>
-                  <span className={styles.ask}>＋</span>
-                  <span className={styles.rowTitle}>{strings.paletteNew}</span>
-                  <span className={styles.tag}>{strings.paletteNewHint}</span>
+                  <span className={styles.ask}>{COMMAND_ICON[entry.command]}</span>
+                  <span className={styles.rowTitle}>{strings[COMMAND_LABEL[entry.command]]}</span>
+                  <span className={styles.tag}>{strings[COMMAND_HINT[entry.command]]}</span>
                 </>
               ) : entry.kind === 'ask' ? (
                 <>

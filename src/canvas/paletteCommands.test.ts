@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { digitTarget, matchesNewCommand } from './paletteCommands';
+import { digitTarget, matchesNewCommand, matchingCommands } from './paletteCommands';
 
 describe('matchesNewCommand', () => {
   it('matches the word itself, and its prefixes', () => {
@@ -42,6 +42,35 @@ describe('matchesNewCommand', () => {
     // would steal the Enter key from the notebook you came to open.
     expect(matchesNewCommand('')).toBe(false);
     expect(matchesNewCommand('   ')).toBe(false);
+  });
+});
+
+describe('matchingCommands', () => {
+  const ALL = ['new', 'replay'] as const;
+
+  it('finds replay by what someone would type for it', () => {
+    expect(matchingCommands('replay', [...ALL])).toEqual(['replay']);
+    expect(matchingCommands('rep', [...ALL])).toEqual(['replay']);
+    expect(matchingCommands('เล่นซ้ำ', [...ALL])).toEqual(['replay']);
+    expect(matchingCommands('リプレイ', [...ALL])).toEqual(['replay']);
+  });
+
+  it('never offers an action that cannot run right now', () => {
+    // Replay needs a notebook with something in it. Offering it anyway would
+    // still take the top row, which is where Enter lands.
+    expect(matchingCommands('replay', ['new'])).toEqual([]);
+  });
+
+  it('keeps them in the order they were offered in', () => {
+    // "n" reaches "new"; both must stay orderable rather than come back in
+    // whatever order the query happened to match.
+    expect(matchingCommands('', [...ALL])).toEqual([]);
+    expect(matchingCommands('new', [...ALL])).toEqual(['new']);
+  });
+
+  it('does not fire on a topic that merely starts the same way', () => {
+    expect(matchingCommands('replication forks', [...ALL])).toEqual([]);
+    expect(matchingCommands('plasma', [...ALL])).toEqual([]);
   });
 });
 

@@ -1,5 +1,6 @@
 import type { RNode, Session } from '../model/types';
 import type { Coverage } from './rank';
+import { headingOf } from '../markdown/heading';
 
 // What the learner already has, in a form small enough to send.
 //
@@ -19,21 +20,6 @@ export type NotebookSummary = {
   understood: number;
   total: number;
 };
-
-/** The first markdown heading in a body, or its opening line. */
-export function headingOf(md: string): string {
-  const heading = /^#{1,6}\s+(.+)$/m.exec(md);
-  if (heading?.[1]) return heading[1].trim();
-  const firstLine = md
-    .split('\n')
-    .map((l) => l.trim())
-    .find((l) => l !== '' && !l.startsWith('>'));
-  // Strip the commonest inline markers rather than sending raw markdown.
-  return (firstLine ?? '')
-    .replace(/[*_`#]/g, '')
-    .slice(0, 80)
-    .trim();
-}
 
 /** Cap per notebook: enough to recognise the subject, not a transcript. */
 export const MAX_HEADINGS = 12;
