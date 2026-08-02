@@ -253,16 +253,28 @@ export function buildSourcesPrompt(req: SourceRequest): ChatPrompt {
       '"H:MM:SS". Give it only if you know that specific part of that specific ' +
       "video; a made-up timestamp wastes more of the learner's time than no " +
       'timestamp does. Omit "at" otherwise.' +
-      (req.wantVideo
-        ? '\n- Include at least one "video" source if a genuinely good one ' +
-          'exists — something that shows the thing rather than describing it. ' +
-          'If there is not one, say so by returning none rather than filling ' +
-          'the slot.'
-        : ''),
+      (req.videoOnly
+        ? '\n- VIDEOS ONLY. Return 1 to 3 "video" sources and nothing else — ' +
+          'the learner asked to be shown this, and a reading list is not an ' +
+          'answer to that. Prefer something that shows the thing happening ' +
+          'over someone describing it. Give "at" wherever you genuinely know ' +
+          'which part of the video covers this, since a good moment in a long ' +
+          'talk is most of the value. If no genuinely good video exists, ' +
+          'return an empty list — that is a real answer, and better than a ' +
+          'clip that only shares the topic name.'
+        : req.wantVideo
+          ? '\n- Include at least one "video" source if a genuinely good one ' +
+            'exists — something that shows the thing rather than describing ' +
+            'it. If there is not one, say so by returning none rather than ' +
+            'filling the slot.'
+          : ''),
     user:
       `## Topic\n\n${req.topic}\n\n` +
       `## The passage\n\n${req.passageMd}\n\n` +
-      'Find sources for this passage.',
+      (req.quotedText === undefined
+        ? 'Find sources for this passage.'
+        : `## What the learner is stuck on\n\n${req.quotedText}\n\n` +
+          'Find sources for THAT phrase specifically, not for the passage as a whole.'),
   };
 }
 

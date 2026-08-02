@@ -3,6 +3,7 @@ import {
   buildAnswerPrompt,
   buildLessonChunkPrompt,
   buildLessonPlanPrompt,
+  buildSourcesPrompt,
   buildResponsePrompt,
 } from './prompts';
 
@@ -68,6 +69,36 @@ describe('prompt builders', () => {
     // repeats the later ones or steals their punchline.
     expect(p.user).toContain('3. Interference');
     expect(p.system).toContain('not the whole lesson');
+  });
+
+  it('asks for videos only, and for the phrase the learner picked', () => {
+    const p = buildSourcesPrompt({
+      topic: 'transformers',
+      passageMd: '## Attention\n\nEvery pair of tokens is scored.',
+      langLabel: 'ไทย',
+      wantVideo: true,
+      videoOnly: true,
+      quotedText: 'Every pair of tokens is scored',
+    });
+    // A reading list is not an answer to "show me this".
+    expect(p.system).toContain('VIDEOS ONLY');
+    // Empty is a real answer — better than a clip that shares only the topic.
+    expect(p.system).toMatch(/return an empty list/);
+    // The search is for the phrase, not the card.
+    expect(p.user).toContain('Every pair of tokens is scored');
+    expect(p.user).toContain('not for the passage as a whole');
+  });
+
+  it('never invents a URL, whatever else it is asked for', () => {
+    // The one rule the whole feature rests on.
+    const p = buildSourcesPrompt({
+      topic: 'x',
+      passageMd: 'y',
+      langLabel: 'English',
+      wantVideo: false,
+    });
+    expect(p.system).toContain('LEAVE THE SOURCE OUT');
+    expect(p.system).not.toContain('VIDEOS ONLY');
   });
 
   it('plans without teaching', () => {

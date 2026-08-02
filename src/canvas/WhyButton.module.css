@@ -46,3 +46,22 @@
     transform: translateX(-50%) translateY(0);
   }
 }
+
+/* Third action on the pill. Narrower than the other two — it is a glyph, and
+   giving it a word's worth of space would make the pill wider than the phrase
+   it hangs over. */
+.video {
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--card);
+  cursor: pointer;
+  border-left: 1px solid rgb(255 255 255 / 0.25);
+}
+
+.video:hover {
+  background: rgb(255 255 255 / 0.14);
+}

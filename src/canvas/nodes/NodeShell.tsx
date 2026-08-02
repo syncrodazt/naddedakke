@@ -54,6 +54,7 @@ export function NodeShell({
   // out. Listing the same source underneath would be the card citing itself.
   const sources = kind === 'video' ? stored?.filter((s) => s.videoId === undefined) : stored;
   const finding = useSourceStore((s) => s.findingFor === nodeId);
+  const notice = useSourceStore((s) => (s.notice?.nodeId === nodeId ? s.notice.text : null));
   const { zoomToNode } = useCameraNav();
 
   return (
@@ -120,6 +121,7 @@ export function NodeShell({
             />
           )}
           {finding && <p className={styles.finding}>{strings.sourcesSearching}</p>}
+          {!finding && notice !== null && <p className={styles.finding}>{notice}</p>}
         </div>
       </div>
       {onAddIdea && (

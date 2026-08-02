@@ -6,6 +6,7 @@ import { confirmDialog } from '../store/uiStore';
 import { useStrings } from '../i18n';
 import { decomposeNode } from '../services/goal';
 import { findSourcesFor } from '../sources/find';
+import { findVideoFor } from '../sources/video';
 import styles from './NodeContextMenu.module.css';
 
 export type MenuState = { x: number; y: number; nodeId: string };
@@ -126,6 +127,19 @@ export function NodeContextMenu({
           }}
         >
           {isQuantity ? strings.decomposeNode : strings.prerequisite}
+        </button>
+      )}
+      {canFindSources && (
+        <button
+          type="button"
+          className={styles.item}
+          onClick={() => {
+            const nodeId = menu.nodeId;
+            onClose();
+            void findVideoFor(nodeId);
+          }}
+        >
+          {strings.showVideoMenu}
         </button>
       )}
       {canFindSources && (

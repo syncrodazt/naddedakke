@@ -5,11 +5,17 @@ import styles from './WhyButton.module.css';
 
 type WhyButtonProps = {
   selection: ActiveSelection;
-  onAct: (selection: ActiveSelection, intent: 'why' | 'respond') => void;
+  onAct: (selection: ActiveSelection, intent: 'why' | 'respond' | 'video') => void;
 };
 
-// Medium-style floating pill above the current text selection, with two
-// actions: なんで？ (ask why) and 答える (submit your own answer for feedback).
+// Medium-style floating pill above the current text selection, with three
+// actions: なんで？ (ask why), 答える (submit your own answer for feedback), and
+// 🎬 (be shown this phrase instead of told it).
+//
+// The video sits here rather than only in a menu because it is the same
+// gesture as the other two — this sentence, do something with it — and because
+// "I can't picture this" arrives while reading a specific line, not while
+// thinking about the card as a whole.
 export function WhyButton({ selection, onAct }: WhyButtonProps) {
   const strings = useStrings();
   const { rect } = selection;
@@ -43,6 +49,18 @@ export function WhyButton({ selection, onAct }: WhyButtonProps) {
         }}
       >
         {strings.respond}
+      </button>
+      <button
+        type="button"
+        className={styles.video}
+        title={strings.showVideoTitle}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onAct(selection, 'video');
+        }}
+      >
+        {strings.showVideo}
       </button>
     </div>,
     document.body,

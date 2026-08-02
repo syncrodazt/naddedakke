@@ -84,6 +84,65 @@ describe('seq ordering', () => {
     expect(useGraphStore.getState().session!.seqCounter).toBe(3);
   });
 
+  it('anchors a video branch exactly the way a question is anchored', async () => {
+    // Asking to be SHOWN a sentence is asking about that sentence, so it makes
+    // a highlight and a why edge like any other branch. CLAUDE.md: a branch
+    // with no anchor is a bug.
+    const store = useGraphStore.getState();
+    await store.createSession('test');
+    const chunk = store.addChunk('a transformer scores every pair of tokens');
+    const source = {
+      id: 'src1',
+      kind: 'video' as const,
+      url: 'https://www.youtube.com/watch?v=aircAruvnKk&t=451s',
+      title: 'What is attention?',
+      videoId: 'aircAruvnKk',
+      at: 451,
+    };
+    const videoId = store.addVideoBranch(
+      chunk,
+      { start: 2, end: 13, text: 'transformer' },
+      source,
+      '**What is attention?**',
+    );
+
+    const { nodes, edges } = useGraphStore.getState();
+    const parent = nodes[chunk]!;
+    expect(parent.content.highlights).toHaveLength(1);
+    expect(parent.content.highlights[0]!.childNodeId).toBe(videoId);
+    expect(parent.content.highlights[0]!.text).toBe('transformer');
+
+    const edge = Object.values(edges).find((e) => e.target === videoId);
+    expect(edge?.kind).toBe('why');
+    expect(edge?.source).toBe(chunk);
+
+    const video = nodes[videoId]!;
+    expect(video.kind).toBe('video');
+    expect(video.sources).toEqual([source]);
+    expect(video.seq).toBeGreaterThan(parent.seq);
+  });
+
+  it('leaves a video branch with nothing pending to compose', async () => {
+    // A question node opens a compose box; a video has already arrived, so
+    // leaving one pending would put a stray textarea on the canvas.
+    const store = useGraphStore.getState();
+    await store.createSession('test');
+    const chunk = store.addChunk('body text here');
+    store.addVideoBranch(
+      chunk,
+      { start: 0, end: 4, text: 'body' },
+      {
+        id: 's',
+        kind: 'video',
+        url: 'https://youtu.be/aircAruvnKk',
+        title: 'v',
+        videoId: 'aircAruvnKk',
+      },
+      'caption',
+    );
+    expect(useGraphStore.getState().pendingQuestionId).toBeNull();
+  });
+
   it('registers the highlight on the parent with childNodeId', async () => {
     const store = useGraphStore.getState();
     await store.createSession('test');

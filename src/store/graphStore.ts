@@ -74,6 +74,12 @@ type GraphActions = {
   setOutline: (steps: LessonStep[]) => void;
   setSources: (nodeId: string, sources: Source[]) => void;
   addVideo: (parentNodeId: string, source: Source, captionMd: string) => string;
+  addVideoBranch: (
+    parentId: string,
+    sel: { start: number; end: number; text: string; lang?: string },
+    source: Source,
+    captionMd: string,
+  ) => string;
   addWhyBranch: (
     parentId: string,
     sel: SelectionRange,
@@ -746,6 +752,62 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             ],
           });
           return node.id;
+        },
+
+        /**
+         * A video branched off a highlighted passage.
+         *
+         * Anchored exactly the way a なんで？ question is, because it is the
+         * same gesture: "this sentence, explain it another way". CLAUDE.md's
+         * rule that every branch anchors to a range in its parent is not
+         * negotiable, so asking for a video from a selection produces a
+         * highlight and a `why` edge, not a floating card.
+         */
+        addVideoBranch(parentId, sel, source, captionMd) {
+          const { session, nodes, edges } = get();
+          if (!session) throw new Error('no active session');
+          const parent = nodes[parentId];
+          if (!parent) throw new Error(`unknown parent node ${parentId}`);
+
+          const videoId = newId();
+          const highlight: Highlight = {
+            id: newId(),
+            start: sel.start,
+            end: sel.end,
+            text: sel.text,
+            ...(sel.lang !== undefined ? { lang: sel.lang } : {}),
+            childNodeId: videoId,
+          };
+
+          const depth = branchDepth(parentId, edges) + 1;
+          const siblingIndex = whySiblingCount(parentId, edges);
+          const node: RNode = {
+            id: videoId,
+            sessionId: session.id,
+            kind: 'video',
+            seq: nextSeq(),
+            position: freePosition(branchPosition(parent, depth, siblingIndex), 'video'),
+            content: freshContent(captionMd),
+            sources: [source],
+          };
+
+          const updatedParent: RNode = {
+            ...parent,
+            content: { ...parent.content, highlights: [...parent.content.highlights, highlight] },
+          };
+          commit({
+            nodes: [updatedParent, node],
+            edges: [
+              {
+                id: newId(),
+                sessionId: session.id,
+                kind: 'why',
+                source: parentId,
+                target: videoId,
+              },
+            ],
+          });
+          return videoId;
         },
 
         setOutline(steps) {

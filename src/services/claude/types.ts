@@ -34,6 +34,13 @@ export type SourceRequest = {
   passageMd: string; // the node the sources are for
   langLabel: string; // the learner's language, for the notes
   wantVideo: boolean; // ask for a video with a timestamp, not only reading
+  // Set when the learner asked for a video and nothing else. A reading list is
+  // not an answer to "show me this moving", so the slots are not filled with
+  // articles when there is no good clip.
+  videoOnly?: boolean;
+  // The passage the learner highlighted, when the request came from a
+  // selection. The search is for THAT sentence, not for the whole node.
+  quotedText?: string;
   signal?: AbortSignal;
 };
 

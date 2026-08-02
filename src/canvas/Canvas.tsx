@@ -13,6 +13,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './nodes/nodeTypes';
 import { useGraphStore } from '../store/graphStore';
+import { findVideoForHighlight } from '../sources/video';
 import { useTextSelection, type ActiveSelection } from './useTextSelection';
 import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
@@ -137,11 +138,19 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   );
 
   const onAct = useCallback(
-    (active: ActiveSelection, intent: 'why' | 'respond') => {
-      const questionId = useGraphStore.getState().addWhyBranch(active.nodeId, active.sel, intent);
+    (active: ActiveSelection, intent: 'why' | 'respond' | 'video') => {
       window.getSelection()?.removeAllRanges();
       clearSelection();
-      panToNode(questionId);
+      if (intent === 'video') {
+        // The node appears when the search comes back — there is nothing to
+        // compose in the meantime, so nothing is created up front. The card
+        // says it is looking.
+        void findVideoForHighlight(active.nodeId, active.sel).then((id) => {
+          if (id) panToNode(id);
+        });
+        return;
+      }
+      panToNode(useGraphStore.getState().addWhyBranch(active.nodeId, active.sel, intent));
     },
     [clearSelection, panToNode],
   );
