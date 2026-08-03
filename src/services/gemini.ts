@@ -7,6 +7,7 @@ import type {
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
+  VisualRequest,
 } from './claude/types';
 import {
   buildAnswerPrompt,
@@ -15,6 +16,7 @@ import {
   buildLessonPlanPrompt,
   buildResponsePrompt,
   buildSourcesPrompt,
+  buildVisualPrompt,
   buildTranslatePrompt,
   buildConceptMapPrompt,
   type ChatPrompt,
@@ -110,6 +112,16 @@ export class GeminiService implements TeachService {
     });
     for await (const delta of stream) out += delta;
     return { raw: out, searched };
+  }
+
+  async makeVisual(req: VisualRequest): Promise<string> {
+    let out = '';
+    // No JSON mode: the figure is a long program full of quotes, braces and
+    // newlines, and asking for it inside a JSON string is where these replies
+    // get truncated. parseVisual accepts raw HTML as readily as the envelope.
+    const stream = this.streamChat(buildVisualPrompt(req), req.signal);
+    for await (const delta of stream) out += delta;
+    return out;
   }
 
   async planLesson(req: LessonPlanRequest): Promise<string> {

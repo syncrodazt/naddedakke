@@ -1,0 +1,50 @@
+.frame {
+  width: 100%;
+  border: 1px solid var(--grid);
+  border-radius: 8px;
+  background: var(--card);
+  display: block;
+}
+
+.loading,
+.error {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Pink is the colour of the thing that goes wrong, everywhere else in the app
+   too — a broken figure should read the same way. */
+.error {
+  color: var(--branch);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.again {
+  margin-top: 8px;
+  font-size: 11px;
+  padding: 4px 9px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--grid);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.again:hover:enabled {
+  color: var(--alias);
+  border-color: var(--alias);
+}
+
+.again:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

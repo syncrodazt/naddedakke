@@ -26,8 +26,10 @@ Two modes share one canvas engine:
    savings) — a dataflow/spreadsheet graph, like Blueprint pins.
 
 Answers can be plain text, **interactive tutorial nodes** (inline SVG figures,
-canvas playgrounds with sliders), or **video nodes** (a YouTube embed starting
-at the timestamp that matters).
+canvas playgrounds with sliders), **generated figures** (`visual` nodes — the
+model writes a small self-contained 2D/3D/animated program that runs in a
+sandboxed iframe, because some things are the wrong shape for prose), or
+**video nodes** (a YouTube embed starting at the timestamp that matters).
 
 Any prose node can also carry **sources** — where its claims can be checked.
 This is the answer to "the quality depends entirely on the model": the claim
@@ -205,10 +207,16 @@ auto-layout may move nodes, seq never changes.
   through `safeUrl` (https only) and videos through `youtubeRef`/`embedUrl`,
   which rebuild the URL from an id matched against YouTube's grammar. A
   fabricated link that renders as a real one is worse than no sources at all.
-- Sandboxing: playground components are first-party code only for now. If/when
-  LLM-generated interactive HTML is supported, it goes in a sandboxed iframe
-  (`sandbox="allow-scripts"`, no same-origin). Never `dangerouslySetInnerHTML`
-  LLM output outside that iframe.
+- Sandboxing: playground components are first-party code only. LLM-generated
+  interactive HTML (`visual` nodes) runs in a sandboxed iframe —
+  `sandbox="allow-scripts"`, NO same-origin, plus a CSP of `default-src 'none'`
+  with `connect-src 'none'` so a figure cannot reach the network. The generated
+  HTML is stored and run verbatim: it is safe because of where it runs, not
+  because of what it contains, and a sanitising step would be a lie about that.
+  Never `dangerouslySetInnerHTML` LLM output outside that iframe.
+- three.js for 3D figures is bundled by `plugins/threeIife.ts` into a dynamic
+  chunk and injected into the iframe as source. The sandbox has no network, so
+  a CDN import is not a slower figure — it is a blank box.
 - Undo/redo for graph edits (React Flow docs list `useUndoable` patterns —
   check current docs, don't reinvent).
 - Language: UI copy may mix Japanese/English (なんで？ button, リプレイ). Keep

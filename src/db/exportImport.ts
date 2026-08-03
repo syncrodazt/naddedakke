@@ -199,6 +199,17 @@ function validateNode(v: unknown, sessionId: string): RNode {
     }
     node.planStep = v.planStep;
   }
+  if (v.visual !== undefined) {
+    if (!isRecord(v.visual)) fail(`node ${id} visual`);
+    const { title, html, three } = v.visual;
+    if (typeof title !== 'string') fail(`node ${id} visual.title`);
+    // Kept verbatim, exactly as generated. There is no sanitising step and
+    // there must not appear to be one: this string is safe because of where it
+    // runs (an opaque-origin sandbox with no network), not because of what it
+    // contains. See visual/sandbox.ts.
+    if (typeof html !== 'string' || html === '') fail(`node ${id} visual.html`);
+    node.visual = { title, html, three: three === true };
+  }
   if (v.sources !== undefined) {
     if (!Array.isArray(v.sources)) fail(`node ${id} sources`);
     node.sources = validateSources(v.sources, id);

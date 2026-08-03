@@ -46,7 +46,8 @@ export type NodeKind =
   | 'goal'
   | 'variable'
   | 'derived' // gyakusan
-  | 'video'; // reserved, unimplemented
+  | 'video' // YouTube embed at a timestamp, from a source
+  | 'visual'; // generated interactive figure, run in a sandboxed iframe
 
 export type RNode = {
   id: string;
@@ -95,8 +96,25 @@ export type RNode = {
   unit?: string;
   // playground only: registered component key + serializable params
   playground?: PlaygroundRef;
+  // visual only: the generated figure
+  visual?: VisualRef;
   // variable only: slider/number-input config
   varInput?: { min: number; max: number; step: number };
+};
+
+/**
+ * A figure the model wrote, to be run in a sandboxed iframe.
+ *
+ * The HTML is stored exactly as generated — never rewritten, never sanitised —
+ * because sanitising would be a lie about where the safety comes from. It comes
+ * from the sandbox (see visual/sandbox.ts), which is why the string can be kept
+ * verbatim and re-run identically a year later.
+ */
+export type VisualRef = {
+  title: string;
+  html: string;
+  /** Whether three.js must be defined before it runs. Derived from the code. */
+  three: boolean;
 };
 
 export type PlaygroundRef = {
@@ -155,6 +173,7 @@ export const NODE_KINDS: readonly NodeKind[] = [
   'variable',
   'derived',
   'video',
+  'visual',
 ];
 
 export const EDGE_KINDS: readonly EdgeKind[] = ['next', 'why', 'reply', 'depends'];

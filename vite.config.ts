@@ -15,6 +15,7 @@ import {
   proxyClaude,
 } from './server/claude.ts';
 import type { ServerResponse } from 'node:http';
+import { threeIife } from './plugins/threeIife.ts';
 
 /** Read a JSON request body, then hand it to the handler. */
 function readJson(
@@ -141,7 +142,7 @@ function chatProxy(env: Record<string, string>): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), chatProxy(env)],
+    plugins: [react(), chatProxy(env), threeIife()],
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],

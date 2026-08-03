@@ -5,6 +5,7 @@ import type {
   LessonPlanRequest,
   SourceRequest,
   TranslateRequest,
+  VisualRequest,
   ConceptMapRequest,
 } from './claude/types';
 
@@ -275,6 +276,60 @@ export function buildSourcesPrompt(req: SourceRequest): ChatPrompt {
         ? 'Find sources for this passage.'
         : `## What the learner is stuck on\n\n${req.quotedText}\n\n` +
           'Find sources for THAT phrase specifically, not for the passage as a whole.'),
+  };
+}
+
+/**
+ * A figure the learner can touch, for the passage they are on.
+ *
+ * The whole point of this app's lineage — Ciechanowski, Comeau — is that some
+ * things are the wrong shape for prose. A field, a waveform, a mechanism, an
+ * algorithm mid-run: describing them costs paragraphs and still leaves the
+ * learner assembling the picture themselves. So the ask is specifically NOT an
+ * illustration. It is the thing, with a control on it.
+ *
+ * The rules about being self-contained are not style: the figure runs in a
+ * sandbox with no network at all, so a CDN import is not a slower figure, it is
+ * a blank box.
+ */
+export function buildVisualPrompt(req: VisualRequest): ChatPrompt {
+  return {
+    system:
+      `${TUTOR_PERSONA}\n` +
+      'You write small interactive figures that make an idea visible. Reply ' +
+      'with ONE JSON object and nothing else — no prose, no code fence:\n' +
+      '{"title":string,"html":string}\n' +
+      '- "html": a complete fragment — markup, <style> and <script> — that ' +
+      'runs on its own. It is inserted into a document body.\n' +
+      '- SELF-CONTAINED. No imports, no fetch, no XHR, no CDN, no external ' +
+      'images or fonts. There is NO NETWORK: anything you try to load makes ' +
+      'the figure a blank box. Draw everything yourself.\n' +
+      '- Make it MANIPULABLE. At least one slider, drag, or play control that ' +
+      'changes what is shown. A static picture is not what was asked for. ' +
+      'Redraw on "input" as well as "change", so it moves while dragging.\n' +
+      '- Say what is happening. One short line of plain-language text near the ' +
+      'figure that states the takeaway, and updates with the controls.\n' +
+      '- Size to the width it is given (use clientWidth, redraw on resize). ' +
+      'Keep the whole figure under about 420px tall.\n' +
+      '- On a canvas, scale for devicePixelRatio ONCE and store the CSS height ' +
+      'you fitted to; re-reading the element height after scaling compounds the ' +
+      'scale on every redraw and the figure grows without bound.\n' +
+      '- Colours: use var(--ink) for the truth, var(--branch) for the thing ' +
+      'that goes wrong or the value being varied, var(--alias) for the ' +
+      'observed or safe case, var(--muted) for scaffolding. They are defined.\n' +
+      (req.allow3d
+        ? '- 3D is available: a global THREE (three.js) is already defined. Use ' +
+          'it ONLY when the idea is genuinely spatial — a 3D bar chart is worse ' +
+          'than a 2D one. Never import three; it is already there.\n'
+        : '- No 3D and no THREE global. 2D canvas or SVG only.\n') +
+      `- Any words in the figure are in ${req.langLabel}. "title" too.`,
+    user:
+      `## Topic\n\n${req.topic}\n\n` +
+      `## The passage\n\n${req.passageMd}\n\n` +
+      (req.quotedText === undefined
+        ? 'Make a figure for this passage.'
+        : `## What the learner wants to see\n\n${req.quotedText}\n\n` +
+          'Make a figure for THAT specifically, not for the passage as a whole.'),
   };
 }
 

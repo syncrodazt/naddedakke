@@ -8,6 +8,7 @@ import type {
   Session,
   SessionExport,
   Source,
+  VisualRef,
 } from '../model/types';
 import { newId } from '../model/ids';
 import { recomputeGraph } from '../gyakusan/engine';
@@ -74,6 +75,13 @@ type GraphActions = {
   setOutline: (steps: LessonStep[]) => void;
   setSources: (nodeId: string, sources: Source[]) => void;
   addVideo: (parentNodeId: string, source: Source, captionMd: string) => string;
+  addVisual: (parentNodeId: string, visual: VisualRef) => string;
+  addVisualBranch: (
+    parentId: string,
+    sel: { start: number; end: number; text: string; lang?: string },
+    visual: VisualRef,
+  ) => string;
+  replaceVisual: (nodeId: string, visual: VisualRef) => void;
   addVideoBranch: (
     parentId: string,
     sel: { start: number; end: number; text: string; lang?: string },
@@ -808,6 +816,98 @@ export const useGraphStore = create<GraphState & GraphActions>()(
             ],
           });
           return videoId;
+        },
+
+        /** A figure hanging off the node it explains. */
+        addVisual(parentNodeId, visual) {
+          const { session, nodes } = get();
+          if (!session) throw new Error('no active session');
+          const parent = nodes[parentNodeId];
+          if (!parent) throw new Error(`unknown node ${parentNodeId}`);
+          const node: RNode = {
+            id: newId(),
+            sessionId: session.id,
+            kind: 'visual',
+            seq: nextSeq(),
+            position: freePosition(answerPosition(parent), 'visual'),
+            // The caption is the figure's title as markdown, so なんで？ works
+            // on it like anywhere else.
+            content: freshContent(`**${visual.title}**`),
+            visual,
+          };
+          commit({
+            nodes: [node],
+            edges: [
+              {
+                id: newId(),
+                sessionId: session.id,
+                kind: 'reply',
+                source: parent.id,
+                target: node.id,
+              },
+            ],
+          });
+          return node.id;
+        },
+
+        /** Same, anchored to a highlighted phrase — see addVideoBranch. */
+        addVisualBranch(parentId, sel, visual) {
+          const { session, nodes, edges } = get();
+          if (!session) throw new Error('no active session');
+          const parent = nodes[parentId];
+          if (!parent) throw new Error(`unknown parent node ${parentId}`);
+
+          const visualId = newId();
+          const highlight: Highlight = {
+            id: newId(),
+            start: sel.start,
+            end: sel.end,
+            text: sel.text,
+            ...(sel.lang !== undefined ? { lang: sel.lang } : {}),
+            childNodeId: visualId,
+          };
+          const depth = branchDepth(parentId, edges) + 1;
+          const siblingIndex = whySiblingCount(parentId, edges);
+          const node: RNode = {
+            id: visualId,
+            sessionId: session.id,
+            kind: 'visual',
+            seq: nextSeq(),
+            position: freePosition(branchPosition(parent, depth, siblingIndex), 'visual'),
+            content: freshContent(`**${visual.title}**`),
+            visual,
+          };
+          const updatedParent: RNode = {
+            ...parent,
+            content: { ...parent.content, highlights: [...parent.content.highlights, highlight] },
+          };
+          commit({
+            nodes: [updatedParent, node],
+            edges: [
+              {
+                id: newId(),
+                sessionId: session.id,
+                kind: 'why',
+                source: parentId,
+                target: visualId,
+              },
+            ],
+          });
+          return visualId;
+        },
+
+        /**
+         * Swap in a regenerated figure, keeping the node.
+         *
+         * Keeping the node is the point: its seq, its place in the replay, and
+         * any questions branched off it survive a retry. Generated code fails
+         * often enough that "try again" has to be cheap, and losing the
+         * learner's questions to a retry would make it anything but.
+         */
+        replaceVisual(nodeId, visual) {
+          const node = get().nodes[nodeId];
+          if (!node) return;
+          commit({ nodes: [{ ...node, visual }] });
         },
 
         setOutline(steps) {

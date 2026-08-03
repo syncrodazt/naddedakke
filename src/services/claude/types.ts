@@ -44,6 +44,18 @@ export type SourceRequest = {
   signal?: AbortSignal;
 };
 
+export type VisualRequest = {
+  topic: string; // the notebook's subject
+  passageMd: string; // the node the figure is for
+  langLabel: string; // the learner's language, for any labels in the figure
+  // The phrase the learner highlighted, when the request came from a selection.
+  quotedText?: string;
+  // Whether three.js will be available. Asking for 3D without it would produce
+  // a figure that cannot run, so the caller decides and the prompt is told.
+  allow3d: boolean;
+  signal?: AbortSignal;
+};
+
 export type GoalPlanRequest = {
   goal: string; // the learner's goal, in their own words
   // Set when decomposing ONE node inside a graph that already exists: these
@@ -103,4 +115,7 @@ export interface TeachService {
   // actually looked things up rather than recalling links, which changes what
   // the result is worth and is shown to the learner.
   findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }>;
+  // A self-contained interactive figure. One document, resolving whole: half a
+  // program is not a figure, and there is nothing to show until it parses.
+  makeVisual(req: VisualRequest): Promise<string>;
 }

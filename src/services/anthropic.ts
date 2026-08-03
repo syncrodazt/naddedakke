@@ -7,6 +7,7 @@ import type {
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
+  VisualRequest,
 } from './claude/types';
 import {
   buildAnswerPrompt,
@@ -15,6 +16,7 @@ import {
   buildLessonPlanPrompt,
   buildResponsePrompt,
   buildSourcesPrompt,
+  buildVisualPrompt,
   buildTranslatePrompt,
   buildConceptMapPrompt,
   type ChatPrompt,
@@ -91,6 +93,16 @@ export class ClaudeService implements TeachService {
     // and never search, and links it wrote from memory must not wear the badge
     // that says otherwise.
     return { raw: out, searched };
+  }
+
+  async makeVisual(req: VisualRequest): Promise<string> {
+    let out = '';
+    // High effort: this is a program that has to run first time. There is no
+    // partial credit — a figure with one wrong index is a blank box — and the
+    // learner is waiting on it rather than reading it as it streams.
+    const stream = this.streamChat(buildVisualPrompt(req), req.signal, { effort: 'high' });
+    for await (const delta of stream) out += delta;
+    return out;
   }
 
   async planLesson(req: LessonPlanRequest): Promise<string> {

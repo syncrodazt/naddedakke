@@ -5,7 +5,7 @@ import styles from './WhyButton.module.css';
 
 type WhyButtonProps = {
   selection: ActiveSelection;
-  onAct: (selection: ActiveSelection, intent: 'why' | 'respond' | 'video') => void;
+  onAct: (selection: ActiveSelection, intent: 'why' | 'respond' | 'video' | 'visual') => void;
 };
 
 // Medium-style floating pill above the current text selection, with three
@@ -49,6 +49,18 @@ export function WhyButton({ selection, onAct }: WhyButtonProps) {
         }}
       >
         {strings.respond}
+      </button>
+      <button
+        type="button"
+        className={styles.video}
+        title={strings.visualPillTitle}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onAct(selection, 'visual');
+        }}
+      >
+        {strings.visualPill}
       </button>
       <button
         type="button"

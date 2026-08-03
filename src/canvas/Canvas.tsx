@@ -14,6 +14,7 @@ import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './nodes/nodeTypes';
 import { useGraphStore } from '../store/graphStore';
 import { findVideoForHighlight } from '../sources/video';
+import { makeVisualForHighlight } from '../visual/generate';
 import { useTextSelection, type ActiveSelection } from './useTextSelection';
 import { useCameraNav } from './useCameraNav';
 import { WhyButton } from './WhyButton';
@@ -138,9 +139,15 @@ export function Canvas({ nodes, edges, readOnly = false }: CanvasProps) {
   );
 
   const onAct = useCallback(
-    (active: ActiveSelection, intent: 'why' | 'respond' | 'video') => {
+    (active: ActiveSelection, intent: 'why' | 'respond' | 'video' | 'visual') => {
       window.getSelection()?.removeAllRanges();
       clearSelection();
+      if (intent === 'visual') {
+        void makeVisualForHighlight(active.nodeId, active.sel).then((id) => {
+          if (id) panToNode(id);
+        });
+        return;
+      }
       if (intent === 'video') {
         // The node appears when the search comes back — there is nothing to
         // compose in the meantime, so nothing is created up front. The card

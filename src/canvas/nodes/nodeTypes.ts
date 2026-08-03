@@ -7,6 +7,7 @@ import { VariableNode } from './VariableNode';
 import { DerivedNode } from './DerivedNode';
 import { GoalNode } from './GoalNode';
 import { VideoNode } from './VideoNode';
+import { VisualNode } from '../../visual/VisualNode';
 
 // One component per NodeKind.
 export const nodeTypes: NodeTypes = {
@@ -18,4 +19,5 @@ export const nodeTypes: NodeTypes = {
   derived: DerivedNode,
   goal: GoalNode,
   video: VideoNode,
+  visual: VisualNode,
 };

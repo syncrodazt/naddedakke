@@ -3,6 +3,7 @@ import type {
   GoalPlanRequest,
   LessonChunkRequest,
   LessonPlanRequest,
+  VisualRequest,
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
@@ -72,6 +73,44 @@ const MOCK_PLAN_STEPS = MOCK_LESSON_CHUNKS;
 
 /** Canned answers streamed in small tokens so the UI exercises real streaming. */
 export class MockClaudeService implements TeachService {
+  /**
+   * A real, working figure — unlike the empty sources above.
+   *
+   * The difference is what a stand-in would be claiming. A canned citation
+   * asserts that somebody said something; a canned figure asserts nothing
+   * except its own labelled mock-ness, and it exercises the sandbox, the error
+   * channel and the height reporting with no key configured.
+   */
+  async makeVisual(req: VisualRequest): Promise<string> {
+    await delay(400);
+    return JSON.stringify({
+      title: `${req.topic}（モック）`,
+      html: `<canvas id="c" style="width:100%;height:180px"></canvas>
+<label>振幅 <input id="a" type="range" min="10" max="80" value="40"></label>
+<p id="v" style="color:var(--muted)"></p>
+<script>
+var c = document.getElementById('c'), x = c.getContext('2d'), a = document.getElementById('a');
+function fit() {
+  if (!c.dataset.baseH) c.dataset.baseH = c.clientHeight;
+  var d = window.devicePixelRatio || 1;
+  c.width = c.clientWidth * d; c.height = Number(c.dataset.baseH) * d;
+  x.setTransform(d, 0, 0, d, 0, 0);
+}
+function draw() {
+  fit();
+  var w = c.clientWidth, h = Number(c.dataset.baseH), amp = Number(a.value);
+  x.clearRect(0, 0, w, h);
+  x.strokeStyle = 'rgb(91,107,123)'; x.beginPath(); x.moveTo(0, h/2); x.lineTo(w, h/2); x.stroke();
+  x.strokeStyle = 'rgb(194,24,91)'; x.lineWidth = 2; x.beginPath();
+  for (var i = 0; i <= w; i++) x.lineTo(i, h/2 - Math.sin(i/28) * amp);
+  x.stroke();
+  document.getElementById('v').textContent = 'モックの図です（振幅 ' + amp + '）。API キーを設定すると本物が生成されます。';
+}
+a.addEventListener('input', draw); window.addEventListener('resize', draw); draw();
+<\u002fscript>`,
+    });
+  }
+
   /**
    * Deliberately empty.
    *

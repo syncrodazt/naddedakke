@@ -7,6 +7,7 @@ import type {
   TeachService,
   TranslateRequest,
   ConceptMapRequest,
+  VisualRequest,
 } from './types';
 import { MockClaudeService } from './mock';
 import { GeminiService } from '../gemini';
@@ -34,6 +35,10 @@ class RoutingService implements TeachService {
 
   findSources(req: SourceRequest): Promise<{ raw: string; searched: boolean }> {
     return this.pick().findSources(req);
+  }
+
+  makeVisual(req: VisualRequest): Promise<string> {
+    return this.pick().makeVisual(req);
   }
 
   planLesson(req: LessonPlanRequest): Promise<string> {
