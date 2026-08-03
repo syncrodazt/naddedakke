@@ -83,9 +83,8 @@ export class MockClaudeService implements TeachService {
    */
   async makeVisual(req: VisualRequest): Promise<string> {
     await delay(400);
-    return JSON.stringify({
-      title: `${req.topic}（モック）`,
-      html: `<canvas id="c" style="width:100%;height:180px"></canvas>
+    return `<!-- title: ${req.topic}（モック） -->
+<canvas id="c" style="width:100%;height:180px"></canvas>
 <label>振幅 <input id="a" type="range" min="10" max="80" value="40"></label>
 <p id="v" style="color:var(--muted)"></p>
 <script>
@@ -107,8 +106,7 @@ function draw() {
   document.getElementById('v').textContent = 'モックの図です（振幅 ' + amp + '）。API キーを設定すると本物が生成されます。';
 }
 a.addEventListener('input', draw); window.addEventListener('resize', draw); draw();
-<\u002fscript>`,
-    });
+<\u002fscript>`;
   }
 
   /**

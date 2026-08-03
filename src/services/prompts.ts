@@ -296,11 +296,15 @@ export function buildVisualPrompt(req: VisualRequest): ChatPrompt {
   return {
     system:
       `${TUTOR_PERSONA}\n` +
-      'You write small interactive figures that make an idea visible. Reply ' +
-      'with ONE JSON object and nothing else — no prose, no code fence:\n' +
-      '{"title":string,"html":string}\n' +
-      '- "html": a complete fragment — markup, <style> and <script> — that ' +
-      'runs on its own. It is inserted into a document body.\n' +
+      'You write small interactive figures that make an idea visible.\n' +
+      'Reply with RAW HTML and nothing else — no JSON, no code fence, no ' +
+      'explanation before or after. Start with a title comment:\n' +
+      '<!-- title: a few words -->\n' +
+      'then the figure: markup, <style> and <script>, complete and running on ' +
+      'its own. It is inserted into a document body.\n' +
+      '- Do NOT wrap this in a JSON string. The code is long and full of ' +
+      'quotes and newlines; escaping it is where these replies get corrupted, ' +
+      'and a broken attribute is a figure that dies on its first line.\n' +
       '- SELF-CONTAINED. No imports, no fetch, no XHR, no CDN, no external ' +
       'images or fonts. There is NO NETWORK: anything you try to load makes ' +
       'the figure a blank box. Draw everything yourself.\n' +
@@ -322,7 +326,9 @@ export function buildVisualPrompt(req: VisualRequest): ChatPrompt {
           'it ONLY when the idea is genuinely spatial — a 3D bar chart is worse ' +
           'than a 2D one. Never import three; it is already there.\n'
         : '- No 3D and no THREE global. 2D canvas or SVG only.\n') +
-      `- Any words in the figure are in ${req.langLabel}. "title" too.`,
+      `- Any words in the figure, and the title, are in ${req.langLabel}.\n` +
+      '- Look your elements up AFTER they exist, and bail out politely if one ' +
+      'is missing, so a small mistake degrades instead of throwing.',
     user:
       `## Topic\n\n${req.topic}\n\n` +
       `## The passage\n\n${req.passageMd}\n\n` +

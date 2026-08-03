@@ -1,4 +1,4 @@
-import { stripFence } from '../services/jsonSalvage';
+import { salvageStringField, stripFence } from '../services/jsonSalvage';
 
 // Reading a generated figure out of a model reply.
 
@@ -31,18 +31,35 @@ export function usesThree(html: string): boolean {
   return /\bTHREE\s*\./.test(html);
 }
 
+/** `<!-- title: ... -->` on the first line, which is how the figure is asked. */
+const TITLE_COMMENT = /^\s*<!--\s*title:\s*([^]*?)\s*-->\s*/i;
+
 /**
  * The figure in a reply, or a failure that says what came back instead.
  *
- * A plain HTML reply is accepted as well as the JSON one asked for. Models drop
- * the envelope on long code often enough that refusing would throw away good
- * figures over their packaging, and there is nothing to lose: the HTML is going
- * into a sandbox either way, so the envelope was never a safety measure.
+ * Three shapes are accepted, in order of how much they can be trusted:
+ *
+ * 1. A JSON envelope that parses.
+ * 2. A JSON envelope that does NOT parse. This is the common case, not an edge
+ *    case: a figure is a long program full of quotes and newlines, and models
+ *    put real newlines inside the string constantly, which is invalid JSON.
+ *    The field is scanned out by hand and unescaped, because the alternative —
+ *    slicing the raw text — leaves `id=\"c\"` in the markup, and an attribute
+ *    that never matches is a figure that dies on its first getElementById.
+ * 3. A bare HTML fragment, which is what the prompt now asks for.
  */
 export function parseVisual(raw: string, fallbackTitle: string): GeneratedVisual {
-  const text = stripFence(raw);
+  let text = stripFence(raw);
 
+  // Taken off the front before anything else: the raw-HTML path starts at the
+  // first TAG, which would step straight over the comment and lose the title.
   let title = '';
+  const leading = TITLE_COMMENT.exec(text);
+  if (leading) {
+    title = (leading[1] ?? '').trim();
+    text = text.slice(leading[0].length);
+  }
+
   let html = '';
   try {
     const parsed: unknown = JSON.parse(text);
@@ -51,7 +68,12 @@ export function parseVisual(raw: string, fallbackTitle: string): GeneratedVisual
       title = typeof parsed.title === 'string' ? parsed.title.trim() : '';
     }
   } catch {
-    // Not JSON — fall through to the raw-HTML path.
+    // Not valid JSON — but it may still BE an envelope. See (2) above.
+  }
+
+  if (html === '' && /"html"\s*:/.test(text)) {
+    html = salvageStringField(text, 'html') ?? '';
+    if (title === '') title = salvageStringField(text, 'title')?.trim() ?? '';
   }
 
   if (html === '') {
@@ -59,6 +81,16 @@ export function parseVisual(raw: string, fallbackTitle: string): GeneratedVisual
     // with a sentence, and that sentence is not part of the figure.
     const start = text.search(/<(?:!doctype|html|body|div|canvas|svg|style|script|p|h[1-6])\b/i);
     if (start !== -1) html = text.slice(start);
+    // ...and drop a closing fence the model left after it.
+    html = html.replace(/\s*```\s*$/, '');
+  }
+
+  // The same comment can arrive INSIDE an envelope's html value, where the
+  // pass above could not have seen it.
+  const titled = TITLE_COMMENT.exec(html);
+  if (titled) {
+    if (title === '') title = (titled[1] ?? '').trim();
+    html = html.slice(titled[0].length);
   }
 
   html = html.trim();
